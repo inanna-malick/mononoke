@@ -8,6 +8,7 @@ import           Commands
 import           Compare (compareMerkleTrees)
 import           FileIO (writeTree, readTree)
 import           Merkle.Types
+import           Merkle.Tree.Encoding
 import           Merkle.Tree.Types
 import           Util.MyCompose
 import           Util.Util (mapErrUtil)
@@ -23,28 +24,28 @@ main = run =<< parse
 
 run :: MerkleDiffOpts -> IO ()
 run (MerkleDiffOpts storeDir (Diff before after)) = do
-  let store = fsStore storeDir
+  let store = fsStore SMTL unSMTL storeDir
   res <- runExceptT $ compareMerkleTrees store before after
   print $ fmap fst res
 run (MerkleDiffOpts storeDir (Get p mfp)) = do
-  let store = fsStore storeDir
+  let store = fsStore SMTL unSMTL storeDir
   fp <- maybe (createTmpDir "merkle_get") pure mfp
   _res <- runExceptT $ strictlyDerefAndWrite store fp p
   putStrLn "done getting!"
   --print res
 run (MerkleDiffOpts storeDir (Find p query)) = do
-  let store = fsStore storeDir
+  let store = fsStore SMTL unSMTL storeDir
   _ <- undefined p query store
   putStrLn "done putting!"
   --print res
 run (MerkleDiffOpts storeDir (Put fp)) = do
-  let store = fsStore storeDir
+  let store = fsStore SMTL unSMTL storeDir
   _res <- runExceptT $ strictlyReadAndUpload store fp
   putStrLn "done putting!"
   --print res
 run (MerkleDiffOpts storeDir Demo) = do -- run the old main method used for testing
   res' <- runExceptT $ do
-    let store = fsStore storeDir
+    let store = fsStore SMTL unSMTL storeDir
 
     -- forget structure of merkle trees and retain only a pointer to the top level
     let forgetStructure = pointer
@@ -108,8 +109,7 @@ strictlyReadAndUpload
   :: MonadIO m
   => Store m (Named :+ Tree)
   -> FilePath
-  -> m StrictMerkleTree
+  -> m $ Fix $ WithHash :+ Named :+ Tree
 strictlyReadAndUpload store dir = do
   let lazyTree = readTree dir
-  strictTree <- cata (\(C effect) -> effect >>= traverse id >>= pure . Fix) lazyTree
-  addToStore store strictTree
+  addToStore store lazyTree

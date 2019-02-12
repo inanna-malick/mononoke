@@ -10,21 +10,38 @@ import           System.Random (randomIO)
 --------------------------------------------
 import           Errors
 import           Merkle.Types (Pointer(..), makeConcrete)
-import           Merkle.Tree.Types
-import           Merkle.Tree.Encoding
 import           Util.MyCompose
 import           Merkle.Store
 --------------------------------------------
 
 -- | Filesystem backed store using a temp dir
-tmpFsStore :: IO $ Store  (ExceptT MerkleTreeLookupError IO) (Named :+ Tree)
-tmpFsStore = do
+tmpFsStore
+  :: forall f a
+   . ( AE.FromJSON a
+     , AE.ToJSON a
+     , Hash.Hashable a
+     , Functor f
+     )
+  => (f Pointer -> a)
+  -> (a -> f Pointer)
+  -> IO $ Store  (ExceptT MerkleTreeLookupError IO) f
+tmpFsStore wrap unwrap = do
   dir <- createTmpDir "merklestore"
-  pure $ fsStore dir
+  pure $ fsStore wrap unwrap dir
 
 -- | Filesystem backed store using the provided dir
-fsStore :: FilePath -> Store (ExceptT MerkleTreeLookupError IO) (Named :+ Tree)
-fsStore root
+fsStore
+  :: forall f a
+   . ( AE.FromJSON a
+     , AE.ToJSON a
+     , Hash.Hashable a
+     , Functor f
+     )
+  => (f Pointer -> a)
+  -> (a -> f Pointer)
+  -> FilePath
+  -> Store (ExceptT MerkleTreeLookupError IO) f
+fsStore wrap unwrap root
   = Store
   { sDeref = \p -> do
       liftIO . putStrLn $ "attempt to deref " ++ show p ++ " via fs state store"
@@ -33,10 +50,10 @@ fsStore root
       case AE.decode contents of
         Nothing -> throwError $ EntityNotFoundInStore p
         Just x  -> do
-          pure $ makeConcrete $ unSMTL x
+          pure $ makeConcrete $ unwrap x
   , sUploadShallow = \smtl -> do
-      let p = Pointer $ Hash.hash $ SMTL smtl
-      liftIO $ B.writeFile (root ++ "/" ++ f p) (AE.encode $ SMTL smtl)
+      let p = Pointer $ Hash.hash $ wrap smtl
+      liftIO $ B.writeFile (root ++ "/" ++ f p) (AE.encode $ wrap smtl)
       pure p
   }
   where

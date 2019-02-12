@@ -25,12 +25,12 @@ addToStore
    . Monad m
   => Traversable x
   => Store m x
-  -> Fix x
+  -> Fix $ m :+ x
   -> m $ Fix $ WithHash :+ x
 addToStore store = cata alg
   where
-    alg :: Algebra x (m $ Fix $ WithHash :+ x)
-    alg e = do
-      e' <- traverse id e
-      p <- sUploadShallow store . fmap pointer $ e'
-      pure . Fix . C $ (p, e')
+    alg :: Algebra (m :+ x) (m $ Fix $ WithHash :+ x)
+    alg (C effect) = do
+      entity <- effect >>= traverse id
+      p <- sUploadShallow store . fmap pointer $ entity
+      pure . Fix . C $ (p, entity)
