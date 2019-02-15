@@ -51,19 +51,30 @@ search
   :: forall m
    . Monad m
   => String
-  -> Fix $ m :+ Named :+ Tree
+  -> Fix $ m :+ Named :+ Tree (Fix $ m :+ Tree FileChunk)
   -> Fix $ m :+ Maybe :+ (,) String
 search query = cata alg
   where
-    alg ::  Algebra (m :+ Named :+ Tree)
+    alg ::  Algebra (m :+ Named :+ Tree (Fix $ m :+ Tree FileChunk))
                    (Fix $ m :+ Maybe :+ (,) String)
-    alg (C e) = Fix $ C $ e >>= worker
+    alg (C effect) = Fix $ C $ effect >>= worker
 
-    worker :: Named :+ Tree $ Fix $ m :+ Maybe :+ (,) String
+    worker :: Named :+ Tree (Fix $ m :+ Tree FileChunk) $ Fix $ m :+ Maybe :+ (,) String
            -> m $ Maybe :+ (,) String $ Fix $ m :+ Maybe :+ (,) String
     worker (C (_, Node ns))
       = getCompose . unfix $ foldr andThen (Fix (C $ pure $ C Nothing)) ns
-    worker (C (_, Leaf body))
-      | query `isSubsequenceOf` body
-          = pure $ C $ Just (body, Fix $ C $ pure $ C Nothing)
+    worker (C (_, Leaf fileChunkTree)) = getCompose . unfix $ cata alg' fileChunkTree
+
+    alg' ::  Algebra (m :+ Tree FileChunk)
+                     (Fix $ m :+ Maybe :+ (,) String)
+    alg' (C effect) = Fix $ C $ effect >>= worker'
+
+    worker' :: Tree FileChunk $ Fix $ m :+ Maybe :+ (,) String
+            -> m $ Maybe :+ (,) String $ Fix $ m :+ Maybe :+ (,) String
+    worker' (Node ns)
+      = getCompose . unfix $ foldr andThen (Fix (C $ pure $ C Nothing)) ns
+    worker' (Leaf chunk)
+        -- TODO: fails on search strings crossing one or more chunk boundaries
+      | query `isSubsequenceOf` chunk
+          = pure . C $ Just (chunk, Fix $ C $ pure $ C Nothing)
       | otherwise = pure $ C Nothing

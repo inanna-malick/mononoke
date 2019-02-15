@@ -27,19 +27,20 @@ compareMerkleTrees
   -- no knowledge about actual monad stack - just knows it's the same
   -- as used by the store, which lets us create a lazy effectful streaming structure
    . Monad m
-  => Store m (Named :+ Tree)
+  => Store m (Named :+ Tree (Fix $ (,) Pointer :+ Tree FileChunk)) -- TODO: weird type? needs hash indir?
+  -> Store m (Tree FileChunk)
   -> Pointer -- top level interface is just pointers!
   -> Pointer -- top level interface is just pointers!
   -> m ( [Diff] -- resulting diffs
        -- partially substantiated trees - can be used to track how far tree traversal went
-       , ( Fix $ WithHash :+ Maybe :+ Named :+ Tree
-         , Fix $ WithHash :+ Maybe :+ Named :+ Tree
+       , ( Fix $ WithHash :+ Maybe :+ Named :+ Tree ()
+         , Fix $ WithHash :+ Maybe :+ Named :+ Tree ()
          )
        )
-compareMerkleTrees store mt1 mt2 =
+compareMerkleTrees store1 store2 mt1 mt2 =
   -- transform merkle trees (hash-addressed indirection) into lazily streaming data structures
   -- before passing to diffing alg
-  compareMerkleTrees' (lazyDeref store mt1) (lazyDeref store mt2)
+  compareMerkleTrees' (lazyDeref store1 store2 mt1) (lazyDeref store1 store2 mt2)
 
 
 -- | Diff two merkle trees where the hash-identified nodes have been
@@ -49,11 +50,11 @@ compareMerkleTrees'
   -- no knowledge about actual monad stack - just knows it can
   -- sequence actions in it to deref successive layers (because monad)
    . Monad m
-  => Fix $ WithHash :+ m :+ Named :+ Tree
-  -> Fix $ WithHash :+ m :+ Named :+ Tree
+  => Fix $ WithHash :+ m :+ Named :+ Tree (Fix $ m :+ Tree FileChunk)
+  -> Fix $ WithHash :+ m :+ Named :+ Tree (Fix $ m :+ Tree FileChunk)
   -> m ( [Diff]
-       , ( Fix $ WithHash :+ Maybe :+ Named :+ Tree
-         , Fix $ WithHash :+ Maybe :+ Named :+ Tree
+       , ( Fix $ WithHash :+ Maybe :+ Named :+ Tree ()
+         , Fix $ WithHash :+ Maybe :+ Named :+ Tree ()
          )
        )
 compareMerkleTrees' t1 t2
@@ -160,13 +161,13 @@ compareMerkleTrees' t1 t2
 
 unexpanded
   :: Pointer
-  -> Fix $ WithHash :+ Maybe :+ Named :+ Tree
+  -> Fix $ WithHash :+ Maybe :+ Named :+ Tree ()
 unexpanded p = Fix $ C (p, C Nothing)
 
 expanded
-  :: Named :+ Tree $ Fix $ WithHash :+ Maybe :+ Named :+ Tree
+  :: Named :+ Tree $ Fix $ WithHash :+ Maybe :+ Named :+ Tree ()
   -> Pointer
-  -> Fix $ WithHash :+ Maybe :+ Named :+ Tree
+  -> Fix $ WithHash :+ Maybe :+ Named :+ Tree ()
 expanded x p = Fix $ C (p, C $ Just x)
 
 -- todo better name?

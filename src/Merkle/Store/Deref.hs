@@ -42,7 +42,7 @@ lazyDeref store = futu alg
     alg p = C (p, C $ handleCMTL <$> sDeref store p)
 
     handleCMTL x
-      = fmap (handleMTL) x
+      = fmap handleMTL x
 
     handleMTL (Fix (C (p, C (Just e)))) = Free $ C (p, C . pure $ handleCMTL e)
     handleMTL (Fix (C (p, C Nothing))) = Pure p

@@ -24,28 +24,28 @@ main = run =<< parse
 
 run :: MerkleDiffOpts -> IO ()
 run (MerkleDiffOpts storeDir (Diff before after)) = do
-  let store = fsStore SMTL unSMTL storeDir
+  let store = fsStore SNMTL unSNMTL storeDir
   res <- runExceptT $ compareMerkleTrees store before after
   print $ fmap fst res
 run (MerkleDiffOpts storeDir (Get p mfp)) = do
-  let store = fsStore SMTL unSMTL storeDir
+  let store = fsStore SNMTL unSNMTL storeDir
   fp <- maybe (createTmpDir "merkle_get") pure mfp
   _res <- runExceptT $ strictlyDerefAndWrite store fp p
   putStrLn "done getting!"
   --print res
 run (MerkleDiffOpts storeDir (Find p query)) = do
-  let store = fsStore SMTL unSMTL storeDir
+  let store = fsStore SNMTL unSNMTL storeDir
   _ <- undefined p query store
   putStrLn "done putting!"
   --print res
 run (MerkleDiffOpts storeDir (Put fp)) = do
-  let store = fsStore SMTL unSMTL storeDir
+  let store = fsStore SNMTL unSNMTL storeDir
   _res <- runExceptT $ strictlyReadAndUpload store fp
   putStrLn "done putting!"
   --print res
 run (MerkleDiffOpts storeDir Demo) = do -- run the old main method used for testing
   res' <- runExceptT $ do
-    let store = fsStore SMTL unSMTL storeDir
+    let store = fsStore SNMTL unSNMTL storeDir
 
     -- forget structure of merkle trees and retain only a pointer to the top level
     let forgetStructure = pointer
