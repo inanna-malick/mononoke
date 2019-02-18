@@ -60,6 +60,7 @@ instance FromJSON ShallowNamedMerkleTreeLayer where
 -- NOTE: so leafs are concrete strings and nodes are pointer indirection
 --   newtype and not type alias so we can have clean typeclass instances
 newtype ShallowMerkleTreeLayer = SMTL { unSMTL :: Tree FileChunk Pointer}
+  deriving (Eq, Show)
 
 instance Hashable ShallowMerkleTreeLayer where
   hashWithSalt s (SMTL (Leaf contents))

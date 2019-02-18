@@ -2,11 +2,12 @@ module Diff.Types where
 
 --------------------------------------------
 import           Merkle.Tree.Types (Name)
+import           Merkle.Tree.Encoding (ShallowMerkleTreeLayer)
 --------------------------------------------
 
 type FileBody = String
 
-data Diff = LeafModified  (Name, FileBody, FileBody)
+data Diff = LeafModified Name ShallowMerkleTreeLayer ShallowMerkleTreeLayer
           | FileReplacedWithDir Name
           | DirReplacedWithFile Name
           | EntityAddedToDir
