@@ -82,7 +82,7 @@ run (MerkleDiffOpts storeDir Demo) = do -- run the old main method used for test
 -- | Write tree to file path (using pointer)
 derefAndSearch
   :: MonadIO m
-  => Store m (Named :+ Tree)
+  => Store m (Named :+ Tree ShallowMerkleTreeLayer)
   -> String
   -> Pointer
   -> m ()
@@ -95,7 +95,7 @@ derefAndSearch store query p = consume (liftIO . putStrLn) lazySearch
 -- | Write tree to file path (using pointer)
 strictlyDerefAndWrite
   :: MonadIO m
-  => Store m (Named :+ Tree)
+  => Store m (Named :+ Tree ShallowMerkleTreeLayer)
   -> FilePath
   -> Pointer
   -> m ()
@@ -107,7 +107,7 @@ strictlyDerefAndWrite store outdir p = do
 -- | Read tree from the file system and upload to a store
 strictlyReadAndUpload
   :: MonadIO m
-  => Store m (Named :+ Tree)
+  => Store m (Named :+ Tree ShallowMerkleTreeLayer)
   -> FilePath
   -> m $ Fix $ WithHash :+ Named :+ Tree
 strictlyReadAndUpload store dir = do
