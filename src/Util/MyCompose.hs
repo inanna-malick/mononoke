@@ -4,6 +4,7 @@ module Util.MyCompose where
 
 
 import Control.Applicative
+import qualified Data.Comp.Multi.HFunctor as C
 
 data (f :+ g) a = C (f (g a))
 infixr 7 :+
@@ -40,3 +41,15 @@ instance (Alternative f, Applicative g) => Alternative (f :+ g) where
 -- @
 type f $ a = f a
 infixr 2 $
+
+
+-- stolen from compdata w/ missing instances added 420 yolo
+
+data (:++) f g e t = HC (f (g e) t)
+infixr 7 :++
+
+getHCompose :: (f :++ g) e t -> f (g e) t
+getHCompose (HC x) = x
+
+instance (C.HFunctor f, C.HFunctor g) => C.HFunctor ((:++) f g) where
+  hfmap f (HC x) = HC $ C.hfmap (C.hfmap f) x
