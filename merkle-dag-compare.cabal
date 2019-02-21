@@ -28,6 +28,7 @@ executable mdc
                , bytestring
                , aeson
                , containers
+               , compdata
                , directory
                , free
                , hashable
