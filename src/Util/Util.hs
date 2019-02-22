@@ -11,12 +11,12 @@ import qualified Data.Comp.Multi.Algebra as C
 import qualified Data.Comp.Multi.HFunctor as C
 import           Data.Comp.Multi.HFunctor ((:->))
 import qualified Data.Comp.Multi.Term as C
-import           Data.Comp.Multi.Ops ((:&:)(..))
+import           Data.Comp.Multi.Ops ((:&:)(..), (:+:)(..))
 
-import           Util.MyCompose hiding (getCompose)
+import           Util.MyCompose
 import           Data.Functor.Const
-import           Data.Functor.Compose
 
+import qualified Data.Comp.Multi.Ops as C
 
 mapErrUtil :: Functor m => (e -> e') -> ExceptT e m a -> ExceptT e' m a
 mapErrUtil f = mapExceptT (fmap (either (Left . f) Right))
@@ -43,7 +43,8 @@ type MyDirTree  = C.Term DirTree ()
 type MyBlobTree = C.Term DirTree FileChunk
 
 leaf :: FileChunk -> MyBlobTree
-leaf = C.Term . Leaf
+leaf =
+  C.Term . Leaf
 
 blobTree :: MyBlobTree
 blobTree = C.Term (BlobNode [leaf "foo", leaf "bar", leaf "baz"])
@@ -99,28 +100,61 @@ printCata' = getConst . C.cata alg
     -- alg (DirNode n xs :&: s)
     --   = Const $ "dir[#" ++ s ++ "](" ++ n ++ "): [" ++ intercalate ", " (fmap getConst xs) ++ "]"
 
--- myFunction
---   :: forall i f f' g
---    . Functor f
---   => C.HFunctor g
---   => (forall x. f x -> f' x)
---   -> C.Term (Compose f  :++ g) i
---   -> C.Term (Compose f' :++ g) i
--- myFunction nat = getConst . C.cata alg
---   where
---     alg :: forall i' . C.Alg (Compose f :++ g) (Const (C.Term (Compose f' :++ g) i'))
---     alg (HC (Compose fg))
---       = Const . C.Term . HC . Compose $ nat fg
---       -- = Const . C.Term . HC . Compose $ fmap (C.hfmap getConst) $ nat fg
 
+
+
+data HashPointer p = HashPointer Int
+type HashIndirect p = Const (HashPointer p)
+
+type LazyHashTagged m p = (,) (HashPointer p) :+ m
+
+-- type StoreF m
+--   = forall i
+--   . HashPointer
+--  -> m $ DirTree
+
+-- haha, whoops - turns out this nat tfn needs to know underlying type.. ah, yes! typed pointers..
+-- note: will end up using coproduct here, maybe?
+
+
+-- NOTE: START READING HERE
+-- NOTE: I fundamentally can't do this with :-> because of the forall i. bit, it needs to have constraint on i being == p.. right?
+-- fetch :: Read p => Monad m => HashIndirect p :-> LazyHashTagged m p
+-- fetch (Const p) = C (p, pure $ read "lmao no")
+
+lazyDeref'
+  :: forall i m p
+   . Monad m
+  => HashIndirect p :-> LazyHashTagged m p
+  -> C.Term ((:+) (HashIndirect     p) :+: DirTree) i
+  -> C.Term ((:+) (LazyHashTagged m p) :++ DirTree) i
+lazyDeref' = myFunction
+  -- where
+  --   f (C (p, Nothing)) = C (p, fetch p)
+  --   f (C (p, Just x))  = C (p, pure x)
 
 myFunction
   :: forall i f f' g
    . Functor f
+  -- => Applicative f
   => C.HFunctor g
   => f :-> f'
-  -> C.Term (Compose f  :++ g) i
-  -> C.Term (Compose f' :++ g) i
-myFunction nat x
-  = let fg = fmap (C.hfmap (myFunction nat)) $ getCompose $ getHCompose $ C.unTerm x
-     in C.Term . HC . Compose $ nat fg
+  -> C.Term ((:+) f  :+: g) i
+  -> C.Term ((:+) f' :++ g) i
+myFunction nat
+  = undefined
+  -- = C.Term . HC . C
+  -- . C.caseH nat pure . fmap (C.hfmap (myFunction nat))
+  -- . getCompose . getHCompose . C.unTerm
+
+-- myFunction'
+--   :: forall i f f' g
+--    . Functor f
+--   => C.HFunctor g
+--   => (((:+) f :++ g) -> ((:+) f' :++ g))
+--   -> C.Term ((:+) f  :++ g) i
+--   -> C.Term ((:+) f' :++ g) i
+-- myFunction' nat
+--   = C.Term . HC . C
+--   . nat . fmap (C.hfmap (myFunction nat))
+--   . getCompose . getHCompose . C.unTerm
