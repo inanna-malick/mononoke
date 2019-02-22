@@ -15,6 +15,7 @@ import           Data.Comp.Multi.Ops ((:&:)(..), (:+:)(..))
 
 import           Util.MyCompose
 import           Data.Functor.Const
+import qualified Data.Functor.Compose as FC
 
 import qualified Data.Comp.Multi.Ops as C
 
@@ -32,6 +33,9 @@ data DirTree a i where
   -- dir and file bits
   FileNode :: Name -> a FileChunk -> DirTree a ()
   DirNode :: Name -> [a ()] -> DirTree a ()
+
+  -- TODO/IDEA: can fit entities like branches and change lists (maybe?) in here
+                         -- maybe w/ struct. sharing instead..
 
 instance C.HFunctor DirTree where
   hfmap _ (Leaf fc)        = Leaf fc
@@ -103,10 +107,15 @@ printCata' = getConst . C.cata alg
 
 
 
-data HashPointer p = HashPointer Int
-type HashIndirect p = Const (HashPointer p)
+-- data HashPointer p = HashPointer Int
+-- type HashIndirect p = Const (HashPointer p)
 
-type LazyHashTagged m p = (,) (HashPointer p) :+ m
+
+data HashPointer = HashPointer Int
+
+type HashIndirect = (,) HashPointer :+ Maybe
+
+type LazyHashTagged m = (,) HashPointer :+ m
 
 -- type StoreF m
 --   = forall i
@@ -119,42 +128,69 @@ type LazyHashTagged m p = (,) (HashPointer p) :+ m
 
 -- NOTE: START READING HERE
 -- NOTE: I fundamentally can't do this with :-> because of the forall i. bit, it needs to have constraint on i being == p.. right?
+
+
 -- fetch :: Read p => Monad m => HashIndirect p :-> LazyHashTagged m p
 -- fetch (Const p) = C (p, pure $ read "lmao no")
 
-lazyDeref'
-  :: forall i m p
-   . Monad m
-  => HashIndirect p :-> LazyHashTagged m p
-  -> C.Term ((:+) (HashIndirect     p) :+: DirTree) i
-  -> C.Term ((:+) (LazyHashTagged m p) :++ DirTree) i
-lazyDeref' = myFunction
+-- lazyDeref'
+--   :: forall i m p
+--    . Monad m
+--   => HashIndirect p :-> LazyHashTagged m p
+--   -> C.Term ((:+) (HashIndirect     p) :+: DirTree) i
+--   -> C.Term ((:+) (LazyHashTagged m p) :++ DirTree) i
+-- lazyDeref' = myFunction
   -- where
   --   f (C (p, Nothing)) = C (p, fetch p)
   --   f (C (p, Just x))  = C (p, pure x)
 
-myFunction
-  :: forall i f f' g
-   . Functor f
-  -- => Applicative f
-  => C.HFunctor g
-  => f :-> f'
-  -> C.Term ((:+) f  :+: g) i
-  -> C.Term ((:+) f' :++ g) i
-myFunction nat
-  = undefined
+-- myFunction
+--   :: forall i f f' g
+--    . Functor f
+--   -- => Applicative f
+--   => C.HFunctor g
+--   => f :-> f'
+--   -> C.Term ((:+) f  :+: g) i
+--   -> C.Term ((:+) f' :++ g) i
+-- myFunction nat
+--   = undefined
   -- = C.Term . HC . C
   -- . C.caseH nat pure . fmap (C.hfmap (myFunction nat))
   -- . getCompose . getHCompose . C.unTerm
 
+
+-- ok cool it compiles, now time to write this algebra
+myFunction
+  :: forall i m
+   . C.Term (FC.Compose HashIndirect     :++ DirTree) i
+  -> C.Term (FC.Compose (LazyHashTagged m) :++ DirTree) i
+myFunction = getConst . C.cata alg
+  where
+    alg :: C.Alg (FC.Compose HashIndirect :++ DirTree)
+                 (Const (C.Term (FC.Compose (LazyHashTagged m) :++ DirTree) i))
+    alg = undefined
+
+
+-- type ModLayer f f' i
+--   = (DirTree (C.Term ((:+) f :++ DirTree)) i)
+--   -> f' (DirTree (C.Term ((:+) f' :++ DirTree)) i)
+
+
 -- myFunction'
---   :: forall i f f' g
+--   :: forall i f f'
 --    . Functor f
---   => C.HFunctor g
---   => (((:+) f :++ g) -> ((:+) f' :++ g))
---   -> C.Term ((:+) f  :++ g) i
---   -> C.Term ((:+) f' :++ g) i
--- myFunction' nat
+--   => ModLayer f f' i
+--   -> C.Term ((:+) f  :++ DirTree) i
+--   -> C.Term ((:+) f' :++ DirTree) i
+-- myFunction' ml
 --   = C.Term . HC . C
---   . nat . fmap (C.hfmap (myFunction nat))
+--   . ml . fmap (C.hfmap (myFunction' ml))
 --   . getCompose . getHCompose . C.unTerm
+
+
+
+
+
+
+
+
