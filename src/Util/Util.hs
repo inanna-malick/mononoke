@@ -159,17 +159,51 @@ type LazyHashTagged m = (,) HashPointer :+ m
   -- . getCompose . getHCompose . C.unTerm
 
 
--- ok cool it compiles, now time to write this algebra
 myFunction
   :: forall i m
-   . C.Term (FC.Compose HashIndirect     :++ DirTree) i
+   . Monad m
+  => HashPointer
   -> C.Term (FC.Compose (LazyHashTagged m) :++ DirTree) i
-myFunction = getConst . C.cata alg
+myFunction = C.futu alg . Const
   where
-    alg :: C.Alg (FC.Compose HashIndirect :++ DirTree)
-                 (Const (C.Term (FC.Compose (LazyHashTagged m) :++ DirTree) i))
-    alg = undefined
+    alg :: C.CVCoalg (FC.Compose (LazyHashTagged m) :++ DirTree)
+                     (Const HashPointer)
+    alg (Const p) = HC $ FC.Compose $ C (p, handleThingy <$> deref p)
 
+
+    handleThingy :: DirTree (C.Term (FC.Compose HashIndirect   :++ DirTree))
+                :-> DirTree (C.Context (FC.Compose (LazyHashTagged m) :++ DirTree) (Const HashPointer))
+    handleThingy = C.hfmap handleCThingy
+
+    handleCThingy :: C.Term (FC.Compose HashIndirect :++ DirTree)
+                 :-> C.Context (FC.Compose (LazyHashTagged m) :++ DirTree) (Const HashPointer)
+    handleCThingy = undefined
+
+    deref :: forall x. HashPointer -> m $ DirTree (C.Term (FC.Compose HashIndirect :++ DirTree)) x
+    deref = undefined
+
+-- myFunction
+--   :: forall i m
+--    . Monad m
+--   => C.Term (FC.Compose HashIndirect     :++ DirTree) i
+--   -> C.Term (FC.Compose (LazyHashTagged m) :++ DirTree) i
+-- myFunction = C.cata alg
+--   where
+--     alg :: C.Alg (FC.Compose HashIndirect :++ DirTree)
+--                  (C.Term (FC.Compose (LazyHashTagged m) :++ DirTree))
+--     alg (HC (FC.Compose (C (p, Nothing)))) = f p
+--     alg (HC (FC.Compose (C (p, Just y)))) = C.Term $ HC $ FC.Compose $ C (p, pure y)
+
+--     f :: HashPointer
+--       -> C.Term (FC.Compose (LazyHashTagged m) :++ DirTree) z
+--     -- f = undefined -- TODO: this needs to, like, call itself recursively because,
+--     --               --       the result of the store fetch call will be a dirtree w/ HashIndirect
+--     f p = C.Term $ HC $ FC.Compose $ C (p, C.hfmap myFunction $ storeFetch p)
+
+--     storeFetch
+--       :: HashPointer
+--       -> DirTree (C.Term (FC.Compose (LazyHashTagged m) :++ DirTree)) z
+--     storeFetch = undefined
 
 -- type ModLayer f f' i
 --   = (DirTree (C.Term ((:+) f :++ DirTree)) i)
