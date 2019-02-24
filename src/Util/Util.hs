@@ -159,28 +159,30 @@ type LazyHashTagged m = (,) HashPointer :+ m
   -- . getCompose . getHCompose . C.unTerm
 
 
-myFunction
+lazyDeref
   :: forall i m
    . Monad m
-  => HashPointer
+  => HFStore m
+  -> HashPointer
   -> C.Term (FC.Compose (LazyHashTagged m) :++ DirTree) i
-myFunction = C.futu alg . Const
+lazyDeref deref = C.futu alg . Const
   where
     alg :: C.CVCoalg (FC.Compose (LazyHashTagged m) :++ DirTree)
                      (Const HashPointer)
-    alg (Const p) = HC $ FC.Compose $ C (p, handleThingy <$> deref p)
+    alg (Const p) = HC $ FC.Compose $ C (p, C.hfmap helper <$> deref p)
 
 
-    handleThingy :: DirTree (C.Term (FC.Compose HashIndirect   :++ DirTree))
-                :-> DirTree (C.Context (FC.Compose (LazyHashTagged m) :++ DirTree) (Const HashPointer))
-    handleThingy = C.hfmap handleCThingy
-
-    handleCThingy :: C.Term (FC.Compose HashIndirect :++ DirTree)
+    helper :: C.Term (FC.Compose HashIndirect :++ DirTree)
                  :-> C.Context (FC.Compose (LazyHashTagged m) :++ DirTree) (Const HashPointer)
-    handleCThingy = undefined
+    helper (C.Term (HC (FC.Compose (C (p, Nothing))))) = C.Hole $ Const p
+    helper (C.Term (HC (FC.Compose (C (p, Just x))))) =
+      C.Term $ HC (FC.Compose (C (p, pure $ C.hfmap helper x)))
 
-    deref :: forall x. HashPointer -> m $ DirTree (C.Term (FC.Compose HashIndirect :++ DirTree)) x
-    deref = undefined
+
+
+type HFStore m
+   = forall x. HashPointer
+  -> m $ DirTree (C.Term (FC.Compose HashIndirect :++ DirTree)) x
 
 -- myFunction
 --   :: forall i m
