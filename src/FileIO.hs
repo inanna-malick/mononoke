@@ -1,70 +1,61 @@
 -- | Functions for interacting with the filesystem to
 -- create dir trees from merkle trees or vice versa
-module FileIO (readTree, writeTree, writeTree') where
+module FileIO where -- (readTree, writeTree, writeTree') where
 
 --------------------------------------------
 import           Control.Monad.Except
 import           Control.Monad.Trans.State.Lazy
 import qualified Data.List as List
+import           Data.Foldable (traverse_)
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Util.MyCompose
-import           Util.RecursionSchemes
+import           Util.HRecursionSchemes
 import           Merkle.Tree.Types
 --------------------------------------------
+import qualified Data.Functor.Compose as FC
+import           Data.Functor.Const
+import           Data.Singletons
 
--- | Write tree to file path (using strict tree)
-writeTree'
-  :: MonadIO m
-  => FilePath
-  -> Fix $ Named :+ Tree
-  -> m ()
-writeTree' outdir tree = do
-  liftIO $ evalStateT (cata alg tree) [outdir]
-
-  where
-    alg :: Algebra (Named :+ Tree) (StateT [FilePath] IO ())
-    alg (C (name, (Leaf body)))     = do
-      path <- List.intercalate "/" . reverse . (name:) <$> get
-      liftIO $ writeFile path body
-    alg (C (name, (Node children))) = do
-      path <- List.intercalate "/" . reverse . (name:) <$> get
-      liftIO $ Dir.createDirectory path
-      modify (push name)
-      _ <- traverse id children
-      modify pop
-
-    push x xs = x:xs
-    pop (_:xs)  = xs
-    pop []    = []
-
-
--- | Write tree to file path (using strict tree)
+-- | Write strict hgit dirtree to file path
 writeTree
   :: MonadIO m
   => FilePath
-  -> Fix $ Named :+ Tree
+  -> Term HGit DirTag
   -> m ()
 writeTree outdir tree = do
-  liftIO $ evalStateT (cata alg tree) [outdir]
+  liftIO $ evalStateT (getConst $ sCata alg tree) [outdir]
 
   where
-    alg :: Algebra (Named :+ Tree) (StateT [FilePath] IO ())
-    alg (C (name, (Leaf body)))     = do
+    alg :: SAlg HGit (Const $ StateT [FilePath] IO ())
+    alg (Blob contents)    = Const $ do -- append - will open file handle multiple times, w/e, can cache via state later
+      path <- List.intercalate "/" . reverse <$> get
+      liftIO $ appendFile path contents
+
+    alg (BlobTree children) = Const $ traverse_ getConst children
+
+    alg (File name child)  = Const $ do -- touch file
       path <- List.intercalate "/" . reverse . (name:) <$> get
-      liftIO $ writeFile path body
-    alg (C (name, (Node children))) = do
+      liftIO $ writeFile path "" -- touch file
+      modify (push name)
+      getConst child
+      modify pop
+    alg (Dir name children) = Const $ do -- mkdir
       path <- List.intercalate "/" . reverse . (name:) <$> get
       liftIO $ Dir.createDirectory path
       modify (push name)
-      _ <- traverse id children
+      traverse_ getConst children
       modify pop
+
+    alg x = error "wat" -- should never occur
+
 
     push x xs = x:xs
     pop (_:xs)  = xs
     pop []    = []
 
 -- | Lazily read some directory tree into memory
+-- NOTE: this needs to be a futu so file steps can read the full file into memory instead of recursing into filepointers
 readTree
   :: forall m
    . MonadIO m
@@ -72,30 +63,38 @@ readTree
   -- tree structure _without_ pointer annotation
   -- type-level guarantee that there is no hash identified
   -- entity indirection allowed here
-  -> Fix (m :+ (Named :+ Tree))
-readTree = ana alg
+  -> Term (FC.Compose m :++ HGit) DirTag
+readTree = sFutu alg . Const
   where
-    alg :: CoAlgebra (m :+ Named :+ Tree) FilePath
-    alg path = C $ do
-      -- todo: validation of input file path, ideally some 'probefile :: FilePath -> IO FileType' widget
-      isFile <- liftIO $ Dir.doesFileExist path
-      if isFile
-        then do
-          fc <- liftIO $ readFile path
-          pure . C . (justTheName path,) $ Leaf fc
-        else do
-          isDir <- liftIO $ Dir.doesDirectoryExist path
-          if isDir
-            then fmap ( C
-                      . (justTheName path,)
-                      . Node
-                      . fmap (\x -> path ++ "/" ++ x)
+    alg :: SCVCoalg (FC.Compose m :++ HGit) (Const FilePath)
+    alg (Const path) = readTree' sing path
+
+readTree'
+  :: forall x h m . MonadIO m => Sing x -> FilePath
+  -> (FC.Compose m :++ HGit) (Cxt Hole (FC.Compose m :++ HGit) (Const FilePath)) x
+readTree' s path = HC $ FC.Compose $ case s of
+      SDirTag -> do
+        isFile <- liftIO $ Dir.doesFileExist path
+        if isFile
+          then do
+            -- first pass: file with direct leaf as child holding full file contents, can fuck around with blocks later
+            contents <- liftIO $ readFile path
+            pure $ File (justTheName path) $ Term $ HC $ FC.Compose $ pure $ Blob contents
+          else do
+            isDir <- liftIO $ Dir.doesDirectoryExist path
+            if isDir
+              then do
+                dirContents <- liftIO $ Dir.getDirectoryContents path
+                let dirContents'
+                      = fmap (\x -> path ++ "/" ++ x)
                       . filter (/= ".")
                       . filter (/= "..")
-                      )
-               . liftIO
-               $ Dir.getDirectoryContents path
-            else fail ("file read error: unexpected type at " ++ path)
+                      $ dirContents
+                pure $ Dir (justTheName path) (fmap (Hole . Const) dirContents')
+              else fail ("file read error: unexpected type at " ++ path)
 
-    justTheName :: String -> String -- hacky hax but it works - take just the name given a file path
-    justTheName = reverse . takeWhile (/= '/') . reverse
+      -- should never happen. never ever ever. let's see how accurate that claim ends up being.
+      x -> error "hey remember when you strongly asserted this would never happen? lol guess what"
+
+justTheName :: FilePath -> String -- hacky hax but it works - take just the name given a file path
+justTheName = reverse . takeWhile (/= '/') . reverse

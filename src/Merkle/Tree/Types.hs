@@ -17,16 +17,11 @@ import           Util.MyCompose
 import qualified Util.HRecursionSchemes as C -- YOLO 420 SHINY AND CHROME
 import           Util.HRecursionSchemes ((:->)) -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
-
 import           Data.Singletons.TH
 import           Data.Singletons
-
-
 import           Data.Kind (Type)
-
 import           Control.Monad.Except
 import           Data.List (intercalate)
-
 import           Util.MyCompose
 import           Data.Functor.Const
 import qualified Data.Functor.Compose as FC
@@ -34,13 +29,9 @@ import qualified Data.Functor.Compose as FC
 type Name = String
 type FileChunk = String
 
-
 $(singletons [d|
   data HGitTag = FileChunkTag | DirTag | CommitTag | MetaTag
   |])
-
-magic :: forall (x :: HGitTag) . SingI x => Sing x
-magic = undefined
 
 data HGit a i where
   -- file chunk bits
