@@ -20,14 +20,35 @@ executable mdc
             , ScopedTypeVariables
             , TupleSections
             , TypeFamilies
+            , DataKinds
+            , DefaultSignatures
+            , EmptyCase
+            , ExistentialQuantification
+            , FlexibleContexts
+            , FlexibleInstances
+            , GADTs
+            , InstanceSigs
+            , KindSignatures
+            , NoStarIsType
+            , PolyKinds
+            , RankNTypes
+            , ScopedTypeVariables
+            , StandaloneDeriving
+            , TemplateHaskell
+            , TypeApplications
+            , TypeFamilies
+            , TypeOperators
+            , UndecidableInstances
 
   ghc-options: -Wall 
              , -Werror
+             , -Wno-redundant-constraints
 
   build-depends: base >=4.8
                , bytestring
                , aeson
                , containers
+               , constraints
                , compdata
                , directory
                , free
@@ -39,6 +60,7 @@ executable mdc
                , random
                , recursion-schemes
                , semigroups
+               , singletons
                , text
                , transformers
   hs-source-dirs:      src

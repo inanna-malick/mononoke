@@ -4,7 +4,7 @@ module Util.MyCompose where
 
 
 import Control.Applicative
-import qualified Data.Comp.Multi.HFunctor as C
+import qualified Util.HRecursionSchemes as C
 
 data (f :+ g) a = C (f (g a))
 infixr 7 :+
@@ -53,3 +53,6 @@ getHCompose (HC x) = x
 
 instance (C.HFunctor f, C.HFunctor g) => C.HFunctor ((:++) f g) where
   hfmap f (HC x) = HC $ C.hfmap (C.hfmap f) x
+
+instance (C.SHFunctor f, C.SHFunctor g) => C.SHFunctor ((:++) f g) where
+  shfmap f (HC x) = HC $ C.shfmap (C.shfmap f) x
