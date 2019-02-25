@@ -1,11 +1,11 @@
 module Errors (MerkleTreeLookupError(..), FileReadError(..))where
 
 --------------------------------------------
-import           Merkle.Types (Pointer(..))
+import           Merkle.Tree.Types (HashPointer(..))
 --------------------------------------------
 
 data MerkleTreeLookupError
-  = EntityNotFoundInStore Pointer
+  = EntityNotFoundInStore HashPointer
   deriving Show
 
 data FileReadError

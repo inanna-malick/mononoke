@@ -3,47 +3,53 @@ module Merkle.Store.Deref where
 --------------------------------------------
 import           Control.Monad.Free (Free(..))
 import           Util.MyCompose
-import           Util.RecursionSchemes
-import           Merkle.Types
+import           Util.HRecursionSchemes
 import           Merkle.Store
+import           Merkle.Tree.Types
 --------------------------------------------
+import qualified Data.Functor.Compose as FC
+import           Data.Functor.Const
+import           Data.Singletons
 
 
--- | Greedily deref a merkle tree
--- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
-strictDeref
-  :: forall m x
-   . Monad m
-  => Traversable x
-  => Store m x
-  -> Pointer
-  -> m $ Fix $ WithHash :+ x
-strictDeref store = cata alg . lazyDeref store
-  where
-    alg :: Algebra (WithHash :+ m :+ x)
-                   (m $ Fix (WithHash :+ x))
-    alg (C (p, C e)) = e >>= traverse id >>= pure . Fix . C . (p,)
+-- -- | Greedily deref a merkle tree
+-- -- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
+-- strictDeref
+--   :: forall m x
+--    . Monad m
+--   => Traversable x
+--   => Store m x
+--   -> Pointer
+--   -> m $ Fix $ WithHash :+ x
+-- strictDeref store = cata alg . lazyDeref store
+--   where
+--     alg :: Algebra (WithHash :+ m :+ x)
+--                    (m $ Fix (WithHash :+ x))
+--     alg (C (p, C e)) = e >>= traverse id >>= pure . Fix . C . (p,)
 
 
 -- | construct a potentially-infinite tree-shaped stream of further values constructed by
 -- deref-ing hash pointers using a hash-addressed store. Allows for store returning multiple
 -- layers of tree structure in a single response (to enable future optimizations) via 'CoAttr'
+-- TODO: update dox for gadt way
+
 lazyDeref
-  :: forall m x
+  :: forall i m
    . Monad m
-  => Functor x
-  => Store m x
-  -> Pointer
-  -> Fix $ WithHash :+ m :+ x
-lazyDeref store = futu alg
+  => SingI i
+  => HFStore m
+  -> HashPointer
+  -> Term (FC.Compose (LazyHashTagged m) :++ HGit) i
+lazyDeref deref = sFutu alg . Const
   where
-    alg :: CVCoAlgebra (WithHash :+ m :+ x)
-                       (Pointer)
-    alg p = C (p, C $ handleCMTL <$> sDeref store p)
+    alg :: SCVCoalg
+             (FC.Compose (LazyHashTagged m) :++ HGit)
+             (Const HashPointer)
+    alg (Const p) = HC $ FC.Compose $ C (p, hfmap helper <$> deref p)
 
-    handleCMTL x
-      = fmap (handleMTL) x
 
-    handleMTL (Fix (C (p, C (Just e)))) = Free $ C (p, C . pure $ handleCMTL e)
-    handleMTL (Fix (C (p, C Nothing))) = Pure p
-
+    helper :: Term (FC.Compose HashIndirect :++ HGit)
+                 :-> Context (FC.Compose (LazyHashTagged m) :++ HGit) (Const HashPointer)
+    helper (Term (HC (FC.Compose (C (p, Nothing))))) = Hole $ Const p
+    helper (Term (HC (FC.Compose (C (p, Just x))))) =
+      Term $ HC (FC.Compose (C (p, pure $ hfmap helper x)))

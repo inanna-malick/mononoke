@@ -5,48 +5,107 @@ module Merkle.Tree.Encoding where
 
 --------------------------------------------
 import           Data.Aeson
+import           Data.Aeson.Types (Parser(..))
 import           Data.Hashable (Hashable(..))
 import           Data.Text
 --------------------------------------------
-import           Merkle.Types (Pointer(..))
 import           Merkle.Tree.Types
 import           Util.MyCompose
 --------------------------------------------
 
+import           Data.Singletons
 import qualified Util.HRecursionSchemes as C -- YOLO 420 SHINY AND CHROME
 import           Util.HRecursionSchemes ((:->)) -- YOLO 420 SHINY AND CHROME
 import Data.Functor.Const
 import Data.Functor.Compose (Compose(..))
--- import qualified Data.Comp.Multi.HFunctor as C
--- import qualified Data.Comp.Multi.Term as C
-
--- | merkle tree in which the top layer is known to be substantiated and
---   all sub-nodes are represented using hash addressed pointers
---   newtype and not type alias so we can have clean typeclass instances
--- newtype ShallowMerkleTreeLayer = SMTL { unSMTL :: (Named :+ Tree) Pointer
 
 
+instance SingI x => FromJSON (HGit (Const HashPointer) x) where
+  parseJSON = sdecode sing
 
--- todo - use existential quant trick to pare this down to just parsing a blob or aeson value
--- IDEA: have as Aeson.Value -> HGit xyz i - anyway, isomorphic to current, can do later
--- class FetchHashPointer (x :: HGitTags) where
---   fetch :: HashPointer -> HGit (Const HashPointer) x
+sdecode :: Sing x -> Value -> Parser $ HGit (Const HashPointer) x
+sdecode = \case
+  SFileChunkTag -> withObject "HGit (Const HashPointer) FileChunkTag" $ \v -> do
+        typ  <- v .: "type"
+        case typ of
+          "blobtree" -> do
+              children <- v .: "children"
+              pure $ BlobTree $ fmap Const children
+          "blob" -> do
+              contents <- v .: "contents"
+              pure $ Blob contents
+          x -> fail $ "require [blob, blobtree] type" ++ x
 
--- instance FetchHashPointer DirTag       where fetch _p = undefined
--- instance FetchHashPointer FileChunkTag where fetch _p = undefined
--- instance FetchHashPointer MetaTag      where fetch _p = undefined
--- instance FetchHashPointer CommitTag    where fetch _p = undefined
+  SDirTag       -> withObject "HGit (Const HashPointer) DirTag" $ \v -> do
+        name <- v .: "name"
+        typ  <- v .: "type"
+        case typ of
+          "dir" -> do
+              children <- v .: "children"
+              pure $ Dir name $ fmap Const children
+          "file" -> do
+              body <- v .: "body"
+              pure $ File name $ Const body
+          x -> fail $ "require [file, dir] type" ++ x
 
-magic2 :: SingHGT x -> HashPointer -> HGit (Const HashPointer) x
-magic2 s _p = case s of
-  SFileChunkTag -> (undefined :: HGit (Const HashPointer) FileChunkTag)
-  SDirTag       -> (undefined :: HGit (Const HashPointer) DirTag)
-  SCommitTag    -> (undefined :: HGit (Const HashPointer) CommitTag)
-  SMetaTag      -> (undefined :: HGit (Const HashPointer) MetaTag)
+  SCommitTag    -> withObject "HGit (Const HashPointer) CommitTag" $ \v -> do
+        typ  <- v .: "type"
+        case typ of
+          "nullcommit" -> pure NullCommit
+          "commit" -> do
+              name <- v .: "name"
+              root <- v .: "root"
+              prev <- v .: "prev"
+              pure $ Commit name (Const root) (Const prev)
+          x -> fail $ "require [commit, nullcommit] type" ++ x
 
-fakeStore :: HFStore IO
-fakeStore s p = pure . C.hfmap f $ magic2 s p
-  where f (Const p) = C.Term $ HC $ Compose $ C (p, Nothing)
+  SMetaTag      -> withObject "HGit (Const HashPointer) MetaTag" $ \v -> do
+        typ  <- v .: "type"
+        case typ of
+          "branch" -> do
+              name <- v .: "name"
+              commit <- v .: "commit"
+              pure $ Branch name (Const commit)
+          x -> fail $ "require [branch] type" ++ x
+
+
+encode :: HGit (Const HashPointer) x -> Value
+encode = \case
+    Blob contents ->
+        object [ "type" .= ("blob" :: Text)
+               , "contents" .= pack contents
+               ]
+    BlobTree children ->
+        object [ "type" .= ("blobtree" :: Text)
+               , "children" .= fmap getConst children
+               ]
+
+    File name contents ->
+        object [ "type" .= ("file" :: Text)
+               , "name" .= pack name
+               , "contents" .= getConst contents
+               ]
+    Dir name children ->
+        object [ "type" .= ("dir" :: Text)
+               , "name" .= pack name
+               , "children" .= fmap getConst children
+               ]
+
+    Commit name root prev ->
+        object [ "type" .= ("commit" :: Text)
+               , "name" .= pack name
+               , "root" .= getConst root
+               , "prev" .= getConst prev
+               ]
+    NullCommit ->
+        object [ "type" .= ("nullcommit" :: Text)
+               ]
+
+    Branch name commit ->
+        object [ "type" .= ("branch" :: Text)
+               , "name" .= pack name
+               , "commit" .= getConst commit
+               ]
 
 -- instance Hashable ShallowMerkleTreeLayer where
 --   hashWithSalt s (SMTL (C (n, (Leaf contents))))
@@ -66,16 +125,3 @@ fakeStore s p = pure . C.hfmap f $ magic2 s p
 --                , "name" .= pack name
 --                , "children" .= toJSON (fmap unPointer pointers)
 --                ]
-
--- instance FromJSON ShallowMerkleTreeLayer where
---     parseJSON = withObject "ShallowMerkleTreeLayer" $ \v -> do
---         name <- v .: "name"
---         typ  <- v .: "type"
---         case typ of
---           "node" -> do
---               children <- fmap Pointer <$> v .: "children"
---               pure . SMTL $ C (name, Node children)
---           "leaf" -> do
---               body <- v .: "body"
---               pure . SMTL $ C (name, Leaf body)
---           x -> fail $ "unsupported node type " ++ x
