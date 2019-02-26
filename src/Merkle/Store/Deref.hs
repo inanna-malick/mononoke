@@ -1,7 +1,6 @@
 module Merkle.Store.Deref where
 
 --------------------------------------------
-import           Control.Monad.Free (Free(..))
 import           Util.MyCompose
 import           Util.HRecursionSchemes
 import           Merkle.Store
@@ -34,22 +33,24 @@ import           Data.Singletons
 -- TODO: update dox for gadt way
 
 lazyDeref
-  :: forall i m
+  :: forall i m p
    . Monad m
+  => SHFunctor p
+  => HFunctor p
   => SingI i
-  => HFStore m
+  => Store m p
   -> HashPointer
-  -> Term (FC.Compose (LazyHashTagged m) :++ HGit) i
-lazyDeref deref = sFutu alg . Const
+  -> Term (FC.Compose (LazyHashTagged m) :++ p) i
+lazyDeref store = sFutu alg . Const
   where
     alg :: SCVCoalg
-             (FC.Compose (LazyHashTagged m) :++ HGit)
+             (FC.Compose (LazyHashTagged m) :++ p)
              (Const HashPointer)
-    alg (Const p) = HC $ FC.Compose $ C (p, hfmap helper <$> deref p)
+    alg (Const p) = HC $ FC.Compose $ C (p, hfmap helper <$> sDeref store p)
 
 
-    helper :: Term (FC.Compose HashIndirect :++ HGit)
-                 :-> Context (FC.Compose (LazyHashTagged m) :++ HGit) (Const HashPointer)
+    helper :: Term (FC.Compose HashIndirect :++ p)
+                 :-> Context (FC.Compose (LazyHashTagged m) :++ p) (Const HashPointer)
     helper (Term (HC (FC.Compose (C (p, Nothing))))) = Hole $ Const p
     helper (Term (HC (FC.Compose (C (p, Just x))))) =
       Term $ HC (FC.Compose (C (p, pure $ hfmap helper x)))

@@ -13,7 +13,7 @@ import           Data.Singletons
 import Data.Functor.Compose -- todo standardize on my more concise repr here too
 import Data.Kind (Type)
 
-
+type NatM m f g = forall i. f i -> m (g i)
 
 type f :-> g = forall (i :: k) . f i -> g i
 type f :=> a = forall (i :: k) . f i -> a

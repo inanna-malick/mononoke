@@ -11,20 +11,14 @@
 module Merkle.Tree.Types where
 
 --------------------------------------------
-import           Data.Functor.Foldable
+import           Data.Functor.Const
+import qualified Data.Functor.Compose as FC
+import           Data.List (intercalate)
+import           Data.Singletons.TH
 --------------------------------------------
 import           Util.MyCompose
 import qualified Util.HRecursionSchemes as C -- YOLO 420 SHINY AND CHROME
-import           Util.HRecursionSchemes ((:->)) -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
-import           Data.Singletons.TH
-import           Data.Singletons
-import           Data.Kind (Type)
-import           Control.Monad.Except
-import           Data.List (intercalate)
-import           Util.MyCompose
-import           Data.Functor.Const
-import qualified Data.Functor.Compose as FC
 
 type Name = String
 type FileChunk = String
@@ -35,20 +29,19 @@ $(singletons [d|
 
 data HGit a i where
   -- file chunk bits
-  Blob :: FileChunk -> HGit a FileChunkTag
-  BlobTree :: [a FileChunkTag] -> HGit a FileChunkTag
+  Blob :: FileChunk -> HGit a 'FileChunkTag
+  BlobTree :: [a 'FileChunkTag] -> HGit a 'FileChunkTag
 
   -- dir and file bits
-  File :: Name -> a FileChunkTag -> HGit a DirTag
-  Dir :: Name -> [a DirTag] -> HGit a DirTag
+  File :: Name -> a 'FileChunkTag -> HGit a 'DirTag
+  Dir :: Name -> [a 'DirTag] -> HGit a 'DirTag
 
   -- commits
-  Commit :: Name -> a DirTag -> a CommitTag -> HGit a CommitTag
-  NullCommit :: HGit a CommitTag
+  Commit :: Name -> a 'DirTag -> a 'CommitTag -> HGit a 'CommitTag
+  NullCommit :: HGit a 'CommitTag
 
   -- branches
-  Branch :: Name -> a CommitTag -> HGit a MetaTag
-
+  Branch :: Name -> a 'CommitTag -> HGit a 'MetaTag
 
 instance C.HFunctor HGit where
   hfmap _ (Blob fc)        = Blob fc
@@ -56,7 +49,7 @@ instance C.HFunctor HGit where
   hfmap f (File n fc)      = File n $ f fc
   hfmap f (Dir n dcs)      = Dir n $ fmap f dcs
   hfmap f (Commit n rc nc) = Commit n (f rc) (f nc)
-  hfmap f  NullCommit      = NullCommit
+  hfmap _  NullCommit      = NullCommit
   hfmap f (Branch n bc)    = Branch n $ f bc
 
 instance C.SHFunctor HGit where
@@ -65,11 +58,11 @@ instance C.SHFunctor HGit where
   shfmap f (File n fc)      = File n $ f fc
   shfmap f (Dir n dcs)      = Dir n $ fmap f dcs
   shfmap f (Commit n rc nc) = Commit n (f rc) (f nc)
-  shfmap f  NullCommit      = NullCommit
+  shfmap _  NullCommit      = NullCommit
   shfmap f (Branch n bc)    = Branch n $ f bc
 
-type MyHGit  = C.Term HGit DirTag
-type MyBlobTree = C.Term HGit FileChunkTag
+type MyHGit  = C.Term HGit 'DirTag
+type MyBlobTree = C.Term HGit 'FileChunkTag
 
 blob :: FileChunk -> MyBlobTree
 blob =
@@ -99,6 +92,37 @@ printCata = getConst . C.cata alg
     alg (NullCommit) = Const $ "nullcommit"
     alg (Branch n x) = Const $ "branch(" ++ n ++ "):" ++ getConst x
 
+printCataM :: forall i . C.Term (FC.Compose IO :++ HGit) i -> IO ()
+printCataM = getConst . C.cata alg
+  where
+    alg :: C.Alg (FC.Compose IO :++ HGit) (Const $ IO ())
+    alg (HC (FC.Compose m)) = Const $ do
+        m' <- m
+        case m' of
+          (Blob x)       -> putStrLn $ "blob:" ++ x
+          (BlobTree xs)  -> do
+            putStrLn $ "blobTree: ["
+            _ <- traverse getConst xs
+            putStrLn "]"
+          (File n x) -> do
+            putStrLn $ "file(" ++ n ++ "): "
+            getConst x
+          (Dir n xs) -> do
+            putStrLn $ "dir(" ++ n ++ "): ["
+            _ <- traverse getConst xs
+            pure ()
+          (Commit n root prev) -> do
+            putStrLn $ "commit(" ++ n ++ "): "
+            getConst root
+            putStrLn " // "
+            getConst prev
+          (NullCommit) -> putStrLn "nullcommit"
+          (Branch n x) -> do
+            putStrLn $ "branch(" ++ n ++ "):"
+            getConst x
+
+
+
 printCata''
   :: forall i
    . C.Term (FC.Compose ((,) HashPointer) :++ HGit) i
@@ -117,7 +141,7 @@ printCata'' = getConst . C.cata alg
     alg (HC (FC.Compose (p, Commit n root prev)))
       = Const $ "commit[#" ++ show p ++ "](" ++ n ++ "): " ++ getConst root ++" // " ++ getConst prev
     alg (HC (FC.Compose (p, NullCommit)))
-      = Const $ "nullcommit"
+      = Const $ "nullcommit[" ++ show p ++ "]"
     alg (HC (FC.Compose (p, Branch n x)))
       = Const $ "branch[#" ++ show p ++ "](" ++ n ++ "): " ++ getConst x
 

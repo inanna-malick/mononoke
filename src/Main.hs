@@ -4,15 +4,12 @@ module Main where
 import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 --------------------------------------------
-import           Commands
 import           Compare (compareMerkleTrees)
 import           FileIO (writeTree, readTree)
-import           Merkle.Types
 import           Merkle.Tree.Types
 import           Util.MyCompose
 import           Util.Util (mapErrUtil)
 import           Util.RecursionSchemes
-import           Search
 import           Merkle.Store
 import           Merkle.Store.Deref
 import           Merkle.Store.FileSystem

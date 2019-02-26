@@ -1,12 +1,12 @@
 module Diff.Types where
 
 --------------------------------------------
-import           Merkle.Tree.Types (Name)
+import           Merkle.Tree.Types (Name, HashPointer)
 --------------------------------------------
 
 type FileBody = String
 
-data Diff = LeafModified  (Name, FileBody, FileBody)
+data Diff = LeafModified  (Name, HashPointer, HashPointer)
           | FileReplacedWithDir Name
           | DirReplacedWithFile Name
           | EntityAddedToDir
