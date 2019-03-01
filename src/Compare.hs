@@ -14,9 +14,9 @@ import           Diff.Types
 import           Util.These (These(..), mapCompare)
 import           Util.MyCompose
 import           Util.HRecursionSchemes
-import           Merkle.Tree.Types
-import           Merkle.Store (Store)
-import           Merkle.Store.Deref (lazyDeref)
+import           HGit.Types
+import           HGit.Store (Store)
+import           HGit.Store.Deref (lazyDeref)
 --------------------------------------------
 import qualified Data.Functor.Compose as FC
 

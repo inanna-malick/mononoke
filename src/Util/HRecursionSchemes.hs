@@ -24,6 +24,21 @@ class HFunctor (h :: (k -> Type) -> k -> Type) where
 
 instance (Functor f) => HFunctor (Compose f) where hfmap f (Compose xs) = Compose (fmap f xs)
 
+-- incomplete (missing foldable constraint), literally just the bit I need for cataM
+class HTraversable t where
+    -- hmapM :: (Monad m) => NatM m a b -> NatM m (t a) (t b)
+    hmapM :: (Monad m)
+          => (forall i .    f  i -> m (   g  i))
+          -> (forall i . (t f) i -> m ((t g) i))
+
+type AlgM m f e = NatM m (f e) e
+
+-- | This is a monadic version of 'cata'.
+cataM :: forall f m a. (HTraversable f, Monad m) =>
+         AlgM m f a -> NatM m (Term f) a
+cataM alg = run
+    where run :: NatM m (Term f) a
+          run (Term x) = alg =<< hmapM run x
 
 -- | This data type represents contexts over a signature. Contexts are
 -- terms containing zero or more holes. The first type parameter is

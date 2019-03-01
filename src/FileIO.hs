@@ -11,7 +11,7 @@ import qualified System.Directory as Dir
 --------------------------------------------
 import           Util.MyCompose
 import           Util.HRecursionSchemes
-import           Merkle.Tree.Types
+import           HGit.Types
 --------------------------------------------
 import qualified Data.Functor.Compose as FC
 import           Data.Functor.Const

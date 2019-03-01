@@ -20,6 +20,13 @@ import           Merkle.Store.FileSystem
 -- add-all: commit message, adds everything in current directory via new commit
 -- checkout: reset current directory to branch - only if no changes (determined by reading current dir and doing diff)
 -- idea: --lazy flag, just touches all files but only grabs those you request
+--       note: this kinda breaks diffing against current directory, BUT I can have my own format:
+--             [filename].hgit.lazy.file OR [dirname].hgit.lazy.dir
+--             could then just disallow this postfix on ingestion to avoid possibility of overlap
+--             anyway, then just have that be read as diff of subtree and include lazyness in file
+--             read... fuck, this is nontrivial. I will do this as part of _V2_ - seriously, nontrivial..
+--             that said, it's a hecking good idea.. w/o it no real need for the search path thing either tbh..
+--             ok, no worries - branch/checkout/etc is PERFECT for demo v1 thingy, next can be w/e lol
 -- idea: that then requires checkout w/ file path (would checkout file and all subdirs and mk same)
 --       could just have optional 'only this path if it exists' string and run off that
 --       type idea: IO $ Either FileDoesntExistError $ IO ()
@@ -30,6 +37,11 @@ import           Merkle.Store.FileSystem
 --       note: --lazy and --match can be applied to the same traversal via the same code
 -- need branch command to create new branch
 -- might as well have status command - diff current w/e and etc
+
+
+-- NOTE: hgit is a nice pun name (unintentional), includes features of both hg and git comma lmao
+
+-- NOTE: might as well just keep popping up the directory tree to find that hgit file w/ branch mappings anyway, lol - (or .hgit/branches, with .hgit/store as the store (removes need for flag))
 
 -- requires: xyz
 -- new work: .git file and store (oh hey, I can make the store directory part of the 'repo' and do everything at that level) -let's say it's also aeson of this data structure:
