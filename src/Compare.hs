@@ -64,16 +64,6 @@ compareMerkleTrees' t1 t2
                (f (Term (FC.Compose (LazyHashTagged m) :++ f)))
     derefLayer (Term (HC (FC.Compose (C (_p, m))))) = m
 
-    pointer :: forall f i. Term (FC.Compose (LazyHashTagged m) :++ f) i -> HashPointer
-    pointer (Term (HC (FC.Compose (C (p, _m))))) = p
-
-    pointer' :: forall f . Term (FC.Compose (LazyHashTagged m) :++ f) :-> Const HashPointer
-    pointer' = Const . pointer
-
-    withName :: forall meh. HGit meh 'DirTag -> Name
-    withName (File n _) = n
-    withName (Dir  n _) = n
-
     cmp :: HGit (Const HashPointer) 'DirTag
         -> HGit (Const HashPointer) 'DirTag
         -> Bool
@@ -86,18 +76,18 @@ compareMerkleTrees' t1 t2
       -> HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
       -> m [Diff]
     compareDerefed entity1 entity2
-      | withName entity1 /= withName entity2 = do
+      | dname entity1 /= dname entity2 = do
           -- flatten out sub-entities to only contain pointers then check equality
           if (hfmap pointer' entity1 `cmp` hfmap pointer' entity2)
             then
-              pure [EntityRenamed (withName entity1) (withName entity2)]
+              pure [EntityRenamed (dname entity1) (dname entity2)]
             else
-              pure [EntityDeleted $ withName entity1, EntityCreated $ withName entity2]
+              pure [EntityDeleted $ dname entity1, EntityCreated $ dname entity2]
       | otherwise = do -- no name mismatch, but known hash mismatch - must explore further
           -- expansion for the case in which neither node is derefed or explored
           case (entity1, entity2) of
             (File _ fc1, File _ fc2)
-              | pointer fc1 /= pointer fc2   -> pure [LeafModified (withName entity1, pointer fc1, pointer fc2)]
+              | pointer fc1 /= pointer fc2   -> pure [LeafModified (dname entity1, pointer fc1, pointer fc2)]
               -- ASSERTION we can only get here if there's a hash diff, but
               --            if we have a hash diff then the file contents should differ.
               -- NOTE: this indicates a situation where two hashes are /= but the hash-addressed
@@ -106,8 +96,8 @@ compareMerkleTrees' t1 t2
               --       would require some additional error type that I don't want to think about
               --       right now
               | otherwise    -> pure []
-            (Dir _ _, File _ _) -> pure [DirReplacedWithFile $ withName entity1]
-            (File _ _, Dir _ _) -> pure [FileReplacedWithDir $ withName entity1]
+            (Dir _ _, File _ _) -> pure [DirReplacedWithFile $ dname entity1]
+            (File _ _, Dir _ _) -> pure [FileReplacedWithDir $ dname entity1]
             -- most of the complexity of this function is here - this
             -- is where the children of two nodes being diffed are compared.
             -- this requires derefing all nodes for which there is a hash
@@ -126,7 +116,7 @@ compareMerkleTrees' t1 t2
 
               let mkByNameMap :: [HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag]
                               -> HashMap Name $ HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
-                  mkByNameMap = Map.fromList . fmap (\e -> (withName e, e))
+                  mkByNameMap = Map.fromList . fmap (\e -> (dname e, e))
                   resolveMapDiff
                     (This (n, _)) = pure [EntityDeleted n]
                   resolveMapDiff

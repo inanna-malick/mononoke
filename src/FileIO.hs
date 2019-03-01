@@ -21,7 +21,7 @@ import           Data.Singletons
 writeTree
   :: MonadIO m
   => FilePath
-  -> Term HGit DirTag
+  -> Term HGit 'DirTag
   -> m ()
 writeTree outdir tree = do
   liftIO $ evalStateT (getConst $ sCata alg tree) [outdir]
@@ -47,8 +47,8 @@ writeTree outdir tree = do
       traverse_ getConst children
       modify pop
 
-    alg x = error "wat" -- should never occur
-
+    -- unreachable
+    alg _ = undefined
 
     push x xs = x:xs
     pop (_:xs)  = xs
@@ -63,14 +63,14 @@ readTree
   -- tree structure _without_ pointer annotation
   -- type-level guarantee that there is no hash identified
   -- entity indirection allowed here
-  -> Term (FC.Compose m :++ HGit) DirTag
+  -> Term (FC.Compose m :++ HGit) 'DirTag
 readTree = sFutu alg . Const
   where
     alg :: SCVCoalg (FC.Compose m :++ HGit) (Const FilePath)
     alg (Const path) = readTree' sing path
 
 readTree'
-  :: forall x h m . MonadIO m => Sing x -> FilePath
+  :: forall x m . MonadIO m => Sing x -> FilePath
   -> (FC.Compose m :++ HGit) (Cxt Hole (FC.Compose m :++ HGit) (Const FilePath)) x
 readTree' s path = HC $ FC.Compose $ case s of
       SDirTag -> do
@@ -93,8 +93,8 @@ readTree' s path = HC $ FC.Compose $ case s of
                 pure $ Dir (justTheName path) (fmap (Hole . Const) dirContents')
               else fail ("file read error: unexpected type at " ++ path)
 
-      -- should never happen. never ever ever. let's see how accurate that claim ends up being.
-      x -> error "hey remember when you strongly asserted this would never happen? lol guess what"
+      -- unreachable
+      _ -> undefined
 
 justTheName :: FilePath -> String -- hacky hax but it works - take just the name given a file path
 justTheName = reverse . takeWhile (/= '/') . reverse

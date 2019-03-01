@@ -59,7 +59,7 @@ executable mdc
                , optparse-applicative
                , random
                , recursion-schemes
-               , semigroups
+               , safe-exceptions
                , singletons
                , text
                , transformers

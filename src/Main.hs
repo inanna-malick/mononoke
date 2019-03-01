@@ -15,98 +15,31 @@ import           Merkle.Store.Deref
 import           Merkle.Store.FileSystem
 --------------------------------------------
 
+-- TODO: new app plan - minimum required for cool demo, basically - idea is diffing branches, checking them out, etc
+-- init: zero args, creates branch 'master'
+-- add-all: commit message, adds everything in current directory via new commit
+-- checkout: reset current directory to branch - only if no changes (determined by reading current dir and doing diff)
+-- idea: --lazy flag, just touches all files but only grabs those you request
+-- idea: that then requires checkout w/ file path (would checkout file and all subdirs and mk same)
+--       could just have optional 'only this path if it exists' string and run off that
+--       type idea: IO $ Either FileDoesntExistError $ IO ()
+--       can then build up actions _but_ only run them (eg intermediate mkdir calls)
+--       if no named file is missing
+--       this allows for tree traversal and not just single file, have input be list of file parts
+--       and use state (as elsewhere) to manage stack - can use * at any level to select all files or dirs and run next thing in list, if * is end of list is treated as Nothing (match all)
+--       note: --lazy and --match can be applied to the same traversal via the same code
+-- need branch command to create new branch
+-- might as well have status command - diff current w/e and etc
+
+-- requires: xyz
+-- new work: .git file and store (oh hey, I can make the store directory part of the 'repo' and do everything at that level) -let's say it's also aeson of this data structure:
+ -- todo import and use map? or just object w/ mappings via alias?
+-- eg: data RepoData = RepoData [(String, HashPointer)] (string to int map, tolerable usage of json)
+-- this is essentially the hg approach
+
+-- note: can just throw on error for conciseness in store pointer failure case
+--       (but still make everything polymorphic wrt m for later if I decide otherwise)
+-- DONE: using MonadThrow, etc. Nice.
+
 main :: IO ()
-main = run =<< parse
-
-run :: MerkleDiffOpts -> IO ()
-run (MerkleDiffOpts storeDir (Diff before after)) = do
-  let store = fsStore storeDir
-  res <- runExceptT $ compareMerkleTrees store before after
-  print $ fmap fst res
-run (MerkleDiffOpts storeDir (Get p mfp)) = do
-  let store = fsStore storeDir
-  fp <- maybe (createTmpDir "merkle_get") pure mfp
-  _res <- runExceptT $ strictlyDerefAndWrite store fp p
-  putStrLn "done getting!"
-  --print res
-run (MerkleDiffOpts storeDir (Find p query)) = do
-  let store = fsStore storeDir
-  _ <- undefined p query store
-  putStrLn "done putting!"
-  --print res
-run (MerkleDiffOpts storeDir (Put fp)) = do
-  let store = fsStore storeDir
-  _res <- runExceptT $ strictlyReadAndUpload store fp
-  putStrLn "done putting!"
-  --print res
-run (MerkleDiffOpts storeDir Demo) = do -- run the old main method used for testing
-  res' <- runExceptT $ do
-    let store = fsStore storeDir
-
-    -- forget structure of merkle trees and retain only a pointer to the top level
-    let forgetStructure = pointer
-
-    -- read some merkle trees into memory (and into the store) and then forget all but the top pointer
-    before <- mapErrUtil show $ forgetStructure <$> strictlyReadAndUpload store "examples/before/node1"
-    after1 <- mapErrUtil show $ forgetStructure <$> strictlyReadAndUpload store "examples/after1/node1"
-    after2 <- mapErrUtil show $ forgetStructure <$> strictlyReadAndUpload store "examples/after2/node1"
-    after3 <- mapErrUtil show $ forgetStructure <$> strictlyReadAndUpload store "examples/after3/node2"
-
-    mapErrUtil show $ do
-      let s (a,b) = (cata s' a, cata s' b)
-          -- todo pretty printer here
-          s' (C (p, C Nothing)) = show (unPointer p) ++ ":unexpanded"
-          s' (C (p, C (Just (C (n, t))))) = show (unPointer p) ++ ":(" ++ n ++"):" ++ show t
-      liftIO $ putStrLn "comparing before to after1"
-      compareMerkleTrees store before after1 >>= liftIO . print . fmap s
-
-      liftIO $ putStrLn "comparing before to after2"
-      compareMerkleTrees store before after2 >>= liftIO . print . fmap s
-
-      liftIO $ putStrLn "comparing before to after3"
-      compareMerkleTrees store before after3 >>= liftIO . print . fmap s
-
-
-    liftIO $ putStrLn "streaming search"
-    mapErrUtil show $ derefAndSearch store "ba"  after1
-    liftIO $ putStrLn "end streaming search"
-
-    mapErrUtil show $ liftIO (createTmpDir "output-example") >>= flip (strictlyDerefAndWrite store) after3
-
-  print res'
-
--- | Write tree to file path (using pointer)
-derefAndSearch
-  :: MonadIO m
-  => Store m (Named :+ Tree)
-  -> String
-  -> Pointer
-  -> m ()
-derefAndSearch store query p = consume (liftIO . putStrLn) lazySearch
-  where
-    lazyDerefed = cata (Fix . snd . getCompose) -- strip hash annotations
-                $ lazyDeref store p
-    lazySearch  = search query lazyDerefed
-
--- | Write tree to file path (using pointer)
-strictlyDerefAndWrite
-  :: MonadIO m
-  => Store m (Named :+ Tree)
-  -> FilePath
-  -> Pointer
-  -> m ()
-strictlyDerefAndWrite store outdir p = do
-  derefed <- cata (Fix . snd . getCompose) -- strip hash annotations
-         <$> strictDeref store p
-  writeTree outdir derefed
-
--- | Read tree from the file system and upload to a store
-strictlyReadAndUpload
-  :: MonadIO m
-  => Store m (Named :+ Tree)
-  -> FilePath
-  -> m StrictMerkleTree
-strictlyReadAndUpload store dir = do
-  let lazyTree = readTree dir
-  strictTree <- cata (\(C effect) -> effect >>= traverse id >>= pure . Fix) lazyTree
-  addToStore store strictTree
+main = undefined

@@ -11,20 +11,23 @@ import           Data.Functor.Const
 import           Data.Singletons
 
 
--- -- | Greedily deref a merkle tree
--- -- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
--- strictDeref
---   :: forall m x
---    . Monad m
---   => Traversable x
---   => Store m x
---   -> Pointer
---   -> m $ Fix $ WithHash :+ x
--- strictDeref store = cata alg . lazyDeref store
---   where
---     alg :: Algebra (WithHash :+ m :+ x)
---                    (m $ Fix (WithHash :+ x))
---     alg (C (p, C e)) = e >>= traverse id >>= pure . Fix . C . (p,)
+-- | Greedily deref a merkle tree
+-- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
+-- NOTE: Specialized to HGit for my convenience, could be generic wrt same but (TODO)
+strictDeref
+  :: forall i m
+   . Monad m
+  =>     Term (FC.Compose ((,) HashPointer :+ m) :++ HGit) i
+  -> m $ Term (FC.Compose ((,) HashPointer     ) :++ HGit) i
+strictDeref = getConst . cata alg
+  where
+    alg :: Alg (FC.Compose ((,) HashPointer :+ m) :++ HGit)
+               (Const (m (Term (FC.Compose ((,) HashPointer :++ HGit)))))
+    alg = undefined
+    -- alg (HC (FC.Compose (C (p, effect)))) = Const $ do
+    --   x <- effect
+    --   case x of
+    --     a@(Blob _) -> pure . Term . HC $ FC.Compose (p, a)
 
 
 -- | construct a potentially-infinite tree-shaped stream of further values constructed by

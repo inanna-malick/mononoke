@@ -59,15 +59,6 @@ sdecode = \case
               pure $ Commit name (Const root) (Const prev)
           x -> fail $ "require [commit, nullcommit] type" ++ x
 
-  SMetaTag      -> withObject "HGit (Const HashPointer) MetaTag" $ \v -> do
-        typ  <- v .: "type"
-        case typ of
-          "branch" -> do
-              name <- v .: "name"
-              commit <- v .: "commit"
-              pure $ Branch name (Const commit)
-          x -> fail $ "require [branch] type" ++ x
-
 
 encode :: HGit (Const HashPointer) x -> Value
 encode = \case
@@ -99,12 +90,6 @@ encode = \case
                ]
     NullCommit ->
         object [ "type" .= ("nullcommit" :: Text)
-               ]
-
-    Branch name commit ->
-        object [ "type" .= ("branch" :: Text)
-               , "name" .= pack name
-               , "commit" .= getConst commit
                ]
 
 -- instance Hashable ShallowMerkleTreeLayer where
