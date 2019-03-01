@@ -10,16 +10,11 @@ cabal-version:       >=1.10
 executable mdc 
   main-is:             Main.hs
   extensions: RankNTypes
-            , TypeOperators
             , PolyKinds
             , DeriveFunctor
             , DeriveFoldable
             , DeriveGeneric
             , DeriveTraversable
-            , OverloadedStrings
-            , ScopedTypeVariables
-            , TupleSections
-            , TypeFamilies
             , DataKinds
             , DefaultSignatures
             , EmptyCase
@@ -27,16 +22,20 @@ executable mdc
             , FlexibleContexts
             , FlexibleInstances
             , GADTs
+            , LambdaCase
             , InstanceSigs
             , KindSignatures
             , NoStarIsType
+            , OverloadedStrings
             , PolyKinds
             , RankNTypes
+            , ScopedTypeVariables
+            , TupleSections
+            , TypeFamilies
             , ScopedTypeVariables
             , StandaloneDeriving
             , TemplateHaskell
             , TypeApplications
-            , TypeFamilies
             , TypeOperators
             , UndecidableInstances
 

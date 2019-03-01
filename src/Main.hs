@@ -5,6 +5,7 @@ import           Control.Monad.Except (runExceptT)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 --------------------------------------------
 import           Compare (compareMerkleTrees)
+import           Commands
 import           FileIO (writeTree, readTree)
 import           HGit.Types
 import           Util.MyCompose
@@ -46,9 +47,12 @@ import           HGit.Store
 -- eg: data RepoData = RepoData [(String, HashPointer)] (string to int map, tolerable usage of json)
 -- this is essentially the hg approach
 
--- note: can just throw on error for conciseness in store pointer failure case
---       (but still make everything polymorphic wrt m for later if I decide otherwise)
--- DONE: using MonadThrow, etc. Nice.
+-- NOTE NOTE NOTE
+-- can replicate distributed nature of git pretty handily by just having a foreign store send
+-- over list of branch names and pulling from said store via http or w/e
+-- that's.. pretty easy, and I think would probably help this be a v. compelling demo
+
 
 main :: IO ()
-main = undefined
+main = parse >>= \case
+  Checkout branch -> undefined
