@@ -1,17 +1,17 @@
 module Diff.Types where
 
 --------------------------------------------
-import           Merkle.Tree.Types (Name, HashPointer)
+import           HGit.Types (PartialFilePath, HashPointer)
 --------------------------------------------
 
 type FileBody = String
 
-data Diff = LeafModified  (Name, HashPointer, HashPointer)
-          | FileReplacedWithDir Name
-          | DirReplacedWithFile Name
+data Diff = LeafModified  (PartialFilePath, HashPointer, HashPointer)
+          | FileReplacedWithDir PartialFilePath
+          | DirReplacedWithFile PartialFilePath
           | EntityAddedToDir
           | EntityRemovedFromDir
-          | EntityRenamed Name Name
-          | EntityDeleted Name
-          | EntityCreated Name
+          | EntityRenamed PartialFilePath PartialFilePath
+          | EntityDeleted PartialFilePath
+          | EntityCreated PartialFilePath
   deriving (Show)

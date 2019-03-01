@@ -115,7 +115,7 @@ compareMerkleTrees' t1 t2
               derefedNs2 <- traverse derefLayer exploredNs2
 
               let mkByNameMap :: [HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag]
-                              -> HashMap Name $ HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
+                              -> HashMap PartialFilePath $ HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
                   mkByNameMap = Map.fromList . fmap (\e -> (dname e, e))
                   resolveMapDiff
                     (This (n, _)) = pure [EntityDeleted n]

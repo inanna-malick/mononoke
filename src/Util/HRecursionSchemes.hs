@@ -13,6 +13,8 @@ import           Data.Singletons
 import Data.Functor.Compose -- todo standardize on my more concise repr here too
 import Data.Kind (Type)
 
+import Control.Monad
+
 type NatM m f g = forall i. f i -> m (g i)
 
 type f :-> g = forall (i :: k) . f i -> g i
@@ -24,12 +26,16 @@ class HFunctor (h :: (k -> Type) -> k -> Type) where
 
 instance (Functor f) => HFunctor (Compose f) where hfmap f (Compose xs) = Compose (fmap f xs)
 
--- incomplete (missing foldable constraint), literally just the bit I need for cataM
+
+-- incomplete (missing foldable constraint), literally just the bit I need for cataM/anaM
 class HTraversable t where
     -- hmapM :: (Monad m) => NatM m a b -> NatM m (t a) (t b)
     hmapM :: (Monad m)
           => (forall i .    f  i -> m (   g  i))
           -> (forall i . (t f) i -> m ((t g) i))
+
+instance (Traversable f) => HTraversable (Compose f) where
+  hmapM nat (Compose xs) = Compose <$> traverse nat xs
 
 type AlgM m f e = NatM m (f e) e
 
@@ -39,6 +45,16 @@ cataM :: forall f m a. (HTraversable f, Monad m) =>
 cataM alg = run
     where run :: NatM m (Term f) a
           run (Term x) = alg =<< hmapM run x
+
+
+type CoalgM m f a = NatM m a (f a)
+
+anaM :: forall a m f. (HTraversable f, Monad m)
+          => CoalgM m f a -> NatM m a (Term f)
+anaM f = run
+    where run :: NatM m a (Term f)
+          run t = liftM Term $ f t >>= hmapM run
+
 
 -- | This data type represents contexts over a signature. Contexts are
 -- terms containing zero or more holes. The first type parameter is

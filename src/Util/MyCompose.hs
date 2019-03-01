@@ -56,3 +56,8 @@ instance (C.HFunctor f, C.HFunctor g) => C.HFunctor ((:++) f g) where
 
 instance (C.SHFunctor f, C.SHFunctor g) => C.SHFunctor ((:++) f g) where
   shfmap f (HC x) = HC $ C.shfmap (C.shfmap f) x
+
+-- incomplete instance, yolo, etc
+instance (C.HTraversable f, C.HTraversable g) => C.HTraversable (f :++ g) where
+    hmapM nat (HC x) = HC <$> C.hmapM (C.hmapM nat) x
+

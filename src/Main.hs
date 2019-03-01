@@ -6,13 +6,10 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 --------------------------------------------
 import           Compare (compareMerkleTrees)
 import           FileIO (writeTree, readTree)
-import           Merkle.Tree.Types
+import           HGit.Types
 import           Util.MyCompose
-import           Util.Util (mapErrUtil)
 import           Util.RecursionSchemes
-import           Merkle.Store
-import           Merkle.Store.Deref
-import           Merkle.Store.FileSystem
+import           HGit.Store
 --------------------------------------------
 
 -- TODO: new app plan - minimum required for cool demo, basically - idea is diffing branches, checking them out, etc
