@@ -2,6 +2,7 @@
 module Commands (Command(..), parse)where
 
 import Options.Applicative
+import Data.List.NonEmpty
 import Data.Semigroup ((<>))
 
 import HGit.Types
@@ -15,20 +16,21 @@ parse = execParser opts
      <> progDesc "Print a greeting for TARGET"
      <> header "hello - a test for optparse-applicative" )
 
--- todo records for each?
+data PathMatcher = WildCard | Concrete String
+
 data Command
   -- switch directory state to that of new branch (nuke and rebuild via store)
   -- fails if any changes exist in current dir (diff via status /= [])
-  = Checkout BranchName
+  = CheckoutBranch BranchName (NonEmpty PathMatcher)
   -- create new branch with same root commit as current branch. changes are fine
-  | Branch BranchName
+  | MkBranch BranchName
   -- add everything in current repo to the current branch in a new commit w/ msg
   -- and update current branch
-  -- initialize repo in empty directory with provided name
-  | Init PartialFilePath
-  | Commit CommitMessage
-  | Status -- get status of current repo (diff current state vs. that of last commit on branch)
-  | Diff BranchName BranchName
+  -- initialize repo in current directory with provided name
+  | InitRepo
+  | MkCommit CommitMessage
+  | GetStatus -- get status of current repo (diff current state vs. that of last commit on branch)
+  | GetDiff BranchName BranchName
 
 parser :: Parser Command
 parser

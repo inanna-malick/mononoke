@@ -6,10 +6,11 @@ module HGit.Serialization where
 --------------------------------------------
 import           Data.Aeson
 import           Data.Aeson.Types (Parser(..))
-import           Data.Hashable (Hashable(..))
+import qualified Data.Hashable as H
 import           Data.Text
 --------------------------------------------
-import           Merkle.Tree.Types
+import           HGit.Types.Common
+import           HGit.Types.Merkle
 import           Util.MyCompose
 --------------------------------------------
 
@@ -60,8 +61,8 @@ sdecode = \case
           x -> fail $ "require [commit, nullcommit] type" ++ x
 
 
-encode :: HGit (Const HashPointer) x -> Value
-encode = \case
+sencode :: HGit (Const HashPointer) x -> Value
+sencode = \case
     Blob contents ->
         object [ "type" .= ("blob" :: Text)
                , "contents" .= pack contents
@@ -91,6 +92,10 @@ encode = \case
     NullCommit ->
         object [ "type" .= ("nullcommit" :: Text)
                ]
+
+
+hash :: HGit (Const HashPointer) x -> HashPointer
+hash = H.hash . sencode
 
 -- instance Hashable ShallowMerkleTreeLayer where
 --   hashWithSalt s (SMTL (C (n, (Leaf contents))))

@@ -1,4 +1,4 @@
-module Merkle.Store.FileSystem where
+module HGit.Store.FileSystem where
 
 --------------------------------------------
 import qualified Data.Aeson as AE
@@ -12,11 +12,11 @@ import           Data.Functor.Const (Const(..))
 import qualified Data.Hashable as Hash
 --------------------------------------------
 import           Errors
-import           Merkle.Tree.Types
-import           Merkle.Tree.Encoding
+import           HGit.Serialization
+import           HGit.Store
+import           HGit.Types
 import           Util.HRecursionSchemes
 import           Util.MyCompose
-import           Merkle.Store
 --------------------------------------------
 
 -- | Filesystem backed store using the provided dir
@@ -35,7 +35,7 @@ fsStore root
         Just x  -> do
           pure $ hfmap (\(Const p') -> Term $ HC $ FC.Compose $ C (p', Nothing)) x
   , sUploadShallow = \smtl -> do
-      let e = AE.encodingToLazyByteString $ AE.toEncoding $ encode smtl
+      let e = AE.encodingToLazyByteString $ AE.toEncoding $ sencode smtl
           p = Hash.hash e
       liftIO $ B.writeFile (root ++ "/" ++ f p) e
       pure p

@@ -7,10 +7,14 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Compare (compareMerkleTrees)
 import           Commands
 import           FileIO (writeTree, readTree)
+import           HGit.Repo
 import           HGit.Types
 import           Util.MyCompose
 import           Util.RecursionSchemes
+import           HGit.Repo
 import           HGit.Store
+import           HGit.Store.Deref
+import           HGit.Store.FileSystem
 --------------------------------------------
 
 -- TODO: new app plan - minimum required for cool demo, basically - idea is diffing branches, checking them out, etc
@@ -53,6 +57,47 @@ import           HGit.Store
 -- that's.. pretty easy, and I think would probably help this be a v. compelling demo
 
 
+-- NOTE NOTE NOTE
+-- for status: can setup reader that builds structure from local fs (via file/dir reads)
+--  ..tracking what is substantiated locally vs. not is hard.. must be in repostate! can do.
+
 main :: IO ()
 main = parse >>= \case
-  Checkout branch -> undefined
+  InitRepo -> do
+    writeState initialRepoState
+    _initStore -- mk hgit stor dir - todo this all as one method call to Repo.hs
+  CheckoutBranch branch pathMatchers -> do
+    store <- mkStore
+    repostate <- readState
+    clearRepoAction <- undefined repostate -- traverse, throw if any un-commited changes, build action to delete all in order
+    clearRepoAction
+    targetCommit <- _getTargetBranch state -- throw if branch name not known
+    undefined pathMatchers $ lazyDeref store targetCommit -- deref and write filtering based on pathMatchers
+  MkBranch branch -> do
+    repostate <- readState
+    writeState $ _modify repostate -- same pointer as current, same dir state - just add new branch -> pointer mapping
+  MkCommit msg -> do
+    store <- mkStore
+    repostate <- readState
+    dirState  <- readTree _currentDir -- then traverse and add to store (todo fn to make this easier? For NatM shit?)
+    let commit = undefined
+    hash <- sUploadShallow store
+    newCommit <- _mkCommit store
+    writeState $ _modify repostate newCommit -- update to hold
+
+  GetStatus -> do
+    repostate <- readState
+    -- basically: just diff but with pointer from branch and current directory state
+    --            abcd
+    undefined
+
+  -- neither needs to ever touch the file system
+  GetDiff before after -> do
+    store     <- mkStore
+    repostate <- readState
+    before'   <- getBranch before repostate
+    after'    <- getBranch after repostate
+    diffs     <- compareMerkleTrees before' after'
+    putStrLn diffs
+
+

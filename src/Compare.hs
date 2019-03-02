@@ -45,17 +45,21 @@ compareMerkleTrees'
   -- no knowledge about actual monad stack - just knows it can
   -- sequence actions in it to deref successive layers (because monad)
    . Monad m
-  => Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
-  -> Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
+  => Term (FC.Compose (LazyHashTagged m) :++ HGit) 'TopLevelDirTag
+  -> Term (FC.Compose (LazyHashTagged m) :++ HGit) 'TopLevelDirTag
   -> m [Diff]
 compareMerkleTrees' t1 t2
   | pointer t1 == pointer t2
       -- no diff, no need to explore further here
       = pure []
   | otherwise
-      = do deref1 <- derefLayer t1
-           deref2 <- derefLayer t2
-           compareDerefed deref1 deref2
+      = do -- let f (TopLevelDir elems) = traverse derefLayer elems
+           let f :: HGit ((Term (FC.Compose (LazyHashTagged m) :++ HGit))) 'TopLevelDirTag
+                 -> [Term (FC.Compose ((,) HashPointer :+ m) :++ HGit) 'DirTag]
+               f (TopLevelDir ns) = ns
+           ns1 <- f <$> derefLayer t1
+           ns2 <- f <$> derefLayer t2
+           compareDirs ns1 ns2
 
   where
     derefLayer
@@ -103,30 +107,37 @@ compareMerkleTrees' t1 t2
             -- this requires derefing all nodes for which there is a hash
             -- mismatch and using the names of the resulting named entities to
             -- compare nodes with the same names
-            (Dir _ ns1, Dir _ ns2) -> do
-              let ns1Pointers = Set.fromList $ fmap pointer ns1
-                  ns2Pointers = Set.fromList $ fmap pointer ns2
+            (Dir _ ns1, Dir _ ns2) -> compareDirs ns1 ns2
 
-              -- DECISION: order of node children doesn't matter, so drop down to Set here
-              let exploredNs1 = filter (not . flip Set.member (ns2Pointers) . pointer) ns1
-                  exploredNs2 = filter (not . flip Set.member (ns1Pointers) . pointer) ns2
 
-              derefedNs1 <- traverse derefLayer exploredNs1
-              derefedNs2 <- traverse derefLayer exploredNs2
+    compareDirs
+      :: [Term (FC.Compose ((,) HashPointer :+ m) :++ HGit) 'DirTag]
+      -> [Term (FC.Compose ((,) HashPointer :+ m) :++ HGit) 'DirTag]
+      -> m [Diff]
+    compareDirs ns1 ns2 = do
+      let ns1Pointers = Set.fromList $ fmap pointer ns1
+          ns2Pointers = Set.fromList $ fmap pointer ns2
 
-              let mkByNameMap :: [HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag]
-                              -> HashMap PartialFilePath $ HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
-                  mkByNameMap = Map.fromList . fmap (\e -> (dname e, e))
-                  resolveMapDiff
-                    (This (n, _)) = pure [EntityDeleted n]
-                  resolveMapDiff
-                    (These (_, a) (_, b)) = compareDerefed a b
-                  resolveMapDiff
-                    (That (n, _)) = pure [EntityCreated n]
+      -- DECISION: order of node children doesn't matter, so drop down to Set here
+      let exploredNs1 = filter (not . flip Set.member (ns2Pointers) . pointer) ns1
+          exploredNs2 = filter (not . flip Set.member (ns1Pointers) . pointer) ns2
 
-              recurseRes <-
-                traverse resolveMapDiff $ mapCompare (mkByNameMap derefedNs1) (mkByNameMap derefedNs2)
+      derefedNs1 <- traverse derefLayer exploredNs1
+      derefedNs2 <- traverse derefLayer exploredNs2
 
-              let diffs = join recurseRes
+      let mkByNameMap :: [HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag]
+                      -> HashMap PartialFilePath $ HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
+          mkByNameMap = Map.fromList . fmap (\e -> (dname e, e))
+          resolveMapDiff
+            (This (n, _)) = pure [EntityDeleted n]
+          resolveMapDiff
+            (These (_, a) (_, b)) = compareDerefed a b
+          resolveMapDiff
+            (That (n, _)) = pure [EntityCreated n]
 
-              pure diffs
+      recurseRes <-
+        traverse resolveMapDiff $ mapCompare (mkByNameMap derefedNs1) (mkByNameMap derefedNs2)
+
+      let diffs = join recurseRes
+
+      pure diffs

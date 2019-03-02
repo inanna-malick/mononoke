@@ -11,9 +11,11 @@ import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
 $(singletons [d|
-  data HGitTag = FileChunkTag | DirTag | CommitTag
+  data HGitTag = FileChunkTag | DirTag | TopLevelDirTag | CommitTag
   |])
 
+
+-- idea: tuple hashes with names or summat, eg:
 data HGit a i where
   -- file chunk bits
   Blob :: FileChunk -> HGit a 'FileChunkTag
@@ -23,21 +25,24 @@ data HGit a i where
   File :: PartialFilePath -> a 'FileChunkTag -> HGit a 'DirTag
   Dir :: PartialFilePath -> [a 'DirTag] -> HGit a 'DirTag
 
+  TopLevelDir :: [a 'DirTag] -> HGit a 'TopLevelDirTag
+
   -- commits (what name should root dir have? forest instead of tree?)
   Commit :: CommitMessage
-         -> a 'DirTag -- root directory (empty string name for now)
-         -> a 'CommitTag -- previous commit
+         -> a 'TopLevelDirTag -- root directory
+         -> a 'CommitTag      -- previous commit
          -> HGit a 'CommitTag
   NullCommit :: HGit a 'CommitTag
 
 
 instance HFunctor HGit where
-  hfmap _ (Blob fc)        = Blob fc
-  hfmap f (BlobTree fcs)   = BlobTree $ fmap f fcs
-  hfmap f (File n fc)      = File n $ f fc
-  hfmap f (Dir n dcs)      = Dir n $ fmap f dcs
-  hfmap f (Commit n rc nc) = Commit n (f rc) (f nc)
-  hfmap _  NullCommit      = NullCommit
+  hfmap _ (Blob fc)         = Blob fc
+  hfmap f (BlobTree fcs)    = BlobTree $ fmap f fcs
+  hfmap f (File n fc)       = File n $ f fc
+  hfmap f (Dir n dcs)       = Dir n $ fmap f dcs
+  hfmap f (TopLevelDir dcs) = TopLevelDir $ fmap f dcs
+  hfmap f (Commit n rc nc)  = Commit n (f rc) (f nc)
+  hfmap _  NullCommit       = NullCommit
 
 
 instance HTraversable HGit where
@@ -51,6 +56,9 @@ instance HTraversable HGit where
   hmapM nat (Dir n dcs) = do
     dcs' <- traverse nat dcs
     pure $ Dir n dcs'
+  hmapM nat (TopLevelDir dcs) = do
+    dcs' <- traverse nat dcs
+    pure $ TopLevelDir dcs'
   hmapM nat (Commit msg rc nc) = do
     rc' <- nat rc
     nc' <- nat nc
@@ -63,6 +71,7 @@ instance SHFunctor HGit where
   shfmap f (BlobTree fcs)   = BlobTree $ fmap f fcs
   shfmap f (File n fc)      = File n $ f fc
   shfmap f (Dir n dcs)      = Dir n $ fmap f dcs
+  shfmap f (TopLevelDir dcs)      = TopLevelDir $ fmap f dcs
   shfmap f (Commit n rc nc) = Commit n (f rc) (f nc)
   shfmap _  NullCommit      = NullCommit
 
