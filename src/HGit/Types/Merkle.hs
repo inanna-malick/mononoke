@@ -11,38 +11,49 @@ import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
 $(singletons [d|
-  data HGitTag = FileChunkTag | DirTag | TopLevelDirTag | CommitTag
-  |])
+  data HGitTag = FileChunkTag | DirTag | CommitTag
+ |])
 
 
--- idea: tuple hashes with names or summat, eg:
+
+type DirPointer f
+  = Either (f 'DirTag)       -- more directory structure
+           (f 'FileChunkTag) -- a file (named blob)
+
+type NamedDirPointer f
+  = ( PartialFilePath -- name of this directory entry (files and dirs have same name rules)
+    , DirPointer f
+    )
+
 data HGit a i where
   -- file chunk bits
   Blob :: FileChunk -> HGit a 'FileChunkTag
   BlobTree :: [a 'FileChunkTag] -> HGit a 'FileChunkTag
 
   -- dir and file bits
-  File :: PartialFilePath -> a 'FileChunkTag -> HGit a 'DirTag
-  Dir :: PartialFilePath -> [a 'DirTag] -> HGit a 'DirTag
+  -- TODO: dedicated sum type for file type branches - could use to represent (eg) symlinks or w/e
+  Dir :: [NamedDirPointer a]
+      -> HGit a 'DirTag
 
-  TopLevelDir :: [a 'DirTag] -> HGit a 'TopLevelDirTag
-
-  -- commits (what name should root dir have? forest instead of tree?)
+  -- commits
   Commit :: CommitMessage
-         -> a 'TopLevelDirTag -- root directory
+         -> a 'DirTag         -- root directory (itself unnamed)
          -> a 'CommitTag      -- previous commit
          -> HGit a 'CommitTag
   NullCommit :: HGit a 'CommitTag
 
 
+dirEntries
+  :: HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
+  -> [NamedDirPointer (Term (FC.Compose (LazyHashTagged m) :++ HGit))]
+dirEntries (Dir ns) = ns
+
 instance HFunctor HGit where
-  hfmap _ (Blob fc)         = Blob fc
-  hfmap f (BlobTree fcs)    = BlobTree $ fmap f fcs
-  hfmap f (File n fc)       = File n $ f fc
-  hfmap f (Dir n dcs)       = Dir n $ fmap f dcs
-  hfmap f (TopLevelDir dcs) = TopLevelDir $ fmap f dcs
-  hfmap f (Commit n rc nc)  = Commit n (f rc) (f nc)
-  hfmap _  NullCommit       = NullCommit
+  hfmap _ (Blob fc)        = Blob fc
+  hfmap f (BlobTree fcs)   = BlobTree $ fmap f fcs
+  hfmap f (Dir dcs)        = Dir $ fmap (fmap (either (Left . f) (Right . f))) dcs
+  hfmap f (Commit n rc nc) = Commit n (f rc) (f nc)
+  hfmap _  NullCommit      = NullCommit
 
 
 instance HTraversable HGit where
@@ -50,15 +61,11 @@ instance HTraversable HGit where
   hmapM nat (BlobTree fcs) = do
     fcs' <- traverse nat fcs
     pure $ BlobTree fcs'
-  hmapM nat (File n fc) = do
-    fc' <- nat fc
-    pure $ File n fc'
-  hmapM nat (Dir n dcs) = do
-    dcs' <- traverse nat dcs
-    pure $ Dir n dcs'
-  hmapM nat (TopLevelDir dcs) = do
-    dcs' <- traverse nat dcs
-    pure $ TopLevelDir dcs'
+  hmapM nat (Dir dcs) = do
+    let f (n, Left dir)   = fmap ((n,) . Left)  $ nat dir
+        f (n, Right file) = fmap ((n,) . Right) $ nat file
+    dcs' <- traverse f dcs
+    pure $ Dir dcs'
   hmapM nat (Commit msg rc nc) = do
     rc' <- nat rc
     nc' <- nat nc
@@ -69,9 +76,7 @@ instance HTraversable HGit where
 instance SHFunctor HGit where
   shfmap _ (Blob fc)        = Blob fc
   shfmap f (BlobTree fcs)   = BlobTree $ fmap f fcs
-  shfmap f (File n fc)      = File n $ f fc
-  shfmap f (Dir n dcs)      = Dir n $ fmap f dcs
-  shfmap f (TopLevelDir dcs)      = TopLevelDir $ fmap f dcs
+  shfmap f (Dir dcs)        = Dir $ fmap (fmap (either (Left . f) (Right . f))) dcs
   shfmap f (Commit n rc nc) = Commit n (f rc) (f nc)
   shfmap _  NullCommit      = NullCommit
 
@@ -88,7 +93,3 @@ pointer (Term (HC (FC.Compose (C (p, _))))) = p
 
 pointer' :: forall f x . Term (FC.Compose ((,) HashPointer :+ x) :++ f) :-> Const HashPointer
 pointer' = Const . pointer
-
-dname :: forall meh. HGit meh 'DirTag -> PartialFilePath
-dname (File n _) = n
-dname (Dir  n _) = n

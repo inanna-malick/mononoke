@@ -36,7 +36,7 @@ strictDeref'
   => HTraversable p
   => SingI i
   => Store m p
-  -> HashPointer
+  -> Const HashPointer i
   -> m $ Term (FC.Compose ((,) HashPointer     ) :++ p) i
 strictDeref' store = strictDeref . lazyDeref store
 
@@ -52,9 +52,9 @@ lazyDeref
   => HFunctor p
   => SingI i
   => Store m p
-  -> HashPointer
+  -> Const HashPointer i
   -> Term (FC.Compose (LazyHashTagged m) :++ p) i
-lazyDeref store = sFutu alg . Const
+lazyDeref store = sFutu alg
   where
     alg :: SCVCoalg
              (FC.Compose (LazyHashTagged m) :++ p)

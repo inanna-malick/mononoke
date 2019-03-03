@@ -6,7 +6,7 @@ import           HGit.Types (PartialFilePath, HashPointer)
 
 type FileBody = String
 
-data Diff = LeafModified  (PartialFilePath, HashPointer, HashPointer)
+data Diff = LeafModified  PartialFilePath HashPointer HashPointer
           | FileReplacedWithDir PartialFilePath
           | DirReplacedWithFile PartialFilePath
           | EntityAddedToDir

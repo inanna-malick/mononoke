@@ -4,9 +4,10 @@ module HGit.Types.RepoState (RepoState(..), initialRepoState) where
 --------------------------------------------
 import           Data.Aeson
 import           Data.Text (Text)
+import           Data.Vector (fromList, toList)
 import           GHC.Generics
 --------------------------------------------
-import           HGit.Serialization (hash)
+import           HGit.Serialization
 import           HGit.Types.Common
 import           HGit.Types.Merkle
 --------------------------------------------
@@ -28,13 +29,10 @@ initialRepoState
   = RepoState
   { branches      = [(initial, hash NullCommit)]
   , currentBranch = initial
-  , substantiated = SubstantiationState
-    ( hash emptyRoot
-    , emptyRoot
-    )
+  , substantiated = SubstantiationState emptyRoot
   }
   where
-    emptyRoot = TopLevelDir []
+    emptyRoot = Dir []
     initial = "default"
 
 
@@ -44,72 +42,32 @@ initialRepoState
 -- can grab file blobs from store if required for diffing
 newtype SubstantiationState
   = SubstantiationState
-  { unSubstantiationState :: (HashPointer, HGit (Term (FC.Compose HashIndirect :++ HGit)) 'TopLevelDirTag)
+  { unSubstantiationState :: HGit (Term (FC.Compose HashIndirect :++ HGit)) 'DirTag
   }
-
-instance ToJSON SubstantiationState where
-    toJSON (SubstantiationState (p, TopLevelDir children)) =
-        object [ "pointer"  .= p
-               , "type"     .= ("topleveldir" :: Text)
-               , "children" .= fmap SubstantiationState' children
-               ]
 
 instance FromJSON SubstantiationState where
-    parseJSON = withObject "SubstantiationState" $ \v -> do
-        p <- v .:  "pointer"
-        -- TODO: some kind of type level thing here to link phantom type and string tag
-        typ     <- v .: "type"
-        case typ of
-          "topleveldir" -> do
-              children <- fmap unSubstantiationState' <$> v .: "children"
-              pure $ SubstantiationState (p, TopLevelDir children)
-          x -> fail $ "require [topleveldir] type" ++ x
+    parseJSON = withArray "array" (\a -> SubstantiationState . Dir . toList <$> traverse mkElem a)
+      where
+        mkElem v = decodeNamedDir handleDir handleFile v
+        handleFile o = do
+          p <- o .: "pointer"
+          pure . Term . HC . FC.Compose $ C (p, Nothing)
+        handleDir o = do
+          p <- o .:  "pointer"
+          e <- o .:? "entity"
+          pure . Term . HC . FC.Compose $ C (p, unSubstantiationState <$> e)
 
-newtype SubstantiationState'
-  = SubstantiationState'
-  { unSubstantiationState' :: Term (FC.Compose HashIndirect :++ HGit) 'DirTag
-  }
-
-instance ToJSON SubstantiationState' where
-    toJSON (SubstantiationState' (Term (HC (FC.Compose (C (p, x)))))) = case x of
-      Nothing ->
-        object ["pointer" .= p]
-      Just (Dir path children) ->
-        object [ "pointer"  .= p
-               , "path"     .= path
-               , "type"     .= ("dir" :: Text)
-               , "children" .= fmap SubstantiationState' children
-               ]
-      Just (File path child) ->
-        object [ "pointer"     .= p
-               , "path"        .= path
-               , "type"        .= ("file" :: Text)
-               -- NOTE: will not round trip if file body is substantiated, but this is correct
-               , "bodyPointer" .= pointer child
-               ]
-
-
-instance FromJSON SubstantiationState' where
-    parseJSON = fmap (fmap (SubstantiationState' . Term . HC . FC.Compose . C))
-            <$> withObject "SubstantiationState'" $ \v -> do
-        p <- v .:  "pointer"
-        -- TODO: some kind of type level thing here to link phantom type and string tag
-        typ     <- v .:? "type"
-        case typ of
-          Nothing ->
-            pure (p, Nothing)
-          Just "dir" -> do
-              children <- fmap unSubstantiationState' <$> v .: "children"
-              path     <- v .: "path"
-              pure (p, Just $ Dir path children)
-          Just "file" -> do
-              bodyPointer <- v .: "bodyPointer"
-              path        <- v .: "path"
-              let bodyPointer' = Term . HC . FC.Compose $ C (bodyPointer, Nothing)
-              pure (p, Just $ File path bodyPointer')
-          Just x -> fail $ "require [file, dir] type" ++ x
-
-
+instance ToJSON SubstantiationState where
+    toJSON (SubstantiationState (Dir xs)) =
+        Array . fromList $ encodeNamedDir handleDir handleFile <$> xs
+      where
+        -- throw away file contents - files don't get persisted here!
+        handleFile (Term (HC (FC.Compose (C (p, _))))) = ["pointer" .= p]
+        handleDir  (Term (HC (FC.Compose (C (p, Nothing))))) = ["pointer" .= p]
+        handleDir  (Term (HC (FC.Compose (C (p, Just dir)))))
+          = ["pointer" .= p
+            ,"children"  .= SubstantiationState dir
+            ]
 
 instance ToJSON RepoState where
     toEncoding = genericToEncoding defaultOptions

@@ -44,8 +44,8 @@ executable mdc
              , -Wno-redundant-constraints
 
   build-depends: base >=4.8
-               , bytestring
                , aeson
+               , bytestring
                , containers
                , constraints
                , compdata
@@ -62,5 +62,6 @@ executable mdc
                , singletons
                , text
                , transformers
+               , vector
   hs-source-dirs:      src
   default-language:    Haskell2010

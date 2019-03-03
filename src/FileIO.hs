@@ -34,18 +34,19 @@ writeTree outdir tree = do
 
     alg (BlobTree children) = Const $ traverse_ getConst children
 
-    alg (File name child)  = Const $ do -- touch file
-      path <- List.intercalate "/" . reverse . (name:) <$> get
-      liftIO $ writeFile path "" -- touch file
-      modify (push name)
-      getConst child
-      modify pop
-    alg (Dir name children) = Const $ do -- mkdir
-      path <- List.intercalate "/" . reverse . (name:) <$> get
-      liftIO $ Dir.createDirectory path
-      modify (push name)
-      traverse_ getConst children
-      modify pop
+    alg (Dir children) = Const $ do -- mkdir
+      let mkDir = do
+            path <- List.intercalate "/" . reverse <$> get
+            liftIO $ Dir.createDirectory path
+          touch = do
+            path <- List.intercalate "/" . reverse <$> get
+            liftIO $ writeFile path "" -- touch file
+          handle (pathChunk, e) = do
+            modify (push pathChunk)
+            either (\_ -> mkDir) (\_ -> touch) e
+            either getConst getConst e
+            modify pop
+      traverse_ handle children
 
     -- unreachable
     alg _ = undefined
@@ -73,28 +74,30 @@ readTree'
   :: forall x m . MonadIO m => Sing x -> FilePath
   -> (FC.Compose m :++ HGit) (Cxt Hole (FC.Compose m :++ HGit) (Const FilePath)) x
 readTree' s path = HC $ FC.Compose $ case s of
+      SFileChunkTag -> liftIO $ fmap Blob $ readFile path
       SDirTag -> do
-        isFile <- liftIO $ Dir.doesFileExist path
-        if isFile
-          then do
-            -- first pass: file with direct leaf as child holding full file contents, can fuck around with blocks later
-            contents <- liftIO $ readFile path
-            pure $ File (justTheName path) $ Term $ HC $ FC.Compose $ pure $ Blob contents
-          else do
-            isDir <- liftIO $ Dir.doesDirectoryExist path
-            if isDir
-              then do
-                dirContents <- liftIO $ Dir.getDirectoryContents path
-                let dirContents'
-                      = fmap (\x -> path ++ "/" ++ x)
-                      . filter (/= ".")
-                      . filter (/= "..")
-                      $ dirContents
-                pure $ Dir (justTheName path) (fmap (Hole . Const) dirContents')
-              else fail ("file read error: unexpected type at " ++ path)
+          dirContents  <- liftIO $ Dir.getDirectoryContents path
+          let dirContents'
+                = filter (/= ".")
+                . filter (/= "..")
+                $ dirContents
+          dirContents'' <- traverse categorize dirContents'
+          pure $ Dir dirContents''
 
       -- unreachable
-      _ -> undefined
+      _ -> fail ("quote 'unreachable' unquote")
+
+  where
+    categorize path = do
+      isFile <- liftIO $ Dir.doesFileExist path
+      if isFile
+        then pure $ (justTheName path, Right $ Hole $ Const path)
+        else do
+          isDir <- liftIO $ Dir.doesDirectoryExist path
+          if isDir
+            then pure $ (justTheName path, Left $ Hole $ Const path)
+            else fail ("file read error: unexpected type at " ++ path)
+
 
 justTheName :: FilePath -> String -- hacky hax but it works - take just the name given a file path
 justTheName = reverse . takeWhile (/= '/') . reverse

@@ -38,15 +38,12 @@ sdecode = \case
           x -> fail $ "require [blob, blobtree] type" ++ x
 
   SDirTag       -> withObject "HGit (Const HashPointer) DirTag" $ \v -> do
-        name <- v .: "name"
         typ  <- v .: "type"
         case typ of
           "dir" -> do
-              children <- v .: "children"
-              pure $ Dir name $ fmap Const children
-          "file" -> do
-              body <- v .: "body"
-              pure $ File name $ Const body
+              children  <- v .: "children"
+              children' <- traverse parseThingy children
+              pure $ Dir children'
           x -> fail $ "require [file, dir] type" ++ x
 
   SCommitTag    -> withObject "HGit (Const HashPointer) CommitTag" $ \v -> do
@@ -60,27 +57,60 @@ sdecode = \case
               pure $ Commit name (Const root) (Const prev)
           x -> fail $ "require [commit, nullcommit] type" ++ x
 
+  where
+    parseThingy
+      :: Value
+      -> Parser ( PartialFilePath
+                , Either (Const HashPointer 'DirTag)
+                         (Const HashPointer 'FileChunkTag)
+                )
+    parseThingy = decodeNamedDir -- both branches just Const pointers
+      (fmap Const . (.: "pointer")) (fmap Const . (.: "pointer"))
+
+encodeNamedDir
+  :: (f 'DirTag       -> [(Text, Value)])
+  -> (f 'FileChunkTag -> [(Text, Value)])
+  -> NamedDirPointer f
+  -> Value
+encodeNamedDir ed ef (path, e)
+  = object $
+  [ "path" .= path
+  ] ++ case e of
+        Left  dir  -> ed dir
+        Right file -> ef file
+
+decodeNamedDir
+  :: (Object -> Parser (f 'DirTag))
+  -> (Object -> Parser (f 'FileChunkTag))
+  -> Value
+  -> Parser (NamedDirPointer f) -- lmao, need new type
+decodeNamedDir pd pf
+  =  withObject "named dir entity pointer thingy" $ \v -> do
+        name    <- v .: "path"
+        typ     <- v .: "type"
+        case typ of
+          "dir"  -> do
+            e <- pd v
+            pure (name, Left e)
+          "file" -> do
+            e <- pf v
+            pure (name, Right e)
+          x      -> fail $ "require [file, dir] type" ++ x
 
 sencode :: HGit (Const HashPointer) x -> Value
 sencode = \case
     Blob contents ->
-        object [ "type" .= ("blob" :: Text)
+        object [ "type"     .= ("blob" :: Text)
                , "contents" .= pack contents
                ]
     BlobTree children ->
-        object [ "type" .= ("blobtree" :: Text)
+        object [ "type"     .= ("blobtree" :: Text)
                , "children" .= fmap getConst children
                ]
 
-    File name contents ->
-        object [ "type" .= ("file" :: Text)
-               , "name" .= pack name
-               , "contents" .= getConst contents
-               ]
-    Dir name children ->
+    Dir children ->
         object [ "type" .= ("dir" :: Text)
-               , "name" .= pack name
-               , "children" .= fmap getConst children
+               , "children" .= fmap mkThingy children
                ]
 
     Commit name root prev ->
@@ -92,6 +122,11 @@ sencode = \case
     NullCommit ->
         object [ "type" .= ("nullcommit" :: Text)
                ]
+
+  where
+    mkThingy :: NamedDirPointer (Const HashPointer) -> Value
+    mkThingy = encodeNamedDir (pure . ("pointer" .=) . getConst)
+                              (pure . ("pointer" .=) . getConst)
 
 
 hash :: HGit (Const HashPointer) x -> HashPointer
