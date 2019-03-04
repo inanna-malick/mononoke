@@ -1,4 +1,4 @@
-module HGit.Repo (writeState, readState, mkStore, getBranch) where
+module HGit.Repo where -- (writeState, readState, mkStore, getBranch) where
 
 
 
@@ -7,6 +7,7 @@ import           Control.Exception.Safe (MonadThrow, throw)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy as B
+import           Data.Functor.Const
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Errors
@@ -22,10 +23,18 @@ hgitStateFile = "state"
 hgitStoreDir = "store"
 
 -- TODO: dir tree traversal to allow for running app in non-root repo dir? mb
-hgitDir', hgitState', hgitStore' :: MonadIO m => m FilePath
-hgitDir'   = (++ "/" ++ hgitDir)       <$> liftIO Dir.getCurrentDirectory
+hgitDir', hgitState', hgitStore', baseDir :: MonadIO m => m FilePath
+baseDir    = liftIO Dir.getCurrentDirectory
+hgitDir'   = (++ "/" ++ hgitDir)       <$> baseDir
 hgitState' = (++ "/" ++ hgitStateFile) <$> hgitDir'
-hgitStore' = (++ "/" ++ hgitStoreDir)  <$> hgitStore'
+hgitStore' = (++ "/" ++ hgitStoreDir)  <$> hgitDir'
+
+mkHgitDir :: MonadIO m => m ()
+mkHgitDir = do
+  path1 <- hgitDir'
+  path2 <- hgitStore'
+  liftIO $ Dir.createDirectory path1
+  liftIO $ Dir.createDirectory path2
 
 mkStore
   :: MonadIO m
@@ -35,14 +44,13 @@ mkStore = fsStore <$> hgitStore'
 
 
 -- | get branch from state, fail if not found
-
 getBranch
   :: MonadThrow m
   => BranchName
   -> RepoState
-  -> m HashPointer
+  -> m (Const HashPointer 'CommitTag)
 getBranch b
-  = maybe (throw $ BranchNotFound b) pure . lookup b . branches
+  = maybe (throw $ BranchNotFound b) (pure . Const) . lookup b . branches
 
 -- | Filesystem backed store using the provided dir
 readState
@@ -52,10 +60,9 @@ readState
 readState = do
   path <- hgitState'
   contents <- liftIO $ B.readFile path
-  case (AE.decode contents) of
-    Nothing -> throw DecodeError
-    Just x  -> do
-      pure x
+  case (AE.eitherDecode contents) of
+    Left e  -> throw $ DecodeError e
+    Right x -> pure x
 
 writeState
   :: MonadIO m

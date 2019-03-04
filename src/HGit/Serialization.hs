@@ -76,8 +76,8 @@ encodeNamedDir ed ef (path, e)
   = object $
   [ "path" .= path
   ] ++ case e of
-        Left  dir  -> ed dir
-        Right file -> ef file
+        Left  dir  -> ["type" .= ("dir" :: Text)] ++ ed dir
+        Right file -> ["type" .= ("file" :: Text)] ++ ef file
 
 decodeNamedDir
   :: (Object -> Parser (f 'DirTag))
@@ -132,21 +132,10 @@ sencode = \case
 hash :: HGit (Const HashPointer) x -> HashPointer
 hash = H.hash . sencode
 
--- instance Hashable ShallowMerkleTreeLayer where
---   hashWithSalt s (SMTL (C (n, (Leaf contents))))
---     = s `hashWithSalt` hash n `hashWithSalt` hash contents
---   hashWithSalt s (SMTL (C (n, (Node contents))))
---     = s `hashWithSalt` hash n `hashWithSalt` hash (fmap unPointer contents)
 
--- instance ToJSON ShallowMerkleTreeLayer where
---     -- this generates a Value
---     toJSON (SMTL (C (name, (Leaf body)))) =
---         object [ "type" .= ("leaf" :: Text)
---                , "name" .= pack name
---                , "body" .= pack body
---                ]
---     toJSON (SMTL (C (name, (Node pointers)))) =
---         object [ "type" .= ("node" :: Text)
---                , "name" .= pack name
---                , "children" .= toJSON (fmap unPointer pointers)
---                ]
+hash' :: HGit (Const HashPointer) :-> Const HashPointer
+hash' = Const . H.hash . sencode
+
+
+emptyDirHash :: Const HashPointer 'DirTag
+emptyDirHash = hash' emptyDir

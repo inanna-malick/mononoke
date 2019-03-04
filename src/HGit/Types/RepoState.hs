@@ -3,24 +3,24 @@ module HGit.Types.RepoState (RepoState(..), initialRepoState) where
 
 --------------------------------------------
 import           Data.Aeson
-import           Data.Text (Text)
+import qualified Data.Functor.Compose as FC
 import           Data.Vector (fromList, toList)
+import           Data.Text (Text)
 import           GHC.Generics
 --------------------------------------------
 import           HGit.Serialization
 import           HGit.Types.Common
 import           HGit.Types.Merkle
---------------------------------------------
-import qualified Data.Functor.Compose as FC
-import           Data.Functor.Identity
 import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
 import           Util.MyCompose
+--------------------------------------------
 
 
 data RepoState
   = RepoState
   { branches      :: [(BranchName, HashPointer)]
   , currentBranch :: BranchName
+  -- NOTE: not yet used, will be req'd for laziness via tracking partially-fetched state
   , substantiated :: SubstantiationState
   } deriving (Generic)
 
@@ -62,6 +62,11 @@ instance ToJSON SubstantiationState where
         Array . fromList $ encodeNamedDir handleDir handleFile <$> xs
       where
         -- throw away file contents - files don't get persisted here!
+        -- NOTE: type signal required to suppress warnings (Term vs. Hole)
+        handleFile
+          :: forall i x y
+           . Term (FC.Compose ((,) HashPointer :+ x) :++ y) i
+          -> [(Text, Value)]
         handleFile (Term (HC (FC.Compose (C (p, _))))) = ["pointer" .= p]
         handleDir  (Term (HC (FC.Compose (C (p, Nothing))))) = ["pointer" .= p]
         handleDir  (Term (HC (FC.Compose (C (p, Just dir)))))

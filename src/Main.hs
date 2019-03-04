@@ -1,25 +1,23 @@
 module Main where
 
 --------------------------------------------
-import           Control.Monad.Except (runExceptT)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Data.Functor.Const
 --------------------------------------------
-import           Compare (compareMerkleTrees)
 import           Commands
-import           FileIO (writeTree, readTree)
+import           FileIO
+import           HGit.Diff (diffMerkleDirs)
 import           HGit.Repo
 import           HGit.Types
 import           Util.MyCompose
-import           Util.RecursionSchemes
-import           HGit.Repo
+import           Util.HRecursionSchemes
+import           HGit.Serialization (emptyDirHash)
 import           HGit.Store
 import           HGit.Store.Deref
 import           HGit.Store.FileSystem
 --------------------------------------------
+import qualified Data.Functor.Compose as FC
 
 -- TODO: new app plan - minimum required for cool demo, basically - idea is diffing branches, checking them out, etc
--- init: zero args, creates branch 'master'
--- add-all: commit message, adds everything in current directory via new commit
 -- checkout: reset current directory to branch - only if no changes (determined by reading current dir and doing diff)
 -- idea: --lazy flag, just touches all files but only grabs those you request
 --       note: this kinda breaks diffing against current directory, BUT I can have my own format:
@@ -37,8 +35,6 @@ import           HGit.Store.FileSystem
 --       this allows for tree traversal and not just single file, have input be list of file parts
 --       and use state (as elsewhere) to manage stack - can use * at any level to select all files or dirs and run next thing in list, if * is end of list is treated as Nothing (match all)
 --       note: --lazy and --match can be applied to the same traversal via the same code
--- need branch command to create new branch
--- might as well have status command - diff current w/e and etc
 
 
 -- NOTE: hgit is a nice pun name (unintentional), includes features of both hg and git comma lmao
@@ -56,48 +52,99 @@ import           HGit.Store.FileSystem
 -- over list of branch names and pulling from said store via http or w/e
 -- that's.. pretty easy, and I think would probably help this be a v. compelling demo
 
-
 -- NOTE NOTE NOTE
 -- for status: can setup reader that builds structure from local fs (via file/dir reads)
 --  ..tracking what is substantiated locally vs. not is hard.. must be in repostate! can do.
+--  note: done (probably works)
+
+-- main :: IO ()
+-- main = do
+--   putStrLn "ok so start doin the main fn"
+--   store <- mkStore
+--   putStrLn "a"
+--   pb  <- readAndStore store "examples/before"
+--   putStrLn "b"
+--   pa1 <- readAndStore store "examples/after1"
+--   putStrLn "b"
+--   pa2 <- readAndStore store "examples/after2"
+--   pa3 <- readAndStore store "examples/after3"
+
+--   ba1Diffs <- diffMerkleDirs store pb pa1
+--   putStrLn "before -> after1"
+--   print ba1Diffs
+
+--   ba2Diffs <- diffMerkleDirs store pb pa2
+--   putStrLn "before -> after2"
+--   print ba2Diffs
+
+--   ba3Diffs <- diffMerkleDirs store pb pa3
+--   putStrLn "before -> after3"
+--   print ba3Diffs
 
 main :: IO ()
 main = parse >>= \case
   InitRepo -> do
+    mkHgitDir -- mk .hgit and .hgit/store dirs
     writeState initialRepoState
-    _initStore -- mk hgit stor dir - todo this all as one method call to Repo.hs
   CheckoutBranch branch pathMatchers -> do
     store <- mkStore
     repostate <- readState
-    clearRepoAction <- undefined repostate -- traverse, throw if any un-commited changes, build action to delete all in order
+    -- TODO: just wipe everything (?)
+    clearRepoAction <- undefined repostate
     clearRepoAction
-    targetCommit <- _getTargetBranch state -- throw if branch name not known
+    targetCommit <- getBranch branch repostate -- throw if branch name not known
     undefined pathMatchers $ lazyDeref store targetCommit -- deref and write filtering based on pathMatchers
   MkBranch branch -> do
     repostate <- readState
-    writeState $ _modify repostate -- same pointer as current, same dir state - just add new branch -> pointer mapping
+    current   <- getBranch (currentBranch repostate) repostate
+    writeState $ repostate
+               { branches      = branches repostate ++ [(branch, getConst current)]
+               , currentBranch = branch
+               }-- same pointer as current, same dir state - just add new branch -> pointer mapping
   MkCommit msg -> do
-    store <- mkStore
-    repostate <- readState
-    dirState  <- readTree _currentDir -- then traverse and add to store (todo fn to make this easier? For NatM shit?)
-    let commit = undefined
-    hash <- sUploadShallow store
-    newCommit <- _mkCommit store
-    writeState $ _modify repostate newCommit -- update to hold
+    store             <- mkStore
+    repostate         <- readState
+    base              <- baseDir
+    currentCommitHash <- getBranch (currentBranch repostate) repostate
+    currentStateHash  <- readAndStore store base
+    let commit = Commit msg currentStateHash currentCommitHash
+    hash <- sUploadShallow store commit
+    writeState $ repostate
+               { branches = (\(x,p) ->
+                               if x == (currentBranch repostate)
+                                 then (x, p)
+                                 else (x, getConst hash)
+                            )
+                        <$> branches repostate
+               }
 
   GetStatus -> do
-    repostate <- readState
-    -- basically: just diff but with pointer from branch and current directory state
-    --            abcd
-    undefined
+    store             <- mkStore
+    repostate         <- readState
+    base              <- baseDir
+    currentCommitHash <- getBranch (currentBranch repostate) repostate
+    currentStateHash  <- readAndStore store base
 
-  -- neither needs to ever touch the file system
-  GetDiff before after -> do
+    currentCommit   <- sDeref store currentCommitHash
+
+    diffs     <- diffMerkleDirs store (commitRoot currentCommit) currentStateHash
+    print diffs
+
+  GetDiff branch1 branch2 -> do
     store     <- mkStore
     repostate <- readState
-    before'   <- getBranch before repostate
-    after'    <- getBranch after repostate
-    diffs     <- compareMerkleTrees before' after'
-    putStrLn diffs
+    commitp1  <- getBranch branch1 repostate
+    commitp2  <- getBranch branch2 repostate
+    commit1   <- sDeref store commitp1
+    commit2   <- sDeref store commitp2
+    diffs     <- diffMerkleDirs store (commitRoot commit1) (commitRoot commit2)
+    print diffs
 
 
+
+-- IDEA: use 'Pair (Const HashPointer) f' instead of (,) HashPointer :+ f
+commitRoot
+  :: HGit (Term (FC.Compose HashIndirect :++ HGit)) 'CommitTag
+  -> Const HashPointer 'DirTag
+commitRoot (Commit _ (Term (HC (FC.Compose (C (p, _))))) _) = Const p
+commitRoot NullCommit        = emptyDirHash

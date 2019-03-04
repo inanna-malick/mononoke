@@ -59,7 +59,7 @@ lazyDeref store = sFutu alg
     alg :: SCVCoalg
              (FC.Compose (LazyHashTagged m) :++ p)
              (Const HashPointer)
-    alg (Const p) = HC $ FC.Compose $ C (p, hfmap helper <$> sDeref store p)
+    alg p = HC $ FC.Compose $ C (getConst p, hfmap helper <$> sDeref store p)
 
 
     helper :: Term (FC.Compose HashIndirect :++ p)

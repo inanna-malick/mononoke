@@ -14,7 +14,7 @@ instance Exception MerkleTreeLookupError
 
 
 data RepoStateError
-  = DecodeError
+  = DecodeError String
   | BranchNotFound BranchName
   deriving Show
 

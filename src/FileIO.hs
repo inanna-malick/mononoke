@@ -11,6 +11,7 @@ import qualified System.Directory as Dir
 --------------------------------------------
 import           Util.MyCompose
 import           Util.HRecursionSchemes
+import           HGit.Store
 import           HGit.Types
 --------------------------------------------
 import qualified Data.Functor.Compose as FC
@@ -55,8 +56,45 @@ writeTree outdir tree = do
     pop (_:xs)  = xs
     pop []    = []
 
+
+readAndStore
+  :: forall m
+   . MonadIO m
+  => Store m HGit
+  -> FilePath
+  -> m (Const HashPointer 'DirTag)
+readAndStore store = fmap Const . getConst . cata alg . readTree
+  where
+    alg :: Alg (FC.Compose m :++ HGit) (Const (m HashPointer))
+    alg (HC (FC.Compose eff)) = Const $ do
+      e <- eff
+      -- upload sub-trees and get hashes
+      let f :: forall i . HGit (Const (m HashPointer)) i -> m (HGit (Const (HashPointer)) i)
+          f = \case
+                Blob x -> pure $ Blob x
+                BlobTree xs -> do
+                  xs' <- traverse (fmap Const . getConst) xs
+                  pure $ BlobTree xs'
+                Dir xs -> do
+                  xs' <- traverse (\(n, et) ->
+                                    (n,) <$> either (fmap (Left . Const) . getConst)
+                                                    (fmap (Right . Const) . getConst)
+                                                     et
+                                  ) xs
+                  pure $ Dir xs'
+                Commit msg a b -> do
+                  a' <- getConst a
+                  b' <- getConst b
+                  pure $ Commit msg (Const a') (Const b')
+                NullCommit ->
+                  pure $ NullCommit
+      e' <- f e
+
+      -- hax (todo chain through)
+      fmap getConst $ sUploadShallow store e'
+
 -- | Lazily read some directory tree into memory
--- NOTE: this needs to be a futu so file steps can read the full file into memory instead of recursing into filepointers
+-- NOTE: this needs to be a futu so file steps can read the full file into memory instead of recursing into filepointers (note 2: is this till true? idk lol)
 readTree
   :: forall m
    . MonadIO m
@@ -76,13 +114,15 @@ readTree'
 readTree' s path = HC $ FC.Compose $ case s of
       SFileChunkTag -> liftIO $ fmap Blob $ readFile path
       SDirTag -> do
+          -- liftIO $ putStrLn $ "readTree' path: " ++ path
           dirContents  <- liftIO $ Dir.getDirectoryContents path
           let dirContents'
-                = filter (/= ".")
+                = fmap (\x -> path ++ "/" ++ x)
+                . filter (/= ".")
                 . filter (/= "..")
                 $ dirContents
           dirContents'' <- traverse categorize dirContents'
-          pure $ Dir dirContents''
+          pure $ Dir $ fmap (\(p,e) -> (justTheName p, e)) dirContents''
 
       -- unreachable
       _ -> fail ("quote 'unreachable' unquote")

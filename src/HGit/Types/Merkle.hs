@@ -42,6 +42,8 @@ data HGit a i where
          -> HGit a 'CommitTag
   NullCommit :: HGit a 'CommitTag
 
+emptyDir :: forall x. HGit x 'DirTag
+emptyDir = Dir []
 
 dirEntries
   :: HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
