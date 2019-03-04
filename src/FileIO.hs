@@ -7,6 +7,9 @@ import           Control.Monad.Except
 import           Control.Monad.Trans.State.Lazy
 import qualified Data.List as List
 import           Data.Foldable (traverse_)
+import qualified Data.Functor.Compose as FC
+import           Data.Functor.Const
+import           Data.Singletons
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Util.MyCompose
@@ -14,9 +17,6 @@ import           Util.HRecursionSchemes
 import           HGit.Store
 import           HGit.Types
 --------------------------------------------
-import qualified Data.Functor.Compose as FC
-import           Data.Functor.Const
-import           Data.Singletons
 
 -- | Write strict hgit dirtree to file path
 writeTree
@@ -50,7 +50,7 @@ writeTree outdir tree = do
       traverse_ handle children
 
     -- unreachable
-    alg _ = undefined
+    alg _ = Const $ fail "*sarcastic air quotes* unreachable *end sarcastic air quotes*"
 
     push x xs = x:xs
     pop (_:xs)  = xs

@@ -14,6 +14,20 @@ import           HGit.Types
 
 -- | Greedily deref a merkle tree
 -- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
+strictDeref''
+  :: forall i m p
+   . HTraversable p
+  => Monad m
+  =>     Term (FC.Compose ((,) HashPointer :+ m) :++ p) i
+  -> m $ Term p i
+strictDeref'' = anaM alg
+  where
+    alg :: CoalgM m p (Term (FC.Compose ((,) a :+ m) :++ p))
+    alg (Term (HC (FC.Compose (C (_, eff))))) = eff
+
+
+-- | Greedily deref a merkle tree
+-- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
 strictDeref
   :: forall i m p
    . HTraversable p

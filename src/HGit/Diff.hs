@@ -67,8 +67,8 @@ diffMerkleDirs' = compareDir []
     resolveMapDiff
       :: [PartialFilePath]
       -> ( PartialFilePath
-         , These (DirPointer (Term (FC.Compose (LazyHashTagged m) :++ HGit)))
-                 (DirPointer (Term (FC.Compose (LazyHashTagged m) :++ HGit)))
+         , These (FileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit)))
+                 (FileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit)))
          )
       -> m [([PartialFilePath], Diff)]
     resolveMapDiff h
@@ -84,8 +84,8 @@ diffMerkleDirs' = compareDir []
     compareDerefed
       :: [PartialFilePath]
       -> PartialFilePath
-      -> DirPointer (Term (FC.Compose (LazyHashTagged m) :++ HGit))
-      -> DirPointer (Term (FC.Compose (LazyHashTagged m) :++ HGit))
+      -> FileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit))
+      -> FileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit))
       -> m [([PartialFilePath], Diff)]
     compareDerefed h path (Left _) (Right _)
       = pure [(h ++ [path], DirReplacedWithFile)]

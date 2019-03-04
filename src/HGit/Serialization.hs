@@ -70,7 +70,7 @@ sdecode = \case
 encodeNamedDir
   :: (f 'DirTag       -> [(Text, Value)])
   -> (f 'FileChunkTag -> [(Text, Value)])
-  -> NamedDirPointer f
+  -> NamedFileTreeEntity f
   -> Value
 encodeNamedDir ed ef (path, e)
   = object $
@@ -83,7 +83,7 @@ decodeNamedDir
   :: (Object -> Parser (f 'DirTag))
   -> (Object -> Parser (f 'FileChunkTag))
   -> Value
-  -> Parser (NamedDirPointer f) -- lmao, need new type
+  -> Parser (NamedFileTreeEntity f) -- lmao, need new type
 decodeNamedDir pd pf
   =  withObject "named dir entity pointer thingy" $ \v -> do
         name    <- v .: "path"
@@ -124,7 +124,7 @@ sencode = \case
                ]
 
   where
-    mkThingy :: NamedDirPointer (Const HashPointer) -> Value
+    mkThingy :: NamedFileTreeEntity (Const HashPointer) -> Value
     mkThingy = encodeNamedDir (pure . ("pointer" .=) . getConst)
                               (pure . ("pointer" .=) . getConst)
 

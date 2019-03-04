@@ -16,13 +16,13 @@ $(singletons [d|
 
 
 
-type DirPointer f
+type FileTreeEntity f
   = Either (f 'DirTag)       -- more directory structure
            (f 'FileChunkTag) -- a file (named blob)
 
-type NamedDirPointer f
+type NamedFileTreeEntity f
   = ( PartialFilePath -- name of this directory entry (files and dirs have same name rules)
-    , DirPointer f
+    , FileTreeEntity f
     )
 
 data HGit a i where
@@ -32,7 +32,7 @@ data HGit a i where
 
   -- dir and file bits
   -- TODO: dedicated sum type for file type branches - could use to represent (eg) symlinks or w/e
-  Dir :: [NamedDirPointer a]
+  Dir :: [NamedFileTreeEntity a]
       -> HGit a 'DirTag
 
   -- commits
@@ -47,7 +47,7 @@ emptyDir = Dir []
 
 dirEntries
   :: HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
-  -> [NamedDirPointer (Term (FC.Compose (LazyHashTagged m) :++ HGit))]
+  -> [NamedFileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit))]
 dirEntries (Dir ns) = ns
 
 instance HFunctor HGit where
