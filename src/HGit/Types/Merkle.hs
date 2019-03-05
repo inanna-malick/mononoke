@@ -82,8 +82,6 @@ instance SHFunctor HGit where
   shfmap f (Commit n rc nc) = Commit n (f rc) (f nc)
   shfmap _  NullCommit      = NullCommit
 
-type MyHGit  = Term HGit 'DirTag
-type MyBlobTree = Term HGit 'FileChunkTag
 
 -- TODO/NOTE: is this just ctx with hash pointer shaped holes?
 --            idk, but can't do recursion schemes over that, can I?

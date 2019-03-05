@@ -38,8 +38,6 @@ import           HGit.Store.Deref
 --       note: --lazy and --match can be applied to the same traversal via the same code
 
 
--- NOTE: hgit is a nice pun name (unintentional), includes features of both hg and git comma lmao
-
 -- NOTE: might as well just keep popping up the directory tree to find that hgit file w/ branch mappings anyway, lol - (or .hgit/branches, with .hgit/store as the store (removes need for flag))
 
 -- NOTE NOTE NOTE
@@ -57,12 +55,12 @@ main = parse >>= \case
   InitRepo -> do
     mkHgitDir -- mk .hgit and .hgit/store dirs
     writeState initialRepoState
+
   CheckoutBranch branch _ -> do
     store        <- mkStore
     base         <- baseDir
     repostate    <- readState
 
-    -- throw if target branch name not known
     targetCommit <- getBranch branch repostate >>= sDeref store
 
     diffs        <- status base repostate store
@@ -75,8 +73,10 @@ main = parse >>= \case
         currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref store
         topLevelCurrentDir <- sDeref store $ commitRoot currentCommit
         let toDelete = dirEntries topLevelCurrentDir
-        -- NUCLEAR: basically only use in a docker container for a bit, lol
-        -- TODO: branch on this, delete if file, remove recursive if dir
+
+        -- NOTE: basically only use in a docker container for a bit, lol
+        -- delete each top-level entity in the current commit's root dir
+        -- we just confirmed that there are no diffs btween it and the current dir state
         let cleanup (p, Left  _) = Dir.removeDirectoryRecursive p
             cleanup (p, Right _) = Dir.removeFile p
         _ <- traverse cleanup toDelete
@@ -93,7 +93,8 @@ main = parse >>= \case
     writeState $ repostate
                { branches      = M.insert branch (getConst current) $ branches repostate
                , currentBranch = branch
-               } -- same pointer as current, same dir state - just add new branch -> pointer mapping
+               }
+
   MkCommit msg -> do
     store             <- mkStore
     repostate         <- readState
