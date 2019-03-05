@@ -45,37 +45,32 @@ parser
   where
     checkoutOptions
         = CheckoutBranch
-      <$> strOption
-          ( long "branch"
-         <> short 'b'
-         <> metavar "BRANCHNAME"
-         <> help "branch to checkout" )
+      <$> strArgument
+          ( metavar "BRANCHNAME"
+         <> help "branch to checkout"
+          )
       <*> pure (pure WildCard) -- placeholder
     branchOptions
         = MkBranch
-      <$> strOption
-          ( long "branch"
-         <> short 'b'
-         <> metavar "BRANCHNAME"
-         <> help "branch to create" )
+      <$> strArgument
+          ( metavar "BRANCHNAME"
+         <> help "branch to create"
+          )
     initOptions  = pure InitRepo
     commitOptions
         = MkCommit
-      <$> strOption
-          ( long "message"
-         <> short 'm'
-         <> metavar "MESSAGE"
-         <> help "commit msg" )
+      <$> strArgument
+          ( metavar "MESSAGE"
+         <> help "commit msg"
+          )
     statusOptions  = pure GetStatus
     diffOptions
         = GetDiff
-      <$> strOption
-          ( long "before"
-         <> short 'b'
-         <> metavar "BEFORE"
-         <> help "'before' branch name" )
-      <*> strOption
-          ( long "after"
-         <> short 'a'
-         <> metavar "AFTER"
-         <> help "'after' branch name" )
+      <$> strArgument
+          ( metavar "BEFORE"
+         <> help "'before' branch name"
+          )
+      <*> strArgument
+          ( metavar "AFTER"
+         <> help "'after' branch name"
+          )

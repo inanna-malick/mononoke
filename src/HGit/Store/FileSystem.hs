@@ -9,7 +9,6 @@ import           Control.Monad.Except
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Functor.Compose as FC
 import           Data.Functor.Const (Const(..))
-import qualified Data.Hashable as Hash
 import           Data.Singletons
 --------------------------------------------
 import           Errors
@@ -30,13 +29,13 @@ fsStore
 fsStore root
   = Store
   { sDeref = handleDeref'
-  , sUploadShallow = \smtl -> do
-      let e = AE.encodingToLazyByteString $ AE.toEncoding $ sencode smtl
-          p = Hash.hash e
-          fn = f p
+  , sUploadShallow = \x -> do
+      let bytes = AE.encodingToLazyByteString . AE.toEncoding $ sencode x
+          p = hash' x
+          fn = f $ getConst p
       -- liftIO . putStrLn $ "upload thing that hashes to pointer " ++ show p ++ "to state store @ " ++ fn
-      liftIO $ B.writeFile (root ++ "/" ++ fn) e
-      pure (Const p)
+      liftIO $ B.writeFile (root ++ "/" ++ fn) bytes
+      pure p
   }
   where
     -- TODO: layered store architecture,

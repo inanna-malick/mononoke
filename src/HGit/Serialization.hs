@@ -132,7 +132,7 @@ hash = H.hash . sencode
 
 
 hash' :: HGit (Const HashPointer) :-> Const HashPointer
-hash' = Const . H.hash . sencode
+hash' = Const . hash
 
 
 emptyDirHash :: Const HashPointer 'DirTag

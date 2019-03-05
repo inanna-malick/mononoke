@@ -124,6 +124,7 @@ main = parse >>= \case
   where
     status base repostate store = do
       currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref store
+      -- note: currently adds current repo state to store - could avoid..
       currentStateHash  <- readAndStore store base
       diffMerkleDirs store (commitRoot currentCommit) currentStateHash
 

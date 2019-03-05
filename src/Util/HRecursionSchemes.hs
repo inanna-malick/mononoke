@@ -5,15 +5,13 @@
 {-# LANGUAGE TypeApplications #-}
 
 
--- | A BUNCH OF SHIT STOLEN FROM COMPDATA + POLYKINDS, TODO UPSTREAM PR
+-- | A BUNCH OF SHIT STOLEN FROM COMPDATA + POLYKINDS/SING stuff from me, TODO UPSTREAM PR
 module Util.HRecursionSchemes where
 
+import           Control.Monad
 import           Data.Singletons
-
-import Data.Functor.Compose -- todo standardize on my more concise repr here too
-import Data.Kind (Type)
-
-import Control.Monad
+import qualified Data.Functor.Compose as FC
+import           Data.Kind (Type)
 
 type NatM m f g = forall i. f i -> m (g i)
 
@@ -24,18 +22,47 @@ type f :=> a = forall (i :: k) . f i -> a
 class HFunctor (h :: (k -> Type) -> k -> Type) where
     hfmap :: (f :-> g) -> h f :-> h g
 
-instance (Functor f) => HFunctor (Compose f) where hfmap f (Compose xs) = Compose (fmap f xs)
+instance (Functor f) => HFunctor (FC.Compose f) where
+  hfmap f (FC.Compose xs) = FC.Compose (fmap f xs)
 
 
--- incomplete (missing foldable constraint), literally just the bit I need for cataM/anaM
+-- note: just the bit I need for cataM/anaM
 class HTraversable t where
-    -- hmapM :: (Monad m) => NatM m a b -> NatM m (t a) (t b)
     hmapM :: (Monad m)
           => (forall i .    f  i -> m (   g  i))
           -> (forall i . (t f) i -> m ((t g) i))
 
-instance (Traversable f) => HTraversable (Compose f) where
-  hmapM nat (Compose xs) = Compose <$> traverse nat xs
+instance (Traversable f) => HTraversable (FC.Compose f) where
+  hmapM nat (FC.Compose xs) = FC.Compose <$> traverse nat xs
+
+
+data Cxt h f a i where
+    Term ::  f (Cxt h f a) i -> Cxt h f a i
+    Hole :: a i -> Cxt Hole f a i
+
+data Hole
+data NoHole
+
+type Context = Cxt Hole
+
+type Term f = Cxt NoHole f (K ())
+
+unTerm :: Term f t -> f (Term f) t
+unTerm (Term t) = t
+
+instance (HFunctor f) => HFunctor (Cxt h f) where
+    hfmap f (Hole x) = Hole (f x)
+    hfmap f (Term t) = Term (hfmap (hfmap f) t)
+
+newtype K a i = K {unK :: a} deriving (Functor, Foldable, Traversable)
+
+
+type Alg f e = f e :-> e
+
+cata :: forall f a. HFunctor f => Alg f a -> Term f :-> a
+cata f = run
+    where run :: Term f :-> a
+          run (Term t) = f (hfmap run t)
 
 type AlgM m f e = NatM m (f e) e
 
@@ -46,6 +73,12 @@ cataM alg = run
     where run :: NatM m (Term f) a
           run (Term x) = alg =<< hmapM run x
 
+type Coalg f a = a :-> f a
+
+ana :: forall f a. HFunctor f => Coalg f a -> a :-> Term f
+ana f = run
+    where run :: a :-> Term f
+          run t = Term $ hfmap run (f t)
 
 type CoalgM m f a = NatM m a (f a)
 
@@ -55,81 +88,8 @@ anaM f = run
     where run :: NatM m a (Term f)
           run t = liftM Term $ f t >>= hmapM run
 
-
--- | This data type represents contexts over a signature. Contexts are
--- terms containing zero or more holes. The first type parameter is
--- supposed to be one of the phantom types 'Hole' and 'NoHole'. The
--- second parameter is the signature of the context. The third
--- parameter is the type family of the holes. The last parameter is
--- the index/label.
-
-data Cxt h f a i where
-    Term ::  f (Cxt h f a) i -> Cxt h f a i
-    Hole :: a i -> Cxt Hole f a i
-
--- | Phantom type that signals that a 'Cxt' might contain holes.
-data Hole
--- | Phantom type that signals that a 'Cxt' does not contain holes.
-data NoHole
-
--- | A context might contain holes.
-type Context = Cxt Hole
-
--- | A (higher-order) term is a context with no holes.
-type Term f = Cxt NoHole f (K ())
-
--- | This function unravels the given term at the topmost layer.
-unTerm :: Term f t -> f (Term f) t
-unTerm (Term t) = t
-
-instance (HFunctor f) => HFunctor (Cxt h f) where
-    hfmap f (Hole x) = Hole (f x)
-    hfmap f (Term t) = Term (hfmap (hfmap f) t)
-
-
--- | The parametrised constant functor.
-newtype K a i = K {unK :: a} deriving (Functor, Foldable, Traversable)
-
-
--- | This type represents multisorted @f@-algebras with a family @e@
--- of carriers.
-type Alg f e = f e :-> e
-
--- | Construct a catamorphism from the given algebra.
-cata :: forall f a. HFunctor f => Alg f a -> Term f :-> a
-cata f = run
-    where run :: Term f :-> a
-          run (Term t) = f (hfmap run t)
-
-----------------
--- Coalgebras --
-----------------
-
-type Coalg f a = a :-> f a
-
-{-| This function unfolds the given value to a term using the given
-unravelling function. This is the unique homomorphism @a -> Term f@
-from the given coalgebra of type @a -> f a@ to the final coalgebra
-@Term f@. -}
-
-ana :: forall f a. HFunctor f => Coalg f a -> a :-> Term f
-ana f = run
-    where run :: a :-> Term f
-          run t = Term $ hfmap run (f t)
-
------------------------------------
--- CV-Coalgebras & Futumorphisms --
------------------------------------
-
-
--- | This type represents cv-coalgebras over functor @f@ and with domain
--- @a@.
-
 type CVCoalg f a = a :-> f (Context f a)
 
-
--- | This function constructs the unique futumorphism from the given
--- cv-coalgebra to the term algebra.
 futu :: forall f a . HFunctor f => CVCoalg f a -> a :-> Term f
 futu coa = ana run . Hole
     where run :: Coalg f (Context f a)
@@ -146,42 +106,28 @@ class SHFunctor (h :: (k -> Type) -> k -> Type) where
 
 type SAlg f e = f e :--> e
 
--- | Construct a catamorphism from the given algebra.
 sCata :: forall f a. SHFunctor f => SAlg f a -> Term f :--> a
 sCata f = run
     where run :: Term f :--> a
           run (Term t) = f (shfmap run t)
 
-
-
 type SCoalg f a = a :--> f a
-
-{-| This function unfolds the given value to a term using the given
-unravelling function. This is the unique homomorphism @a -> Term f@
-from the given coalgebra of type @a -> f a@ to the final coalgebra
-@Term f@. -}
 
 sAna :: forall f a. SHFunctor f => SCoalg f a -> (a :--> Term f)
 sAna f = run
     where run :: a :--> Term f
           run t = Term $ shfmap run (f t)
 
--- | This type represents cv-coalgebras over functor @f@ and with domain
--- @a@.
-
 type SCVCoalg f a = a :--> f (Context f a)
 
-
--- | This function constructs the unique futumorphism from the given
--- cv-coalgebra to the term algebra.
 sFutu :: forall f a . SHFunctor f => SCVCoalg f a -> a :--> Term f
 sFutu coa = sAna run . Hole
     where run :: SCoalg f (Context f a)
           run (Hole a) = coa a
           run (Term v) = v
 
-instance (Functor f) => SHFunctor (Compose f)
-  where shfmap f (Compose xs) = Compose (fmap f xs)
+instance (Functor f) => SHFunctor (FC.Compose f)
+  where shfmap f (FC.Compose xs) = FC.Compose (fmap f xs)
 
 instance (SHFunctor f) => SHFunctor (Cxt h f) where
     shfmap f (Hole x) = Hole (f x)
