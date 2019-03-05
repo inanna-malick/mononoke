@@ -5,24 +5,22 @@ module HGit.Serialization where
 
 --------------------------------------------
 import           Data.Aeson
-import           Data.Aeson.Types (Parser(..))
+import           Data.Aeson.Types (Parser)
+import           Data.Functor.Const
 import qualified Data.Hashable as H
+import           Data.Singletons
 import           Data.Text
 --------------------------------------------
 import           HGit.Types.Common
 import           HGit.Types.Merkle
+import           Util.HRecursionSchemes ((:->)) -- YOLO 420 SHINY AND CHROME
 import           Util.MyCompose
 --------------------------------------------
 
-import           Data.Singletons
-import qualified Util.HRecursionSchemes as C -- YOLO 420 SHINY AND CHROME
-import           Util.HRecursionSchemes ((:->)) -- YOLO 420 SHINY AND CHROME
-import Data.Functor.Const
-import Data.Functor.Compose (Compose(..))
+instance SingI x => FromJSON (HGitConst x) where
+  parseJSON = fmap HGitConst <$> sdecode sing
 
-
-instance SingI x => FromJSON (HGit (Const HashPointer) x) where
-  parseJSON = sdecode sing
+newtype HGitConst i = HGitConst { unHGitConst :: HGit (Const HashPointer) i}
 
 sdecode :: Sing x -> Value -> Parser $ HGit (Const HashPointer) x
 sdecode = \case

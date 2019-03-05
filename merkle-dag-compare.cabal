@@ -7,8 +7,28 @@ maintainer:          pkinsky@gmail.com
 build-type:          Simple
 cabal-version:       >=1.10
 
-executable mdc 
-  main-is:             Main.hs
+executable hgit
+  main-is: Main.hs
+  other-modules:
+        Commands
+        Errors
+        FileIO
+        HGit.Diff
+        HGit.Diff.Types
+        HGit.Repo
+        HGit.Serialization
+        HGit.Store
+        HGit.Store.Deref
+        HGit.Store.FileSystem
+        HGit.Types
+        HGit.Types.Common
+        HGit.Types.Merkle
+        HGit.Types.RepoState
+        Util.HRecursionSchemes
+        Util.MyCompose
+        Util.These
+
+
   extensions: RankNTypes
             , PolyKinds
             , DeriveFunctor
@@ -39,9 +59,7 @@ executable mdc
             , TypeOperators
             , UndecidableInstances
 
-  ghc-options: -Wall 
-             , -Werror
-             , -Wno-redundant-constraints
+  ghc-options: -Wall -Werror -Wno-redundant-constraints
 
   build-depends: base >=4.8
                , aeson

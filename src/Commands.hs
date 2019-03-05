@@ -16,7 +16,7 @@ parse = execParser opts
      <> progDesc "Print a greeting for TARGET"
      <> header "hello - a test for optparse-applicative" )
 
-data PathMatcher = WildCard | Concrete String
+data PathMatcher = WildCard -- | Concrete String
 
 data Command
   -- switch directory state to that of new branch (nuke and rebuild via store)

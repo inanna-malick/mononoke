@@ -68,7 +68,7 @@ fsStore root
       contents <- liftIO $ B.readFile (root ++ "/" ++ fn)
       case (AE.eitherDecode contents) of
         Left  e -> throw $ DecodeError e
-        Right x -> do
+        Right (HGitConst x) -> do
           -- liftIO . putStrLn $ "got: " ++ (filter ('\\' /=) $ show contents)
           pure $ hfmap (\(Const p') -> Term $ HC $ FC.Compose $ C (p', Nothing)) x
 

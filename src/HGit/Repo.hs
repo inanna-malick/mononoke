@@ -8,6 +8,7 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy as B
 import           Data.Functor.Const
+import qualified Data.Map as M
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Errors
@@ -50,7 +51,7 @@ getBranch
   -> RepoState
   -> m (Const HashPointer 'CommitTag)
 getBranch b
-  = maybe (throw $ BranchNotFound b) (pure . Const) . lookup b . branches
+  = maybe (throw $ BranchNotFound b) (pure . Const) . M.lookup b . branches
 
 -- | Filesystem backed store using the provided dir
 readState

@@ -118,8 +118,8 @@ readTree' s path = HC $ FC.Compose $ case s of
           dirContents  <- liftIO $ Dir.getDirectoryContents path
           let dirContents'
                 = fmap (\x -> path ++ "/" ++ x)
-                . filter (/= ".")
-                . filter (/= "..")
+                -- ignore all starting with '.' (eg ..,.,.hgit/)
+                . filter (\fn -> take 1 fn /= ".")
                 $ dirContents
           dirContents'' <- traverse categorize dirContents'
           pure $ Dir $ fmap (\(p,e) -> (justTheName p, e)) dirContents''
@@ -128,15 +128,15 @@ readTree' s path = HC $ FC.Compose $ case s of
       _ -> fail ("quote 'unreachable' unquote")
 
   where
-    categorize path = do
-      isFile <- liftIO $ Dir.doesFileExist path
+    categorize p = do
+      isFile <- liftIO $ Dir.doesFileExist p
       if isFile
-        then pure $ (justTheName path, Right $ Hole $ Const path)
+        then pure $ (justTheName p, Right $ Hole $ Const p)
         else do
-          isDir <- liftIO $ Dir.doesDirectoryExist path
+          isDir <- liftIO $ Dir.doesDirectoryExist p
           if isDir
-            then pure $ (justTheName path, Left $ Hole $ Const path)
-            else fail ("file read error: unexpected type at " ++ path)
+            then pure $ (justTheName p, Left $ Hole $ Const p)
+            else fail ("file read error: unexpected type at " ++ p)
 
 
 justTheName :: FilePath -> String -- hacky hax but it works - take just the name given a file path

@@ -3,6 +3,7 @@ module Main where
 --------------------------------------------
 import           Data.Functor.Const
 import qualified Data.Functor.Compose as FC
+import qualified Data.Map as M
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Commands
@@ -75,16 +76,22 @@ main = parse >>= \case
         topLevelCurrentDir <- sDeref store $ commitRoot currentCommit
         let toDelete = dirEntries topLevelCurrentDir
         -- NUCLEAR: basically only use in a docker container for a bit, lol
-        _ <- traverse (Dir.removeDirectoryRecursive . fst) toDelete
+        -- TODO: branch on this, delete if file, remove recursive if dir
+        let cleanup (p, Left  _) = Dir.removeDirectoryRecursive p
+            cleanup (p, Right _) = Dir.removeFile p
+        _ <- traverse cleanup toDelete
 
         x <- strictDeref'' . lazyDeref store $ commitRoot targetCommit
         writeTree base x
+        writeState $ repostate
+                  { currentBranch = branch
+                  }
 
   MkBranch branch -> do
     repostate <- readState
     current   <- getBranch (currentBranch repostate) repostate
     writeState $ repostate
-               { branches      = branches repostate ++ [(branch, getConst current)]
+               { branches      = M.insert branch (getConst current) $ branches repostate
                , currentBranch = branch
                } -- same pointer as current, same dir state - just add new branch -> pointer mapping
   MkCommit msg -> do
@@ -96,12 +103,7 @@ main = parse >>= \case
     let commit = Commit msg currentStateHash currentCommitHash
     hash <- sUploadShallow store commit
     writeState $ repostate
-               { branches = (\(x,p) ->
-                               if x == (currentBranch repostate)
-                                 then (x, p)
-                                 else (x, getConst hash)
-                            )
-                        <$> branches repostate
+               { branches = M.insert (currentBranch repostate) (getConst hash) $ branches repostate
                }
 
   GetStatus -> do

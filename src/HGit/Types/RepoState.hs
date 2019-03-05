@@ -4,6 +4,7 @@ module HGit.Types.RepoState (RepoState(..), initialRepoState) where
 --------------------------------------------
 import           Data.Aeson
 import qualified Data.Functor.Compose as FC
+import qualified Data.Map as M
 import           Data.Vector (fromList, toList)
 import           Data.Text (Text)
 import           GHC.Generics
@@ -18,7 +19,7 @@ import           Util.MyCompose
 
 data RepoState
   = RepoState
-  { branches      :: [(BranchName, HashPointer)]
+  { branches      :: M.Map BranchName HashPointer
   , currentBranch :: BranchName
   -- NOTE: not yet used, will be req'd for laziness via tracking partially-fetched state
   , substantiated :: SubstantiationState
@@ -27,7 +28,7 @@ data RepoState
 initialRepoState :: RepoState
 initialRepoState
   = RepoState
-  { branches      = [(initial, hash NullCommit)]
+  { branches      = M.fromList [(initial, hash NullCommit)]
   , currentBranch = initial
   , substantiated = SubstantiationState emptyRoot
   }
