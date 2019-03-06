@@ -6,21 +6,22 @@ This repo implements a full git-like data structure (commits, dirs, blob trees, 
 and uses it to implement a minimal proof-of concept version control tool that supports functionality including
 lazy diffing of merkle dirs and lazy merging of branches. Many of the techniques (hash pointer based store, 
 lazy deref, etc) used are applicable to _any_ recursive data structure that uses Merkle-type hash pointer based
-indirection, eg merkle lists (blockchains), merkle trees (git, mercurial), merkle DAGs (IPFS) and merkle AST's (github.com/unisonweb/unison, if I understand it correctly).
+indirection, eg merkle lists (blockchains), merkle trees (git, mercurial), merkle DAGs (IPFS) and merkle AST's ([unison](github.com/unisonweb/unison), if I understand it correctly).
 
 disclaimer: all hashes shown below are the result of some janky non-cryptographic hash function being converted into `[a..z,A..Z,0..9]`. I will eventually move to `blake2` or some other modern cryptographic hash function. Pls no bully.
+disclaimer: running this example will likely result in different hashes, as the hashes are derived from the serialized json structure of hgit objects which continues to change.
 
 
 Demo using the provided dockerfile:
 
-```
+```bash
 > docker build -t pkinsky/hgit:demo .
 > docker run -it pkinsky/hgit:demo bash
 ```
 
 
 let's create an empty repo:
-```
+```bash
 bash:/# mkdir repo
 bash:/# cd repo
 bash:/repo# hgit init
@@ -34,11 +35,11 @@ bash:/repo# cat .hgit/state.json
 
 `hgit init` creates a `.hgit` directory with a `store` subdir that will be used to store various hash-identified objects (commits, dir trees, file blobs, etc) and a `state` file used to track repo state, which consists of the current branch and a map of branch names to commit pointers.
 
-Repos start with the 'default' branch, which is initialized as pointer to the null commit ("z" (or zero) is used as a pointer to the null commit)
+Repos start with the 'default' branch, which is initialized as pointer to the null commit (`z` (or zero) is used as a pointer to the null commit)
 
 Ok, cool. Let's add some files to the repo.
 
-```
+```bash
 bash:/repo# echo "totally a real project" > README.md
 bash:/repo# echo "pls no infringe" > LICENSE
 
@@ -53,7 +54,7 @@ bash:/repo# cat .hgit/state.json
 
 ```
 
-We've created a few simple files and commited them, updating the 'default' branch's commit pointer to "xE9cQhCc0Vvk". Let's take a look at the contents of our store, starting with that commit.
+We've created a few simple files and commited them, updating the 'default' branch's commit pointer to `xE9cQhCc0Vvk`. Let's take a look at the contents of our store, starting with that commit.
 
 ```
 bash:/repo# tree .hgit
