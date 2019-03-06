@@ -2,7 +2,17 @@
 HGIT
 ----
 
-demo using the provided dockerfile:
+This repo implements a full git-like data structure (commits, dirs, blob trees, blobs) using recursion schemes
+and uses it to implement a minimal proof-of concept version control tool that supports functionality including
+lazy diffing of merkle dirs and lazy merging of branches. Many of the techniques (hash pointer based store, 
+lazy deref, etc) used are applicable to _any_ recursive data structure that uses Merkle-type hash pointer based
+indirection, eg merkle lists (blockchains), merkle trees (git, mercurial), merkle DAGs (IPFS) and merkle AST's (github.com/unisonweb/unison, if I understand it correctly).
+
+disclaimer: all hashes shown below are the result of some janky non-cryptographic hash function being converted into `[a..z,A..Z,0..9]`. I will eventually move to `blake2` or some other modern cryptographic hash function. Pls no bully.
+
+
+Demo using the provided dockerfile:
+
 ```
 > docker build -t pkinsky/hgit:demo .
 > docker run -it pkinsky/hgit:demo bash
