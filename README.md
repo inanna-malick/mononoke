@@ -6,7 +6,7 @@ This repo implements a full git-like data structure (commits, dirs, blob trees, 
 and uses it to implement a minimal proof-of concept version control tool that supports functionality including
 lazy diffing of merkle dirs and lazy merging of branches. Many of the techniques (hash pointer based store, 
 lazy deref, etc) used are applicable to _any_ recursive data structure that uses Merkle-type hash pointer based
-indirection, eg merkle lists (blockchains), merkle trees (git, mercurial), merkle DAGs (IPFS) and merkle AST's ([unison](github.com/unisonweb/unison), if I understand it correctly).
+indirection, eg merkle lists (blockchains), merkle trees (git, mercurial), merkle DAGs (IPFS) and merkle AST's ([unison](https://github.com/unisonweb/unison), if I understand it correctly).
 
 
 Demo using the provided dockerfile:
