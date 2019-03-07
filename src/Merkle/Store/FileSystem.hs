@@ -1,0 +1,76 @@
+module Merkle.Store.FileSystem where
+
+--------------------------------------------
+import qualified Data.Aeson as AE
+import qualified Data.Aeson.Internal as AE
+import qualified Data.Aeson.Parser as AE
+import qualified Data.Aeson.Types as AE
+import qualified Data.Aeson.Encoding as AE (encodingToLazyByteString)
+
+import           Control.Exception.Safe (MonadThrow, throw)
+import           Control.Monad.Except
+import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
+import qualified Data.Functor.Compose as FC
+import           Data.Functor.Const (Const(..))
+import           Data.Singletons
+--------------------------------------------
+import           Errors
+import           Merkle.Store
+import           Merkle.Types
+import           Util.HRecursionSchemes
+import           Util.MyCompose
+--------------------------------------------
+
+-- | Filesystem backed store using the provided dir
+fsStore
+  :: forall m p
+   . ( MonadIO m
+     , MonadThrow m
+     , HFunctor p
+     )
+  => p (Const HashPointer) :-> Const HashPointer             -- hash structure
+  -> p (Const HashPointer) :-> Const AE.Value                -- encode json
+  -> NatM AE.Parser (Const AE.Value) (p (Const HashPointer)) -- decode json
+  -- the 'forall x' here enforces the invariant that exceptions can only contain empty structure!
+  -- EG: the null commit is often represented using the hash '0' or some other special value
+  -> (forall i x . SingI i => Const HashPointer i -> Maybe (p x i))
+  -> FilePath
+  -> Store m p
+fsStore hash encode decode exceptions root
+  = Store
+  { sDeref = handleDeref'
+  , sUploadShallow = \x -> do
+      let bytes = AE.encodingToLazyByteString . AE.toEncoding $ encode x
+          p = hash x
+          fn = unHashPointer $ getConst p
+      -- liftIO . putStrLn $ "upload thing that hashes to pointer " ++ show p ++ "to state store @ " ++ fn
+      liftIO $ BL.writeFile (root ++ "/" ++ fn) bytes
+      pure p
+  }
+  where
+    -- TODO: layered store architecture,
+    -- TODO: 'withFallback' structure supporting in-memory cache, filesystem, remote, etc
+    -- null commit and empty dir are always in store
+    -- TODO: make write path ignore these too
+    handleDeref' :: forall i
+                 . SingI i
+                => Const HashPointer i
+                -> m $ p (Term (FC.Compose HashIndirect :++ p)) i
+    handleDeref' p = case exceptions p of
+      Just exception -> pure exception
+      Nothing -> handleDeref p
+
+    handleDeref :: forall i
+                 . SingI i
+                => Const HashPointer i
+                -> m $ p (Term (FC.Compose HashIndirect :++ p)) i
+    handleDeref (Const p) = do
+      let fn = unHashPointer p
+      -- liftIO . putStrLn $ "attempt to deref " ++ show p ++ " via fs state store @ " ++ fn
+      contents <- liftIO $ B.readFile (root ++ "/" ++ fn)
+      case (AE.eitherDecodeStrictWith AE.json' (AE.iparse decode . Const) contents) of
+        Left  e -> throw . DecodeError $ show e
+        Right x -> do
+          -- liftIO . putStrLn $ "got: " ++ (filter ('\\' /=) $ show contents)
+          pure $ hfmap (\(Const p') -> Term $ HC $ FC.Compose $ C (p', Nothing)) x
