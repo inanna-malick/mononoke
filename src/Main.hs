@@ -17,8 +17,9 @@ import           HGit.Merge
 import           Util.MyCompose
 import           Util.HRecursionSchemes
 import           HGit.Serialization (emptyDirHash)
-import           HGit.Store
-import           HGit.Store.Deref
+import           Merkle.Store
+import           Merkle.Store.Deref
+import           Merkle.Types
 --------------------------------------------
 
 -- TODO: new app plan - minimum required for cool demo, basically - idea is diffing branches, checking them out, etc

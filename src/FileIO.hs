@@ -14,8 +14,9 @@ import qualified System.Directory as Dir
 --------------------------------------------
 import           Util.MyCompose
 import           Util.HRecursionSchemes
-import           HGit.Store
 import           HGit.Types
+import           Merkle.Store
+import           Merkle.Types (HashPointer)
 --------------------------------------------
 
 -- | Write strict hgit dirtree to file path

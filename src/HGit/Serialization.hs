@@ -6,24 +6,24 @@ module HGit.Serialization where
 --------------------------------------------
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
+import qualified Data.Functor.Compose as FC
 import           Data.Functor.Const
 import qualified Data.Hashable as H
 import           Data.Singletons
 import           Data.Text
+import           Data.Vector (fromList, toList)
 --------------------------------------------
-import           HGit.Types.Common
 import           HGit.Types.Merkle
-import           Util.HRecursionSchemes ((:->)) -- YOLO 420 SHINY AND CHROME
+import           Merkle.Types
+import           Util.HRecursionSchemes
 import           Util.MyCompose
 --------------------------------------------
 
-instance SingI x => FromJSON (HGitConst x) where
-  parseJSON = fmap HGitConst <$> sdecode sing
+sdecode :: NatM Parser (Const Value) (HGit (Const HashPointer))
+sdecode = sdecode' sing . getConst
 
-newtype HGitConst i = HGitConst { unHGitConst :: HGit (Const HashPointer) i}
-
-sdecode :: Sing x -> Value -> Parser $ HGit (Const HashPointer) x
-sdecode = \case
+sdecode' :: Sing x -> Value -> Parser $ HGit (Const HashPointer) x
+sdecode' = \case
   SFileChunkTag -> withObject "HGit (Const HashPointer) FileChunkTag" $ \v -> do
         typ  <- v .: "type"
         case typ of
@@ -92,8 +92,8 @@ decodeNamedDir pd pf
             pure (name, FileEntity e)
           x      -> fail $ "require [file, dir] type" ++ x
 
-sencode :: HGit (Const HashPointer) x -> Value
-sencode = \case
+sencode :: HGit (Const HashPointer) :-> Const Value
+sencode x =  Const $ case x of
     Blob contents ->
         object [ "type"     .= ("blob" :: Text)
                , "contents" .= pack contents
@@ -117,24 +117,102 @@ sencode = \case
     NullCommit ->
         object [ "type" .= ("nullcommit" :: Text)
                ]
-
   where
     mkThingy :: NamedFileTreeEntity (Const HashPointer) -> Value
     mkThingy = encodeNamedDir (pure . ("pointer" .=) . unHashPointer . getConst)
                               (pure . ("pointer" .=) . unHashPointer . getConst)
 
 
+hash :: HGit (Const HashPointer) :-> Const HashPointer
+hash x = maybe (Const $ mkHashPointer . H.hash $ sencode x) id $ specialhash x
+
+
 -- both the empty dir and the null commit use the same pointer,
 -- but that's ok - can distinguish via type tags
-hash :: HGit (Const HashPointer) x -> HashPointer
-hash (Dir [])   = mkHashPointer 0
-hash NullCommit = mkHashPointer 0
-hash x = mkHashPointer . H.hash $ sencode x
-
-
-hash' :: HGit (Const HashPointer) :-> Const HashPointer
-hash' = Const . hash
-
+-- 'x' is type level assertion that these hashes cannot depend on structure of hashed object
+specialhash :: forall i x . SingI i => HGit x i -> Maybe $ Const HashPointer i
+specialhash (Dir [])   = Just . Const $ mkHashPointer 0
+specialhash NullCommit = Just . Const $ mkHashPointer 0
+specialhash _          = Nothing
 
 emptyDirHash :: Const HashPointer 'DirTag
-emptyDirHash = hash' emptyDir
+emptyDirHash = hash emptyDir
+
+newtype HashIndirectTerm i
+  = HashIndirectTerm
+  { unHashIndirectTerm :: Term (FC.Compose HashIndirect :++ HGit) i
+  }
+
+-- NOTE: this really needs round trip properties for surety.. which means generators..
+instance SingI i => FromJSON (HashIndirectTerm i) where
+    parseJSON = fmap HashIndirectTerm . anaM alg . Const
+      where
+        -- parser (Result) is a monad, so we can just run in that
+        alg :: CoalgM Parser (FC.Compose HashIndirect :++ HGit) (Const Value)
+        alg x = flip (withObject "pointer tagged entity") (getConst x) $ \o -> do
+          p <- HashPointer <$> o .:  "pointer"
+          (mentity :: Maybe Value) <- o .:? "entity" -- entity present but null != entity not present
+          case mentity of
+            Nothing -> pure $ HC $ FC.Compose $ C (p, Nothing)
+            Just entity -> handle p entity
+
+        handle :: forall i'
+                . SingI i'
+               => HashPointer
+               -> Value
+               -> Parser $ (FC.Compose HashIndirect :++ HGit) (Const Value) i'
+        handle p v = case sing @i' of
+          SDirTag -> handleDirTag p v -- todo inline
+          SCommitTag -> case v of
+            Null -> pure $ HC $ FC.Compose $ C (p, Just NullCommit)
+            x    -> flip (withObject "commit") x $ \o -> do
+              name <- o .: "msg"
+              root <- o .: "root"
+              parents <- o .: "parents"
+              pure $ HC $ FC.Compose $ C (p, Just $ Commit name (Const root) (fmap Const parents))
+
+          SFileChunkTag -> case v of
+            (String t) -> pure $ HC $ FC.Compose $ C (p, Just $ Blob $ unpack t)
+            (x :: Value) -> flip (withArray "blobtree entries") x $ \a ->
+              pure $ HC $ FC.Compose $ C (p, Just $ BlobTree $ fmap Const $ toList a)
+
+
+
+        handleDirTag :: HashPointer -> Value -> Parser $ (FC.Compose HashIndirect :++ HGit) (Const Value) 'DirTag
+        handleDirTag p = withArray "dir entries" $ \a -> do
+          (elems :: [NamedFileTreeEntity (Const Value)]) <- traverse mkElem $ toList a
+          let res :: (FC.Compose HashIndirect :++ HGit) (Const Value) 'DirTag
+              res = HC $ FC.Compose $ C (p, Just $ Dir elems)
+          pure $ res
+
+        mkElem :: Value -> Parser $ NamedFileTreeEntity (Const Value)
+        mkElem v = decodeNamedDir handleDir handleFile v
+        handleFile o = do
+          file <- o .: "file"
+          pure $ Const file
+        handleDir o = do
+          dir <- o .: "dir"
+          pure $ Const dir
+
+instance SingI i => ToJSON (HashIndirectTerm i) where
+    toJSON = getConst . cata alg . unHashIndirectTerm
+      where
+        alg :: Alg (FC.Compose HashIndirect :++ HGit) (Const Value)
+        alg (HC (FC.Compose (C (p, Nothing)))) = Const $ object ["pointer" .= unHashPointer p]
+        alg (HC (FC.Compose (C (p, Just x)))) = Const $
+          object [ "pointer" .= unHashPointer p
+                 , "entity" .= encodeEntity  x
+                 ]
+
+        encodeEntity :: HGit (Const Value) :=> Value
+        encodeEntity (Dir xs) = Array $ fromList $ fmap (encodeNamedDir (pure . ("file" .= )) (pure . ("dir" .= ))) xs
+
+        encodeEntity (NullCommit) = Null
+        encodeEntity (Commit msg root parents) =
+          object [ "msg" .= msg
+                 , "root" .= getConst root
+                 , "parents" .= fmap getConst parents
+                 ]
+
+        encodeEntity (Blob fc) = String $ pack fc
+        encodeEntity (BlobTree fcs) = Array $ fmap getConst $ fromList fcs

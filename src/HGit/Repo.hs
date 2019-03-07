@@ -9,12 +9,15 @@ import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy as B
 import           Data.Functor.Const
 import qualified Data.Map as M
+import           Data.Singletons
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Errors
+import qualified HGit.Serialization as Ser
 import           HGit.Types
-import           HGit.Store
-import           HGit.Store.FileSystem (fsStore)
+import           Merkle.Types (HashPointer)
+import           Merkle.Store
+import           Merkle.Store.FileSystem (fsStore)
 --------------------------------------------
 
 
@@ -41,8 +44,17 @@ mkStore
   :: MonadIO m
   => MonadThrow m
   => m (Store m HGit)
-mkStore = fsStore <$> hgitStore'
-
+mkStore = fsStore Ser.hash Ser.sencode Ser.sdecode exceptions <$> hgitStore'
+  where
+    exceptions :: forall i x . SingI i => Const HashPointer i -> Maybe (HGit x i)
+    exceptions x = case sing @i of
+      SCommitTag -> if Just x == Ser.specialhash NullCommit
+                 then Just NullCommit
+                 else Nothing
+      SDirTag -> if Just x == Ser.specialhash (Dir [])
+                 then Just (Dir [])
+                 else Nothing
+      _ -> Nothing
 
 -- | get branch from state, fail if not found
 getBranch

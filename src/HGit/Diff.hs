@@ -11,8 +11,9 @@ import           Data.Functor.Const
 --------------------------------------------
 import           HGit.Diff.Types
 import           HGit.Types
-import           HGit.Store (Store)
-import           HGit.Store.Deref (lazyDeref)
+import           Merkle.Store (Store)
+import           Merkle.Store.Deref (lazyDeref)
+import           Merkle.Types
 import           Util.These (These(..), mapCompare)
 import           Util.MyCompose
 import           Util.HRecursionSchemes

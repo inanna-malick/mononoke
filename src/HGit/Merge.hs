@@ -2,18 +2,19 @@ module HGit.Merge (mergeMerkleDirs) where
 
 --------------------------------------------
 import           Control.Monad.IO.Class
+import           Control.Monad.Trans.Except
 import qualified Data.HashMap.Strict as Map
+import qualified Data.Functor.Compose as FC
 import           Data.Functor.Const
 --------------------------------------------
 import           HGit.Types
-import           HGit.Store
-import           HGit.Store.Deref (lazyDeref)
+import           Merkle.Store
+import           Merkle.Store.Deref (lazyDeref)
+import           Merkle.Types
 import           Util.These (These(..), mapCompare)
 import           Util.MyCompose
 import           Util.HRecursionSchemes
 --------------------------------------------
-import qualified Data.Functor.Compose as FC
-import Control.Monad.Trans.Except
 
 
 data MergeViolation = MergeViolation { mergeViolationPath :: [PartialFilePath] }

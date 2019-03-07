@@ -2,34 +2,17 @@ module HGit.Types.Merkle where
 
 --------------------------------------------
 import           Data.List.NonEmpty
-import           Data.Functor.Const
-import qualified Data.Functor.Compose as FC
 import           Data.Singletons.TH
 --------------------------------------------
 import           HGit.Types.Common
-import           Util.MyCompose
 import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
+
+
 
 $(singletons [d|
   data HGitTag = FileChunkTag | DirTag | CommitTag
  |])
-
-data FileTreeEntity f
-  = FileEntity (f 'FileChunkTag) -- a file (named blobtree)
-  | DirEntity  (f 'DirTag)       -- more directory structure
-
-fte :: (f 'FileChunkTag -> a)
-    -> (f 'DirTag       -> a)
-    -> FileTreeEntity f
-    -> a
-fte f _ (FileEntity x) = f x
-fte _ g (DirEntity  x) = g x
-
-type NamedFileTreeEntity f
-  = ( PartialFilePath -- name of this directory entry (files and dirs have same name rules)
-    , FileTreeEntity f
-    )
 
 data HGit a i where
   -- file chunk bits
@@ -51,9 +34,25 @@ emptyDir :: forall x. HGit x 'DirTag
 emptyDir = Dir []
 
 dirEntries
-  :: HGit (Term (FC.Compose (LazyHashTagged m) :++ HGit)) 'DirTag
-  -> [NamedFileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit))]
+  :: HGit x 'DirTag
+  -> [NamedFileTreeEntity x]
 dirEntries (Dir ns) = ns
+
+data FileTreeEntity f
+  = FileEntity (f 'FileChunkTag) -- a file (named blobtree)
+  | DirEntity  (f 'DirTag)       -- more directory structure
+
+fte :: (f 'FileChunkTag -> a)
+    -> (f 'DirTag       -> a)
+    -> FileTreeEntity f
+    -> a
+fte f _ (FileEntity x) = f x
+fte _ g (DirEntity  x) = g x
+
+type NamedFileTreeEntity f
+  = ( PartialFilePath -- name of this directory entry (files and dirs have same name rules)
+    , FileTreeEntity f
+    )
 
 instance HFunctor HGit where
   hfmap _ (Blob fc)        = Blob fc
@@ -78,20 +77,5 @@ instance HTraversable HGit where
     pure $ Commit msg rc' ncs'
   hmapM _  NullCommit = pure NullCommit
 
-
-type Test m = Term (Pair (Const' HashPointer) (FC.Compose m :++ HGit))
-
-type HashIndirect = (,) HashPointer :+ Maybe
-type LazyHashTagged m = (,) HashPointer :+ m
-
-pointer :: forall f i x. Term (FC.Compose ((,) HashPointer :+ x) :++ f) i -> HashPointer
-pointer (Term (HC (FC.Compose (C (p, _))))) = p
-
-pointer' :: forall f x . Term (FC.Compose ((,) HashPointer :+ x) :++ f) :-> Const HashPointer
-pointer' = Const . pointer
-
-derefLayer
-  :: forall f m
-  . NatM m (Term (FC.Compose (LazyHashTagged m) :++ f))
-            (f (Term (FC.Compose (LazyHashTagged m) :++ f)))
-derefLayer (Term (HC (FC.Compose (C (_p, m))))) = m
+-- test using type-tagged pointers via FC.Compose Const instead of (,)
+-- type Test m = Term (Pair (FC.Compose (Const HashPointer)) (FC.Compose m :++ HGit))

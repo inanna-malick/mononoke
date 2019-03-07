@@ -18,9 +18,10 @@ executable hgit
         HGit.Merge
         HGit.Repo
         HGit.Serialization
-        HGit.Store
-        HGit.Store.Deref
-        HGit.Store.FileSystem
+        Merkle.Store
+        Merkle.Store.Deref
+        Merkle.Store.FileSystem
+        Merkle.Types
         HGit.Types
         HGit.Types.Common
         HGit.Types.Merkle
@@ -77,6 +78,7 @@ executable hgit
                , random
                , recursion-schemes
                , safe-exceptions
+               , servant
                , singletons
                , text
                , transformers
