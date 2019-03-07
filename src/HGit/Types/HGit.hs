@@ -1,4 +1,4 @@
-module HGit.Types.Merkle where
+module HGit.Types.HGit where
 
 --------------------------------------------
 import           Data.List.NonEmpty
@@ -7,7 +7,6 @@ import           Data.Singletons.TH
 import           HGit.Types.Common
 import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
-
 
 
 $(singletons [d|

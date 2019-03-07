@@ -3,6 +3,7 @@ module Merkle.Types where
 --------------------------------------------
 import           Data.Functor.Const
 import qualified Data.Functor.Compose as FC
+import qualified Data.Hashable as H
 --------------------------------------------
 import           Util.MyCompose
 import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
@@ -30,6 +31,9 @@ newtype HashPointer = HashPointer { unHashPointer :: String }
   deriving (Eq, Ord)
 instance Show HashPointer where
   show (HashPointer x) = "#[" ++ x ++ "]"
+
+instance H.Hashable HashPointer where
+  hashWithSalt i a = i `H.hashWithSalt` (H.hash a)
 
 
 -- one-way function

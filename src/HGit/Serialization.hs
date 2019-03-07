@@ -13,11 +13,22 @@ import           Data.Singletons
 import           Data.Text
 import           Data.Vector (fromList, toList)
 --------------------------------------------
-import           HGit.Types.Merkle
+import           HGit.Types.HGit
 import           Merkle.Types
 import           Util.HRecursionSchemes
 import           Util.MyCompose
 --------------------------------------------
+
+{-
+ideas for lazy fetch
+- file/dir pointer fs entities (fname.dir.pointer/fname.file.pointer w/ pointer as contents)
+- each dir has a .hgit-substantiation.json file with this structure
+-- SubstantiationState = Substantiated (HashPointer, FilePath) | UnSubstantiated Pointer
+-- actually, [NamedFilePointer (Const (HashPointer, Maybe FilePath)] will work
+--   idea is that on (lazy/strict) checkout this gets populated with the file paths and hashes
+--   for all fetched files, and on read this gets read and consulted - can also be used for 'status'
+--   style fsstate vs. repo pointer diff - but actually that's bad, ideally logic gets used once..
+-}
 
 sdecode :: NatM Parser (Const Value) (HGit (Const HashPointer))
 sdecode = sdecode' sing . getConst
@@ -122,21 +133,35 @@ sencode x =  Const $ case x of
     mkThingy = encodeNamedDir (pure . ("pointer" .=) . unHashPointer . getConst)
                               (pure . ("pointer" .=) . unHashPointer . getConst)
 
+structuralHash :: HGit (Const HashPointer) :-> Const HashPointer
+-- special cases
+structuralHash (Dir []) = emptyDirHash
+structuralHash (NullCommit) = nullCommitHash
 
-hash :: HGit (Const HashPointer) :-> Const HashPointer
-hash x = maybe (Const $ mkHashPointer . H.hash $ sencode x) id $ specialhash x
+-- file-type entities
+structuralHash (Blob x) = Const $ mkHashPointer $ H.hash x
+structuralHash (BlobTree xs) = Const $ mkHashPointer $ H.hash xs
 
+-- non-empty dir-type entities
+structuralHash (Dir xs) = Const $ mkHashPointer $ H.hash $ fmap hashNFTE xs
+  where hashNFTE (name, f) = H.hash name `H.hashWithSalt` hashFTE f
+        hashFTE =
+          fte (\chp -> H.hash ("file" :: Text) `H.hashWithSalt` H.hash chp)
+              (\chp -> H.hash ("dir"  :: Text) `H.hashWithSalt` H.hash chp)
 
--- both the empty dir and the null commit use the same pointer,
--- but that's ok - can distinguish via type tags
--- 'x' is type level assertion that these hashes cannot depend on structure of hashed object
-specialhash :: forall i x . SingI i => HGit x i -> Maybe $ Const HashPointer i
-specialhash (Dir [])   = Just . Const $ mkHashPointer 0
-specialhash NullCommit = Just . Const $ mkHashPointer 0
-specialhash _          = Nothing
+-- commit-type entities
+structuralHash (Commit msg root parents)
+  = Const $ mkHashPointer $ H.hash
+  [ H.hash msg
+  , H.hash root
+  , H.hash parents
+  ]
+
+nullCommitHash :: Const HashPointer 'CommitTag
+nullCommitHash = Const $ mkHashPointer 0
 
 emptyDirHash :: Const HashPointer 'DirTag
-emptyDirHash = hash emptyDir
+emptyDirHash = Const $ mkHashPointer 0
 
 newtype HashIndirectTerm i
   = HashIndirectTerm
@@ -151,7 +176,7 @@ instance SingI i => FromJSON (HashIndirectTerm i) where
         alg :: CoalgM Parser (FC.Compose HashIndirect :++ HGit) (Const Value)
         alg x = flip (withObject "pointer tagged entity") (getConst x) $ \o -> do
           p <- HashPointer <$> o .:  "pointer"
-          (mentity :: Maybe Value) <- o .:? "entity" -- entity present but null != entity not present
+          (mentity :: Maybe Value) <- o .:! "entity" -- entity present but null != entity not present
           case mentity of
             Nothing -> pure $ HC $ FC.Compose $ C (p, Nothing)
             Just entity -> handle p entity

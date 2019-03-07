@@ -9,7 +9,6 @@ import           GHC.Generics
 --------------------------------------------
 import           HGit.Serialization
 import           HGit.Types.Common
-import           HGit.Types.Merkle
 import           Merkle.Types (HashPointer(..))
 --------------------------------------------
 
@@ -23,7 +22,7 @@ data RepoState
 initialRepoState :: RepoState
 initialRepoState
   = RepoState
-  { branches      = M.fromList [(initial, getConst $ hash NullCommit)]
+  { branches      = M.fromList [(initial, getConst $ nullCommitHash)]
   , currentBranch = initial
   }
   where

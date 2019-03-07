@@ -44,14 +44,14 @@ mkStore
   :: MonadIO m
   => MonadThrow m
   => m (Store m HGit)
-mkStore = fsStore Ser.hash Ser.sencode Ser.sdecode exceptions <$> hgitStore'
+mkStore = fsStore Ser.structuralHash Ser.sencode Ser.sdecode exceptions <$> hgitStore'
   where
     exceptions :: forall i x . SingI i => Const HashPointer i -> Maybe (HGit x i)
     exceptions x = case sing @i of
-      SCommitTag -> if Just x == Ser.specialhash NullCommit
+      SCommitTag -> if x == Ser.nullCommitHash
                  then Just NullCommit
                  else Nothing
-      SDirTag -> if Just x == Ser.specialhash (Dir [])
+      SDirTag -> if x == Ser.emptyDirHash
                  then Just (Dir [])
                  else Nothing
       _ -> Nothing
