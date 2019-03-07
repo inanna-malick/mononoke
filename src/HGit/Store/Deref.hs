@@ -18,6 +18,7 @@ strictDeref''
   :: forall i m p
    . HTraversable p
   => Monad m
+  => SingI i
   =>     Term (FC.Compose ((,) HashPointer :+ m) :++ p) i
   -> m $ Term p i
 strictDeref'' = anaM alg
@@ -32,6 +33,7 @@ strictDeref
   :: forall i m p
    . HTraversable p
   => Monad m
+  => SingI i
   =>     Term (FC.Compose ((,) HashPointer :+ m) :++ p) i
   -> m $ Term (FC.Compose ((,) HashPointer     ) :++ p) i
 strictDeref = anaM alg
@@ -45,7 +47,6 @@ strictDeref = anaM alg
 strictDeref'
   :: forall i m p
    . Monad m
-  => SHFunctor p
   => HFunctor p
   => HTraversable p
   => SingI i
@@ -62,15 +63,14 @@ strictDeref' store = strictDeref . lazyDeref store
 lazyDeref
   :: forall i m p
    . Monad m
-  => SHFunctor p
   => HFunctor p
   => SingI i
   => Store m p
   -> Const HashPointer i
   -> Term (FC.Compose (LazyHashTagged m) :++ p) i
-lazyDeref store = sFutu alg
+lazyDeref store = futu alg
   where
-    alg :: SCVCoalg
+    alg :: CVCoalg
              (FC.Compose (LazyHashTagged m) :++ p)
              (Const HashPointer)
     alg p = HC $ FC.Compose $ C (getConst p, hfmap helper <$> sDeref store p)

@@ -62,7 +62,6 @@ instance HFunctor HGit where
   hfmap f (Commit n rc nc) = Commit n (f rc) (fmap f nc)
   hfmap _  NullCommit      = NullCommit
 
-
 instance HTraversable HGit where
   hmapM _ (Blob fc) = pure $ Blob fc
   hmapM nat (BlobTree fcs) = do
@@ -80,12 +79,7 @@ instance HTraversable HGit where
   hmapM _  NullCommit = pure NullCommit
 
 
-instance SHFunctor HGit where
-  shfmap _ (Blob fc)        = Blob fc
-  shfmap f (BlobTree fcs)   = BlobTree $ fmap f fcs
-  shfmap f (Dir dcs)        = Dir $ fmap (fmap (fte (FileEntity . f) (DirEntity . f))) dcs
-  shfmap f (Commit n rc ncs) = Commit n (f rc) (fmap f ncs)
-  shfmap _  NullCommit      = NullCommit
+type Test m = Term (Pair (Const' HashPointer) (FC.Compose m :++ HGit))
 
 type HashIndirect = (,) HashPointer :+ Maybe
 type LazyHashTagged m = (,) HashPointer :+ m

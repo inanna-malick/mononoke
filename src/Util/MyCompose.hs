@@ -32,13 +32,6 @@ instance (Alternative f, Applicative g) => Alternative (f :+ g) where
 
 
 -- taken from http://hackage.haskell.org/package/type-operators-0.1.0.4/docs/src/Control-Type-Operator.html#%24
--- | Infix application.
---
--- @
--- f :: Either String $ Maybe Int
--- =
--- f :: Either String (Maybe Int)
--- @
 type f $ a = f a
 infixr 2 $
 
@@ -53,9 +46,6 @@ getHCompose (HC x) = x
 
 instance (C.HFunctor f, C.HFunctor g) => C.HFunctor ((:++) f g) where
   hfmap f (HC x) = HC $ C.hfmap (C.hfmap f) x
-
-instance (C.SHFunctor f, C.SHFunctor g) => C.SHFunctor ((:++) f g) where
-  shfmap f (HC x) = HC $ C.shfmap (C.shfmap f) x
 
 -- incomplete instance, yolo, etc
 instance (C.HTraversable f, C.HTraversable g) => C.HTraversable (f :++ g) where

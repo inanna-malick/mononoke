@@ -20,38 +20,31 @@ import           HGit.Types
 
 -- | Write strict hgit dirtree to file path
 writeTree
-  :: MonadIO m
+  :: forall m
+   . MonadIO m
   => FilePath
   -> Term HGit 'DirTag
   -> m ()
-writeTree outdir tree = do
-  liftIO $ evalStateT (getConst $ sCata alg tree) [outdir]
-
+writeTree outdir tree = evalStateT (writeDir tree) [outdir]
   where
-    alg :: SAlg HGit (Const $ StateT [FilePath] IO ())
-    alg (Blob contents)    = Const $ do -- append - will open file handle multiple times, w/e, can cache via state later
-      path <- List.intercalate "/" . reverse <$> get
-      liftIO $ appendFile path contents
+    writeFileChunk :: Term HGit 'FileChunkTag -> StateT [FilePath] m ()
+    -- append - will open file handle multiple times, w/e, can cache via state later
+    writeFileChunk (Term (Blob contents)) =
+      gets (List.intercalate "/" . reverse) >>=  liftIO . flip appendFile contents
+    writeFileChunk (Term (BlobTree children)) =
+      traverse_ writeFileChunk children
 
-    alg (BlobTree children) = Const $ traverse_ getConst children
+    writeDir :: Term HGit 'DirTag -> StateT [FilePath] m ()
+    writeDir (Term (Dir children)) = flip traverse_ children $ \(pathChunk, e) -> do
+      modify (push pathChunk)
+      fte (\(_ :: Term HGit 'FileChunkTag) -> touch)
+          (\(_ :: Term HGit 'DirTag) -> mkDir) e
+      fte writeFileChunk writeDir e
+      modify pop
 
-    alg (Dir children) = Const $ do -- mkdir
-      let mkDir = do
-            path <- List.intercalate "/" . reverse <$> get
-            liftIO $ Dir.createDirectory path
-          touch = do
-            path <- List.intercalate "/" . reverse <$> get
-            liftIO $ writeFile path "" -- touch file
-          handle (pathChunk, e) = do
-            modify (push pathChunk)
-            fte (\(_ :: Const (StateT [String] IO ()) 'FileChunkTag) -> touch)
-                (\(_ :: Const (StateT [String] IO ()) 'DirTag) -> mkDir) e
-            fte getConst getConst e
-            modify pop
-      traverse_ handle children
 
-    -- unreachable
-    alg _ = Const $ fail "*sarcastic air quotes* unreachable *end sarcastic air quotes*"
+    mkDir = gets (List.intercalate "/" . reverse) >>= liftIO . Dir.createDirectory
+    touch = gets (List.intercalate "/" . reverse) >>= liftIO . flip writeFile ""
 
     push x xs = x:xs
     pop (_:xs)  = xs
@@ -104,9 +97,9 @@ readTree
   -- type-level guarantee that there is no hash identified
   -- entity indirection allowed here
   -> Term (FC.Compose m :++ HGit) 'DirTag
-readTree = sFutu alg . Const
+readTree = futu alg . Const
   where
-    alg :: SCVCoalg (FC.Compose m :++ HGit) (Const FilePath)
+    alg :: CVCoalg (FC.Compose m :++ HGit) (Const FilePath)
     alg (Const path) = readTree' sing path
 
 readTree'
