@@ -110,7 +110,7 @@ futu coa = ana run . Hole
 
 
 -- | ETC:
-data Pair f g h i = Pair (f i) (g h i)
+data Pair f g h i = Pair { ptag :: (f i), pelem :: (g h i) }
 
 instance HFunctor g => HFunctor (Pair f g) where
     hfmap f (Pair x y) = Pair x (hfmap f y)

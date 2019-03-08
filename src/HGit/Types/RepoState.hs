@@ -28,18 +28,7 @@ initialRepoState
   }
   where
     initial = "default"
-
-
 instance ToJSON RepoState where
-    toJSON (RepoState bs cb) =
-      object
-      [ "branches"      .= (M.map (unHashPointer . getConst) bs)
-      , "currentBranch" .= cb
-      ]
-instance FromJSON RepoState where
-    parseJSON = withObject "RepoState" $ \o -> do
-      bs <- o .: "branches"
-      cb <- o .: "currentBranch"
-      pure $ RepoState (M.map (Const . HashPointer) bs) cb
+    toEncoding = genericToEncoding defaultOptions
 
-
+instance FromJSON RepoState

@@ -13,21 +13,6 @@ import           Merkle.Types
 
 -- -- | Greedily deref a merkle tree
 -- -- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
--- strictDeref'
---   :: forall i m p
---    . HTraversable p
---   => Monad m
---   => SingI i
---   =>     Term (Compose ((,) HashPointer :+ m) :++ p) i
---   -> m $ Term p i
--- strictDeref' = anaM alg
---   where
---     alg :: CoalgM m p (Term (Compose ((,) a :+ m) :++ p))
---     alg (Term (HC (Compose (C (_, eff))))) = eff
-
-
--- -- | Greedily deref a merkle tree
--- -- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
 strictDeref
   :: forall m p
    . HTraversable p
@@ -65,15 +50,11 @@ lazyDeref
 lazyDeref store = futu alg
   where
     alg :: CVCoalg (LazyHashTagged m p) (Const HashPointer)
-    alg p = Pair p $ HC $ Compose $ do
-      x <- sDeref store p
-      pure $ hfmap helper x
+    alg p = Pair p . HC . Compose $ hfmap (cata helper) <$> sDeref store p
 
-    helper :: Term (HashIndirect p)
-          :-> Context (LazyHashTagged m p) (Const HashPointer)
-    helper (Term (Pair p (HC (Compose Nothing)))) = Hole p
-    helper (Term (Pair p (HC (Compose (Just x))))) =
-      Term $ Pair p $ (HC (Compose $ pure $ hfmap helper x))
+    helper :: Alg (HashIndirect p) (Context (LazyHashTagged m p) (Const HashPointer))
+    helper (Pair p (HC (Compose Nothing))) = Hole p
+    helper (Pair p (HC (Compose (Just x)))) = Term $ Pair p $ (HC (Compose $ pure $ x))
 
 
 

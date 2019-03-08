@@ -12,20 +12,28 @@ import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
 type HashTagged f = Pair (Const HashPointer) f
 
 stripTags :: HFunctor f => Term (HashTagged f) :-> Term f
-stripTags = undefined
-
+stripTags = cata (Term . pelem)
 
 type HashIndirect f = HashTagged (Compose Maybe :++ f)
+
+-- handleHI
+--   :: (Const HashPointer :-> x)
+--   -> (Pair (Const HashPointer) (f g) :-> x)
+--   -> HashIndirect f g :-> x
+-- handleHI f _ (Pair p (HC (Compose Nothing))) = f p
+-- handleHI _ g (Pair p (HC (Compose (Just x)))) = f $ Pair p x
+
+
 type LazyHashTagged m f = HashTagged (Compose m :++ f)
 
 pointer :: forall f . Term (HashTagged f) :-> Const HashPointer
-pointer (Term (Pair p l)) = p
+pointer (Term (Pair p _)) = p
 
 derefLayer
   :: forall f m
    . NatM m (Term (LazyHashTagged m f))
             (f (Term (LazyHashTagged m f)))
-derefLayer (Term (Pair p (HC (Compose m)))) = m
+derefLayer (Term (Pair _ (HC (Compose m)))) = m
 
 -- | Hash pointer (points to value from which hash was derived),
 newtype HashPointer = HashPointer { unHashPointer :: String }

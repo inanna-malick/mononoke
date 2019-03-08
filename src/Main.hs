@@ -181,7 +181,8 @@ main = parse >>= \case
 
 -- IDEA: use 'Pair (Const HashPointer) f' instead of (,) HashPointer :+ f
 commitRoot
-  :: HGit (Term (HashIndirect HGit)) 'CommitTag
+  :: forall x
+   . HGit (Term (HashTagged x)) 'CommitTag
   -> Const HashPointer 'DirTag
 commitRoot (Commit _ (Term (Pair p _)) _) = p
 commitRoot NullCommit        = emptyDirHash
