@@ -6,8 +6,7 @@ module HGit.Serialization where
 --------------------------------------------
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
-import qualified Data.Functor.Compose as FC
-import           Data.Functor.Const
+import           Data.Functor.Compose
 import qualified Data.Hashable as H
 import           Data.Singletons
 import           Data.Text
@@ -165,7 +164,7 @@ emptyDirHash = Const $ mkHashPointer 0
 
 newtype HashIndirectTerm i
   = HashIndirectTerm
-  { unHashIndirectTerm :: Term (FC.Compose HashIndirect :++ HGit) i
+  { unHashIndirectTerm :: Term (HashIndirect HGit) i
   }
 
 -- NOTE: this really needs round trip properties for surety.. which means generators..
@@ -173,41 +172,45 @@ instance SingI i => FromJSON (HashIndirectTerm i) where
     parseJSON = fmap HashIndirectTerm . anaM alg . Const
       where
         -- parser (Result) is a monad, so we can just run in that
-        alg :: CoalgM Parser (FC.Compose HashIndirect :++ HGit) (Const Value)
+        alg :: CoalgM Parser (HashIndirect HGit) (Const Value)
         alg x = flip (withObject "pointer tagged entity") (getConst x) $ \o -> do
-          p <- HashPointer <$> o .:  "pointer"
+          p <- o .:  "pointer"
           (mentity :: Maybe Value) <- o .:! "entity" -- entity present but null != entity not present
           case mentity of
-            Nothing -> pure $ HC $ FC.Compose $ C (p, Nothing)
+            Nothing -> pure $ Pair p $ HC $ Compose Nothing
             Just entity -> handle p entity
 
         handle :: forall i'
                 . SingI i'
-               => HashPointer
+               => Const HashPointer i'
                -> Value
-               -> Parser $ (FC.Compose HashIndirect :++ HGit) (Const Value) i'
+               -> Parser $ (HashIndirect HGit) (Const Value) i'
         handle p v = case sing @i' of
           SDirTag -> handleDirTag p v -- todo inline
           SCommitTag -> case v of
-            Null -> pure $ HC $ FC.Compose $ C (p, Just NullCommit)
+            Null -> pure $ Pair p $ HC $ Compose $ Just $ NullCommit
             x    -> flip (withObject "commit") x $ \o -> do
               name <- o .: "msg"
               root <- o .: "root"
               parents <- o .: "parents"
-              pure $ HC $ FC.Compose $ C (p, Just $ Commit name (Const root) (fmap Const parents))
+              -- pure $ HC $ Compose $ C (p, Just $ Commit name (Const root) (fmap Const parents))
+              pure $ Pair p $ HC $ Compose $ Just $ Commit name (Const root) (fmap Const parents)
+
 
           SFileChunkTag -> case v of
-            (String t) -> pure $ HC $ FC.Compose $ C (p, Just $ Blob $ unpack t)
+            (String t) -> pure $ Pair p $ HC $ Compose $ Just $ Blob $ unpack t
             (x :: Value) -> flip (withArray "blobtree entries") x $ \a ->
-              pure $ HC $ FC.Compose $ C (p, Just $ BlobTree $ fmap Const $ toList a)
+              -- pure $ HC $ Compose $ C (p, Just $ BlobTree $ fmap Const $ toList a)
+              pure $ Pair p $ HC $ Compose $ Just $ BlobTree $ fmap Const $ toList a
 
 
-
-        handleDirTag :: HashPointer -> Value -> Parser $ (FC.Compose HashIndirect :++ HGit) (Const Value) 'DirTag
+        handleDirTag
+          :: Const HashPointer 'DirTag
+          -> Value -> Parser $ (HashIndirect HGit) (Const Value) 'DirTag
         handleDirTag p = withArray "dir entries" $ \a -> do
           (elems :: [NamedFileTreeEntity (Const Value)]) <- traverse mkElem $ toList a
-          let res :: (FC.Compose HashIndirect :++ HGit) (Const Value) 'DirTag
-              res = HC $ FC.Compose $ C (p, Just $ Dir elems)
+          let res :: (HashIndirect HGit) (Const Value) 'DirTag
+              res = Pair p $ HC $ Compose $ Just $ Dir elems
           pure $ res
 
         mkElem :: Value -> Parser $ NamedFileTreeEntity (Const Value)
@@ -222,9 +225,9 @@ instance SingI i => FromJSON (HashIndirectTerm i) where
 instance SingI i => ToJSON (HashIndirectTerm i) where
     toJSON = getConst . cata alg . unHashIndirectTerm
       where
-        alg :: Alg (FC.Compose HashIndirect :++ HGit) (Const Value)
-        alg (HC (FC.Compose (C (p, Nothing)))) = Const $ object ["pointer" .= unHashPointer p]
-        alg (HC (FC.Compose (C (p, Just x)))) = Const $
+        alg :: Alg (HashIndirect HGit) (Const Value)
+        alg (Pair (Const p) (HC (Compose Nothing))) = Const $ object ["pointer" .= unHashPointer p]
+        alg (Pair (Const p) (HC (Compose (Just x)))) = Const $
           object [ "pointer" .= unHashPointer p
                  , "entity" .= encodeEntity  x
                  ]

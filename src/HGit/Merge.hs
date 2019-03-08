@@ -5,7 +5,6 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import qualified Data.HashMap.Strict as Map
 import qualified Data.Functor.Compose as FC
-import           Data.Functor.Const
 --------------------------------------------
 import           HGit.Types
 import           Merkle.Store
@@ -30,7 +29,7 @@ mergeMerkleDirs
   => Store m HGit
   -> Const HashPointer 'DirTag
   -> Const HashPointer 'DirTag
-  -> m $ Either MergeViolation $ Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
+  -> m $ Either MergeViolation $ Term (LazyHashTagged m HGit) 'DirTag
 mergeMerkleDirs store p1 p2 =
   runExceptT $ mergeMerkleDirs' store (lazyDeref store p1) (lazyDeref store p2)
 
@@ -47,16 +46,16 @@ mergeMerkleDirs'
    . Monad m
   => MonadIO m
   => Store m HGit
-  -> Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
-  -> Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
-  -> ExceptT MergeViolation m $ Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
+  -> Term (LazyHashTagged m HGit) 'DirTag
+  -> Term (LazyHashTagged m HGit) 'DirTag
+  -> ExceptT MergeViolation m $ Term (LazyHashTagged m HGit) 'DirTag
 mergeMerkleDirs' store = mergeDirs []
   where
     mergeDirs
       :: [PartialFilePath]
-      -> Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
-      -> Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
-      -> ExceptT MergeViolation m $ Term (FC.Compose (LazyHashTagged m) :++ HGit) 'DirTag
+      -> Term (LazyHashTagged m HGit) 'DirTag
+      -> Term (LazyHashTagged m HGit) 'DirTag
+      -> ExceptT MergeViolation m $ Term (LazyHashTagged m HGit) 'DirTag
     mergeDirs h dir1 dir2 = do
       ns1' <- ExceptT $ Right . dirEntries <$> derefLayer dir1
       ns2' <- ExceptT $ Right . dirEntries <$> derefLayer dir2
@@ -65,17 +64,17 @@ mergeMerkleDirs' store = mergeDirs []
                 $ mapCompare (Map.fromList ns1') (Map.fromList ns2')
 
       let dir = Dir entries
-          dir' = hfmap pointer' dir
-      hash <- ExceptT $ Right <$> sUploadShallow store dir'
-      pure $ Term $ HC $ FC.Compose $ C $ (getConst hash, pure dir)
+          dir' = hfmap pointer dir
+      p <- ExceptT $ Right <$> sUploadShallow store dir'
+      pure $ Term $ Pair p $ HC $ FC.Compose $ pure dir
 
     resolveMapDiff
       :: [PartialFilePath]
       -> ( PartialFilePath
-         , These (FileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit)))
-                 (FileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit)))
+         , These (FileTreeEntity (Term (LazyHashTagged m HGit)))
+                 (FileTreeEntity (Term (LazyHashTagged m HGit)))
          )
-      -> ExceptT MergeViolation m $ NamedFileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit))
+      -> ExceptT MergeViolation m $ NamedFileTreeEntity (Term (LazyHashTagged m HGit))
     resolveMapDiff _
       (n, This x) = pure (n, x) -- non-conflicting change, keep
     resolveMapDiff h
@@ -88,9 +87,9 @@ mergeMerkleDirs' store = mergeDirs []
     compareDerefed
       :: [PartialFilePath]
       -> PartialFilePath
-      -> FileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit))
-      -> FileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit))
-      -> ExceptT MergeViolation m $ NamedFileTreeEntity (Term (FC.Compose (LazyHashTagged m) :++ HGit))
+      -> FileTreeEntity (Term (LazyHashTagged m HGit))
+      -> FileTreeEntity (Term (LazyHashTagged m HGit))
+      -> ExceptT MergeViolation m $ NamedFileTreeEntity (Term (LazyHashTagged m HGit))
     compareDerefed h path (DirEntity _) (FileEntity _)
       = throwE . MergeViolation $ h ++ [path]
     compareDerefed h path (FileEntity _) (DirEntity _)

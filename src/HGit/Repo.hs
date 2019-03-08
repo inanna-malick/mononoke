@@ -7,7 +7,6 @@ import           Control.Exception.Safe (MonadThrow, throw)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy as B
-import           Data.Functor.Const
 import qualified Data.Map as M
 import           Data.Singletons
 import qualified System.Directory as Dir
@@ -18,6 +17,7 @@ import           HGit.Types
 import           Merkle.Types (HashPointer)
 import           Merkle.Store
 import           Merkle.Store.FileSystem (fsStore)
+import           Util.HRecursionSchemes (Const)
 --------------------------------------------
 
 
@@ -63,7 +63,7 @@ getBranch
   -> RepoState
   -> m (Const HashPointer 'CommitTag)
 getBranch b
-  = maybe (throw $ BranchNotFound b) (pure . Const) . M.lookup b . branches
+  = maybe (throw $ BranchNotFound b) pure . M.lookup b . branches
 
 -- | Filesystem backed store using the provided dir
 readState

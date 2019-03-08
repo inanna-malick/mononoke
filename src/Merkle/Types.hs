@@ -1,32 +1,33 @@
 module Merkle.Types where
 
 --------------------------------------------
-import           Data.Functor.Const
-import qualified Data.Functor.Compose as FC
+import qualified Data.Aeson as AE
+import           Data.Functor.Compose
 import qualified Data.Hashable as H
 --------------------------------------------
 import           Util.MyCompose
 import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
+type HashTagged f = Pair (Const HashPointer) f
+
+stripTags :: HFunctor f => Term (HashTagged f) :-> Term f
+stripTags = undefined
 
 
+type HashIndirect f = HashTagged (Compose Maybe :++ f)
+type LazyHashTagged m f = HashTagged (Compose m :++ f)
 
-type HashIndirect = (,) HashPointer :+ Maybe
-type LazyHashTagged m = (,) HashPointer :+ m
-
-pointer :: forall f i x. Term (FC.Compose ((,) HashPointer :+ x) :++ f) i -> HashPointer
-pointer (Term (HC (FC.Compose (C (p, _))))) = p
-
-pointer' :: forall f x . Term (FC.Compose ((,) HashPointer :+ x) :++ f) :-> Const HashPointer
-pointer' = Const . pointer
+pointer :: forall f . Term (HashTagged f) :-> Const HashPointer
+pointer (Term (Pair p l)) = p
 
 derefLayer
   :: forall f m
-  . NatM m (Term (FC.Compose (LazyHashTagged m) :++ f))
-            (f (Term (FC.Compose (LazyHashTagged m) :++ f)))
-derefLayer (Term (HC (FC.Compose (C (_p, m))))) = m
+   . NatM m (Term (LazyHashTagged m f))
+            (f (Term (LazyHashTagged m f)))
+derefLayer (Term (Pair p (HC (Compose m)))) = m
 
+-- | Hash pointer (points to value from which hash was derived),
 newtype HashPointer = HashPointer { unHashPointer :: String }
   deriving (Eq, Ord)
 instance Show HashPointer where
@@ -35,6 +36,11 @@ instance Show HashPointer where
 instance H.Hashable HashPointer where
   hashWithSalt i a = i `H.hashWithSalt` (H.hash a)
 
+instance AE.ToJSON HashPointer where
+  toJSON (HashPointer x) = AE.toJSON x
+
+instance AE.FromJSON HashPointer where
+  parseJSON v = HashPointer <$> AE.parseJSON v
 
 -- one-way function
 -- (because I'm lazy and don't want or need to write a parser, no fundamental reason)

@@ -6,13 +6,11 @@ import qualified Data.Aeson.Internal as AE
 import qualified Data.Aeson.Parser as AE
 import qualified Data.Aeson.Types as AE
 import qualified Data.Aeson.Encoding as AE (encodingToLazyByteString)
-
 import           Control.Exception.Safe (MonadThrow, throw)
 import           Control.Monad.Except
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
-import qualified Data.Functor.Compose as FC
-import           Data.Functor.Const (Const(..))
+import           Data.Functor.Compose
 import           Data.Singletons
 --------------------------------------------
 import           Errors
@@ -49,14 +47,10 @@ fsStore hash encode decode exceptions root
       pure p
   }
   where
-    -- TODO: layered store architecture,
-    -- TODO: 'withFallback' structure supporting in-memory cache, filesystem, remote, etc
-    -- null commit and empty dir are always in store
-    -- TODO: make write path ignore these too
     handleDeref' :: forall i
                  . SingI i
                 => Const HashPointer i
-                -> m $ p (Term (FC.Compose HashIndirect :++ p)) i
+                -> m $ p (Term (HashIndirect p)) i
     handleDeref' p = case exceptions p of
       Just exception -> pure exception
       Nothing -> handleDeref p
@@ -64,7 +58,7 @@ fsStore hash encode decode exceptions root
     handleDeref :: forall i
                  . SingI i
                 => Const HashPointer i
-                -> m $ p (Term (FC.Compose HashIndirect :++ p)) i
+                -> m $ p (Term (HashIndirect p)) i
     handleDeref (Const p) = do
       let fn = unHashPointer p
       -- liftIO . putStrLn $ "attempt to deref " ++ show p ++ " via fs state store @ " ++ fn
@@ -73,4 +67,4 @@ fsStore hash encode decode exceptions root
         Left  e -> throw . DecodeError $ show e
         Right x -> do
           -- liftIO . putStrLn $ "got: " ++ (filter ('\\' /=) $ show contents)
-          pure $ hfmap (\(Const p') -> Term $ HC $ FC.Compose $ C (p', Nothing)) x
+          pure $ hfmap (\p' -> Term $ Pair p' $ HC $ Compose $ Nothing) x

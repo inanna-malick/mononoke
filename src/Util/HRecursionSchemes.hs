@@ -1,5 +1,4 @@
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -8,8 +7,10 @@
 module Util.HRecursionSchemes where
 
 import           Control.Monad
+import qualified Data.Aeson as AE
+import qualified Data.Hashable as H
 import           Data.Singletons
-import           Data.Functor.Const (Const)
+-- import           Data.Functor.Const (Const)
 import qualified Data.Functor.Compose as FC
 import           Data.Kind (Type)
 
@@ -21,10 +22,21 @@ type f :=> a = forall (i :: k) . SingI i => f i -> a
 class HFunctor (h :: (k -> Type) -> k -> Type) where
     hfmap :: (f :-> g) -> h f :-> h g
 
-newtype Const' a h i = Const' { unConst' :: a}
+newtype K a h i = Const { getConst :: a}
+  deriving (Eq, Ord, Show)
+type Const a = K a ()
 
-instance HFunctor (Const' x) where
-  hfmap _ (Const' x) = Const' x
+instance AE.ToJSON x => AE.ToJSON (Const x i) where
+  toJSON (Const x) = AE.toJSON x
+
+instance AE.FromJSON x => AE.FromJSON (Const x i) where
+  parseJSON v = Const <$> AE.parseJSON v
+
+instance H.Hashable x => H.Hashable (Const x i) where
+  hashWithSalt s (Const x) = H.hashWithSalt s x
+
+instance HFunctor (K x) where
+  hfmap _ (Const x) = Const x
 
 instance (Functor f) => HFunctor (FC.Compose f) where
   hfmap f (FC.Compose xs) = FC.Compose (fmap f xs)
@@ -52,14 +64,9 @@ type Term f = Cxt NoHole f (Const ())
 unTerm :: Term f t -> f (Term f) t
 unTerm (Term t) = t
 
-data Pair f g h i = Pair (f h i) (g h i)
-
 instance (HFunctor f) => HFunctor (Cxt h f) where
     hfmap f (Hole x) = Hole (f x)
     hfmap f (Term t) = Term (hfmap (hfmap f) t)
-
-instance (HFunctor f, HFunctor g) => HFunctor (Pair f g) where
-    hfmap f (Pair x y) = Pair (hfmap f x) (hfmap f y)
 
 type Alg f e = f e :-> e
 
@@ -100,3 +107,13 @@ futu coa = ana run . Hole
     where run :: Coalg f (Context f a)
           run (Hole a) = coa a
           run (Term v) = v
+
+
+-- | ETC:
+data Pair f g h i = Pair (f i) (g h i)
+
+instance HFunctor g => HFunctor (Pair f g) where
+    hfmap f (Pair x y) = Pair x (hfmap f y)
+
+instance (HTraversable f) => HTraversable (Pair g f) where
+  hmapM nat (Pair f g) = Pair f <$> hmapM nat g

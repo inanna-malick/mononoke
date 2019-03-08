@@ -1,8 +1,6 @@
 module Main where
 
 --------------------------------------------
-import           Data.Functor.Const
-import qualified Data.Functor.Compose as FC
 import qualified Data.List as L
 import           Data.List.NonEmpty
 import qualified Data.Map as M
@@ -14,7 +12,6 @@ import           HGit.Diff (diffMerkleDirs)
 import           HGit.Repo
 import           HGit.Types
 import           HGit.Merge
-import           Util.MyCompose
 import           Util.HRecursionSchemes
 import           HGit.Serialization (emptyDirHash)
 import           Merkle.Store
@@ -86,7 +83,7 @@ main = parse >>= \case
     repostate <- readState
     current   <- getBranch (currentBranch repostate) repostate
     writeState $ repostate
-               { branches      = M.insert branch (getConst current) $ branches repostate
+               { branches      = M.insert branch current $ branches repostate
                , currentBranch = branch
                }
 
@@ -99,7 +96,7 @@ main = parse >>= \case
     let commit = Commit msg currentStateHash (pure currentCommitHash)
     hash <- sUploadShallow store commit
     writeState $ repostate
-               { branches = M.insert (currentBranch repostate) (getConst hash) $ branches repostate
+               { branches = M.insert (currentBranch repostate) hash $ branches repostate
                }
 
   -- todo: n-way branch merge once I figure out UX
@@ -127,15 +124,15 @@ main = parse >>= \case
         case mergeRes of
           Left err -> fail $ "merge nonviable due to: " ++ show err
           Right root -> do
-            let commit = Commit msg (pointer' root) $ currentCommitHash :| [targetCommitHash]
+            let commit = Commit msg (pointer root) $ currentCommitHash :| [targetCommitHash]
             hash <- sUploadShallow store commit
             writeState $ repostate
-                       { branches = M.insert (currentBranch repostate) (getConst hash) $ branches repostate
+                       { branches = M.insert (currentBranch repostate) hash $ branches repostate
                        }
 
 
             topLevelCurrentDir <- sDeref store $ commitRoot currentCommit
-            setDirTo store base topLevelCurrentDir $ pointer' root
+            setDirTo store base topLevelCurrentDir $ pointer root
 
   GetStatus -> do
     store     <- mkStore
@@ -178,13 +175,13 @@ main = parse >>= \case
           cleanup (p, FileEntity _) = Dir.removeFile p
       _ <- traverse cleanup toDelete
 
-      x <- strictDeref'' $ lazyDeref store targetDir
-      writeTree base x
+      x <- strictDeref $ lazyDeref store targetDir
+      writeTree base $ stripTags x
 
 
 -- IDEA: use 'Pair (Const HashPointer) f' instead of (,) HashPointer :+ f
 commitRoot
-  :: HGit (Term (FC.Compose HashIndirect :++ HGit)) 'CommitTag
+  :: HGit (Term (HashIndirect HGit)) 'CommitTag
   -> Const HashPointer 'DirTag
-commitRoot (Commit _ (Term (HC (FC.Compose (C (p, _))))) _) = Const p
+commitRoot (Commit _ (Term (Pair p _)) _) = p
 commitRoot NullCommit        = emptyDirHash

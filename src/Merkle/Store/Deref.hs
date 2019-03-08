@@ -1,8 +1,7 @@
 module Merkle.Store.Deref where
 
 --------------------------------------------
-import qualified Data.Functor.Compose as FC
-import           Data.Functor.Const
+import           Data.Functor.Compose
 import           Data.Singletons
 --------------------------------------------
 import           Util.MyCompose
@@ -12,37 +11,32 @@ import           Merkle.Types
 --------------------------------------------
 
 
--- | Greedily deref a merkle tree
--- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
-strictDeref''
-  :: forall i m p
-   . HTraversable p
-  => Monad m
-  => SingI i
-  =>     Term (FC.Compose ((,) HashPointer :+ m) :++ p) i
-  -> m $ Term p i
-strictDeref'' = anaM alg
-  where
-    alg :: CoalgM m p (Term (FC.Compose ((,) a :+ m) :++ p))
-    alg (Term (HC (FC.Compose (C (_, eff))))) = eff
+-- -- | Greedily deref a merkle tree
+-- -- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
+-- strictDeref'
+--   :: forall i m p
+--    . HTraversable p
+--   => Monad m
+--   => SingI i
+--   =>     Term (Compose ((,) HashPointer :+ m) :++ p) i
+--   -> m $ Term p i
+-- strictDeref' = anaM alg
+--   where
+--     alg :: CoalgM m p (Term (Compose ((,) a :+ m) :++ p))
+--     alg (Term (HC (Compose (C (_, eff))))) = eff
 
 
--- | Greedily deref a merkle tree
--- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
+-- -- | Greedily deref a merkle tree
+-- -- NOTE: fully consumes potentially-infinite effectful stream and may not terminate
 strictDeref
-  :: forall i m p
+  :: forall m p
    . HTraversable p
   => Monad m
-  => SingI i
-  =>     Term (FC.Compose ((,) HashPointer :+ m) :++ p) i
-  -> m $ Term (FC.Compose ((,) HashPointer     ) :++ p) i
+  => NatM m (Term (LazyHashTagged m p)) (Term (HashTagged p))
 strictDeref = anaM alg
   where
-    alg :: CoalgM m (FC.Compose ((,) a) :++ p) (Term (FC.Compose ((,) a :+ m) :++ p))
-    alg (Term (HC (FC.Compose (C (p, e))))) = do
-      e' <- e
-      pure $ HC $ FC.Compose $ (p, e')
-
+    alg :: CoalgM m (HashTagged p) (Term (LazyHashTagged m p))
+    alg (Term (Pair p (HC (Compose e)))) = Pair p <$> e
 
 strictDeref'
   :: forall i m p
@@ -52,7 +46,7 @@ strictDeref'
   => SingI i
   => Store m p
   -> Const HashPointer i
-  -> m $ Term (FC.Compose ((,) HashPointer     ) :++ p) i
+  -> m $ Term (HashTagged p) i
 strictDeref' store = strictDeref . lazyDeref store
 
 -- | construct a potentially-infinite tree-shaped stream of further values constructed by
@@ -67,17 +61,27 @@ lazyDeref
   => SingI i
   => Store m p
   -> Const HashPointer i
-  -> Term (FC.Compose (LazyHashTagged m) :++ p) i
+  -> Term (LazyHashTagged m p) i
 lazyDeref store = futu alg
   where
-    alg :: CVCoalg
-             (FC.Compose (LazyHashTagged m) :++ p)
-             (Const HashPointer)
-    alg p = HC $ FC.Compose $ C (getConst p, hfmap helper <$> sDeref store p)
+    alg :: CVCoalg (LazyHashTagged m p) (Const HashPointer)
+    alg p = Pair p $ HC $ Compose $ do
+      x <- sDeref store p
+      pure $ hfmap helper x
+
+    helper :: Term (HashIndirect p)
+          :-> Context (LazyHashTagged m p) (Const HashPointer)
+    helper (Term (Pair p (HC (Compose Nothing)))) = Hole p
+    helper (Term (Pair p (HC (Compose (Just x))))) =
+      Term $ Pair p $ (HC (Compose $ pure $ hfmap helper x))
 
 
-    helper :: Term (FC.Compose HashIndirect :++ p)
-                 :-> Context (FC.Compose (LazyHashTagged m) :++ p) (Const HashPointer)
-    helper (Term (HC (FC.Compose (C (p, Nothing))))) = Hole $ Const p
-    helper (Term (HC (FC.Compose (C (p, Just x))))) =
-      Term $ HC (FC.Compose (C (p, pure $ hfmap helper x)))
+
+
+
+
+
+
+
+
+
