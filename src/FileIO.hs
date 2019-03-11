@@ -27,17 +27,14 @@ writeTree
   -> m ()
 writeTree outdir tree = evalStateT (writeDir tree) [outdir]
   where
-    writeFileChunk :: Term HGit 'FileChunkTag -> StateT [FilePath] m ()
+    writeFileChunk :: Term HGit 'BlobTag -> StateT [FilePath] m ()
     -- append - will open file handle multiple times, w/e, can cache via state later
     writeFileChunk (Term (Blob contents)) =
       gets (List.intercalate "/" . reverse) >>=  liftIO . flip appendFile contents
-    writeFileChunk (Term (BlobTree children)) =
-      traverse_ writeFileChunk children
-
     writeDir :: Term HGit 'DirTag -> StateT [FilePath] m ()
     writeDir (Term (Dir children)) = flip traverse_ children $ \(pathChunk, e) -> do
       modify (push pathChunk)
-      fte (\(_ :: Term HGit 'FileChunkTag) -> touch)
+      fte (\(_ :: Term HGit 'BlobTag) -> touch)
           (\(_ :: Term HGit 'DirTag) -> mkDir) e
       fte writeFileChunk writeDir e
       modify pop
@@ -66,9 +63,6 @@ readAndStore store = fmap Const . getConst . cata alg . readTree
       let f :: forall i . HGit (Const (m HashPointer)) i -> m (HGit (Const (HashPointer)) i)
           f = \case
                 Blob x -> pure $ Blob x
-                BlobTree xs -> do
-                  xs' <- traverse (fmap Const . getConst) xs
-                  pure $ BlobTree xs'
                 Dir xs -> do
                   xs' <- traverse (\(n, et) ->
                                     (n,) <$> fte (fmap (FileEntity . Const) . getConst)
@@ -106,7 +100,7 @@ readTree'
   :: forall x m . MonadIO m => Sing x -> FilePath
   -> (FC.Compose m :++ HGit) (Cxt Hole (FC.Compose m :++ HGit) (Const FilePath)) x
 readTree' s path = HC $ FC.Compose $ case s of
-      SFileChunkTag -> liftIO $ fmap Blob $ readFile path
+      SBlobTag -> liftIO $ fmap Blob $ readFile path
       SDirTag -> do
           -- liftIO $ putStrLn $ "readTree' path: " ++ path
           dirContents  <- liftIO $ Dir.getDirectoryContents path

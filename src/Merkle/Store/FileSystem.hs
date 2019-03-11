@@ -37,34 +37,29 @@ fsStore
   -> Store m p
 fsStore hash encode decode exceptions root
   = Store
-  { sDeref = handleDeref'
+  { sDeref = \p -> case exceptions p of
+      Just exception -> pure exception
+      Nothing -> handleDeref p
   , sUploadShallow = \x -> do
-      let bytes = AE.encodingToLazyByteString . AE.toEncoding $ encode x
-          p = hash x
+      let p = hash x
           fn = unHashPointer $ getConst p
       -- liftIO . putStrLn $ "upload thing that hashes to pointer " ++ show p ++ "to state store @ " ++ fn
-      liftIO $ BL.writeFile (root ++ "/" ++ fn) bytes
+      liftIO . BL.writeFile (root ++ "/" ++ fn)
+             . AE.encodingToLazyByteString . AE.toEncoding
+             $ encode x
+
       pure p
   }
   where
-    handleDeref' :: forall i
-                 . SingI i
-                => Const HashPointer i
-                -> m $ p (Term (HashIndirect p)) i
-    handleDeref' p = case exceptions p of
-      Just exception -> pure exception
-      Nothing -> handleDeref p
-
     handleDeref :: forall i
                  . SingI i
                 => Const HashPointer i
                 -> m $ p (Term (HashIndirect p)) i
     handleDeref (Const p) = do
-      let fn = unHashPointer p
       -- liftIO . putStrLn $ "attempt to deref " ++ show p ++ " via fs state store @ " ++ fn
-      contents <- liftIO $ B.readFile (root ++ "/" ++ fn)
+      contents <- liftIO $ B.readFile (root ++ "/" ++ unHashPointer p)
       case (AE.eitherDecodeStrictWith AE.json' (AE.iparse decode . Const) contents) of
         Left  e -> throw . DecodeError $ show e
         Right x -> do
           -- liftIO . putStrLn $ "got: " ++ (filter ('\\' /=) $ show contents)
-          pure $ hfmap (\p' -> Term $ Pair p' $ HC $ Compose $ Nothing) x
+          pure $ hfmap (Term . flip Pair (HC $ Compose $ Nothing)) x

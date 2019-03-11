@@ -10,20 +10,19 @@ import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
 
 
 $(singletons [d|
-  data HGitTag = FileChunkTag | DirTag | CommitTag
+  data HGitTag = BlobTag | DirTag | CommitTag
  |])
 
 data HGit a i where
   -- file chunk bits
-  Blob :: FileChunk -> HGit a 'FileChunkTag
-  BlobTree :: [a 'FileChunkTag] -> HGit a 'FileChunkTag
+  Blob :: FileChunk -> HGit a 'BlobTag
 
   -- dir and file bits
   Dir :: [NamedFileTreeEntity a]
       -> HGit a 'DirTag
 
   -- commits
-  Commit :: CommitMessage
+  Commit :: CommitMessage           -- todo: commit message as blob!
          -> a 'DirTag               -- root directory (itself unnamed)
          -> NonEmpty (a 'CommitTag) -- parent commits (at least one)
          -> HGit a 'CommitTag
@@ -38,10 +37,10 @@ dirEntries
 dirEntries (Dir ns) = ns
 
 data FileTreeEntity f
-  = FileEntity (f 'FileChunkTag) -- a file (named blobtree)
+  = FileEntity (f 'BlobTag) -- a file
   | DirEntity  (f 'DirTag)       -- more directory structure
 
-fte :: (f 'FileChunkTag -> a)
+fte :: (f 'BlobTag -> a)
     -> (f 'DirTag       -> a)
     -> FileTreeEntity f
     -> a
@@ -55,16 +54,12 @@ type NamedFileTreeEntity f
 
 instance HFunctor HGit where
   hfmap _ (Blob fc)        = Blob fc
-  hfmap f (BlobTree fcs)   = BlobTree $ fmap f fcs
   hfmap f (Dir dcs)        = Dir $ fmap (fmap (fte (FileEntity . f) (DirEntity . f))) dcs
   hfmap f (Commit n rc nc) = Commit n (f rc) (fmap f nc)
   hfmap _  NullCommit      = NullCommit
 
 instance HTraversable HGit where
   hmapM _ (Blob fc) = pure $ Blob fc
-  hmapM nat (BlobTree fcs) = do
-    fcs' <- traverse nat fcs
-    pure $ BlobTree fcs'
   hmapM nat (Dir dcs) = do
     let f (n, DirEntity dir)   = fmap ((n,) . DirEntity)  $ nat dir
         f (n, FileEntity file) = fmap ((n,) . FileEntity) $ nat file

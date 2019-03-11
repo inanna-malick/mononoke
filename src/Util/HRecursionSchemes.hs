@@ -110,6 +110,8 @@ futu coa = ana run . Hole
 
 
 -- | ETC:
+
+-- todo new name - Tagged!
 data Pair f g h i = Pair { ptag :: (f i), pelem :: (g h i) }
 
 instance HFunctor g => HFunctor (Pair f g) where

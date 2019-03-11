@@ -7,6 +7,7 @@ module HGit.Serialization where
 import           Data.Aeson
 import           Data.Aeson.Types (Parser)
 import           Data.Functor.Compose
+import qualified Data.List.NonEmpty as NEL
 import qualified Data.Hashable as H
 import           Data.Singletons
 import           Data.Text
@@ -17,6 +18,7 @@ import           Merkle.Types
 import           Util.HRecursionSchemes
 import           Util.MyCompose
 --------------------------------------------
+
 
 {-
 ideas for lazy fetch
@@ -34,16 +36,13 @@ sdecode = sdecode' sing . getConst
 
 sdecode' :: Sing x -> Value -> Parser $ HGit (Const HashPointer) x
 sdecode' = \case
-  SFileChunkTag -> withObject "HGit (Const HashPointer) FileChunkTag" $ \v -> do
+  SBlobTag -> withObject "HGit (Const HashPointer) BlobTag" $ \v -> do
         typ  <- v .: "type"
         case typ of
-          "blobtree" -> do
-              children <- v .: "children"
-              pure $ BlobTree $ fmap (Const . HashPointer) children
           "blob" -> do
               contents <- v .: "contents"
               pure $ Blob contents
-          x -> fail $ "require [blob, blobtree] type" ++ x
+          x -> fail $ "require [blob] type" ++ x
 
   SDirTag       -> withObject "HGit (Const HashPointer) DirTag" $ \v -> do
         typ  <- v .: "type"
@@ -73,12 +72,11 @@ sdecode' = \case
       (fmap (Const . HashPointer) . (.: "pointer")) (fmap (Const . HashPointer) . (.: "pointer"))
 
 encodeNamedDir
-  :: (f 'DirTag       -> [(Text, Value)])
-  -> (f 'FileChunkTag -> [(Text, Value)])
+  :: (f 'BlobTag -> [(Text, Value)])
+  -> (f 'DirTag       -> [(Text, Value)])
   -> NamedFileTreeEntity f
   -> Value
-encodeNamedDir ed ef (path, e)
-  = object $
+encodeNamedDir ef ed (path, e) = object $
   [ "path" .= path
   ] ++ case e of
         DirEntity  dir  -> ["type" .= ("dir" :: Text)] ++ ed dir
@@ -86,7 +84,7 @@ encodeNamedDir ed ef (path, e)
 
 decodeNamedDir
   :: (Object -> Parser (f 'DirTag))
-  -> (Object -> Parser (f 'FileChunkTag))
+  -> (Object -> Parser (f 'BlobTag))
   -> Value
   -> Parser (NamedFileTreeEntity f) -- lmao, need new type
 decodeNamedDir pd pf
@@ -107,10 +105,6 @@ sencode x =  Const $ case x of
     Blob contents ->
         object [ "type"     .= ("blob" :: Text)
                , "contents" .= pack contents
-               ]
-    BlobTree children ->
-        object [ "type"     .= ("blobtree" :: Text)
-               , "children" .= fmap (unHashPointer . getConst) children
                ]
 
     Dir children ->
@@ -139,7 +133,6 @@ structuralHash (NullCommit) = nullCommitHash
 
 -- file-type entities
 structuralHash (Blob x) = Const $ mkHashPointer $ H.hash x
-structuralHash (BlobTree xs) = Const $ mkHashPointer $ H.hash xs
 
 -- non-empty dir-type entities
 structuralHash (Dir xs) = Const $ mkHashPointer $ H.hash $ fmap hashNFTE xs
@@ -156,6 +149,74 @@ structuralHash (Commit msg root parents)
   , H.hash parents
   ]
 
+
+
+-- | Compare two hash indirect structures, returning True only if both are exactly equal
+--   (eg not just equal via pointer comparison, all substantiations and list orderings must be identical)
+eqStructuralUgh :: forall i . Term (HGit) i -> Term (HGit) i -> Bool
+eqStructuralUgh (Term me1) (Term me2) = case (me1, me2) of
+    ((Blob b1), (Blob b2)) -> b1 == b2
+    (NullCommit, NullCommit) -> True
+    ((Commit msg1 root1 parents1), (Commit msg2 root2 parents2)) ->
+      msg1 == msg2
+        && eqStructuralUgh root1 root2
+        && ( Prelude.foldl (&&) True $ NEL.zipWith eqStructuralUgh parents1 parents2
+           )
+    ((Dir xs1), (Dir xs2)) -> Prelude.foldl (&&) True $ Prelude.zipWith eqFTE xs1 xs2
+    (_, _) -> False
+
+  where
+    eqFTE (n1, DirEntity d1) (n2, DirEntity d2) = n1 == n2 && eqStructuralUgh d1 d2
+    eqFTE (n1, FileEntity f1) (n2, FileEntity f2) = n1 == n2 && eqStructuralUgh f1 f2
+    eqFTE _ _ = False
+
+
+-- | Compare two hash indirect structures, returning True only if both are exactly equal
+--   (eg not just equal via pointer comparison, all substantiations and list orderings must be identical)
+eqStructural :: forall i . Term (HashTagged HGit) i -> Term (HashTagged HGit) i -> Bool
+eqStructural (Term (Pair p1 (me1))) (Term (Pair p2 (me2))) =
+  p1 == p2 && case (me1, me2) of
+    ((Blob b1), (Blob b2)) -> b1 == b2
+    (NullCommit, NullCommit) -> True
+    ((Commit msg1 root1 parents1), (Commit msg2 root2 parents2)) ->
+      msg1 == msg2
+        && eqStructural root1 root2
+        && ( Prelude.foldl (&&) True $ NEL.zipWith eqStructural parents1 parents2
+           )
+    ((Dir xs1), (Dir xs2)) -> Prelude.foldl (&&) True $ Prelude.zipWith eqFTE xs1 xs2
+    (_, _) -> False
+
+  where
+    eqFTE (n1, DirEntity d1) (n2, DirEntity d2) = n1 == n2 && eqStructural d1 d2
+    eqFTE (n1, FileEntity f1) (n2, FileEntity f2) = n1 == n2 && eqStructural f1 f2
+    eqFTE _ _ = False
+
+
+
+
+-- | Compare two hash indirect structures, returning True only if both are exactly equal
+--   (eg not just equal via pointer comparison, all substantiations and list orderings must be identical)
+eqStructural' :: forall i . Term (HashIndirect HGit) i -> Term (HashIndirect HGit) i -> Bool
+eqStructural' (Term (Pair p1 (HC (Compose me1)))) (Term (Pair p2 (HC (Compose me2)))) =
+  p1 == p2 && case (me1, me2) of
+    (Just (Blob b1), Just (Blob b2)) -> b1 == b2
+    (Just NullCommit, Just NullCommit) -> True
+    (Just (Commit msg1 root1 parents1), Just (Commit msg2 root2 parents2)) ->
+      msg1 == msg2
+        && eqStructural' root1 root2
+        && ( Prelude.foldl (&&) True $ NEL.zipWith eqStructural' parents1 parents2
+           )
+    (Just (Dir xs1), Just (Dir xs2)) -> Prelude.foldl (&&) True $ Prelude.zipWith eqFTE xs1 xs2
+    (Nothing, Nothing) -> True
+    (_, _) -> False
+
+  where
+    eqFTE (n1, DirEntity d1) (n2, DirEntity d2) = n1 == n2 && eqStructural' d1 d2
+    eqFTE (n1, FileEntity f1) (n2, FileEntity f2) = n1 == n2 && eqStructural' f1 f2
+    eqFTE _ _ = False
+
+
+
 nullCommitHash :: Const HashPointer 'CommitTag
 nullCommitHash = Const $ mkHashPointer 0
 
@@ -166,6 +227,12 @@ newtype HashIndirectTerm i
   = HashIndirectTerm
   { unHashIndirectTerm :: Term (HashIndirect HGit) i
   }
+
+instance Eq (HashIndirectTerm i) where
+  (HashIndirectTerm a) == (HashIndirectTerm b) = eqStructural' a b
+
+instance SingI i => Show (HashIndirectTerm i) where
+  show = show . encode -- lazy (not in the good way), mostly just for use in tests
 
 -- NOTE: this really needs round trip properties for surety.. which means generators..
 instance SingI i => FromJSON (HashIndirectTerm i) where
@@ -197,11 +264,9 @@ instance SingI i => FromJSON (HashIndirectTerm i) where
               pure $ Pair p $ HC $ Compose $ Just $ Commit name (Const root) (fmap Const parents)
 
 
-          SFileChunkTag -> case v of
+          SBlobTag -> case v of
             (String t) -> pure $ Pair p $ HC $ Compose $ Just $ Blob $ unpack t
-            (x :: Value) -> flip (withArray "blobtree entries") x $ \a ->
-              -- pure $ HC $ Compose $ C (p, Just $ BlobTree $ fmap Const $ toList a)
-              pure $ Pair p $ HC $ Compose $ Just $ BlobTree $ fmap Const $ toList a
+            _          -> fail "expected string"
 
 
         handleDirTag
@@ -233,7 +298,8 @@ instance SingI i => ToJSON (HashIndirectTerm i) where
                  ]
 
         encodeEntity :: HGit (Const Value) :=> Value
-        encodeEntity (Dir xs) = Array $ fromList $ fmap (encodeNamedDir (pure . ("file" .= )) (pure . ("dir" .= ))) xs
+        encodeEntity (Dir xs) =
+          Array $ fromList $ fmap (encodeNamedDir (pure . ("file" .= )) (pure . ("dir" .= ))) xs
 
         encodeEntity (NullCommit) = Null
         encodeEntity (Commit msg root parents) =
@@ -243,4 +309,3 @@ instance SingI i => ToJSON (HashIndirectTerm i) where
                  ]
 
         encodeEntity (Blob fc) = String $ pack fc
-        encodeEntity (BlobTree fcs) = Array $ fmap getConst $ fromList fcs

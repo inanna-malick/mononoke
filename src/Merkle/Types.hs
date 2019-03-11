@@ -6,23 +6,35 @@ import           Data.Functor.Compose
 import qualified Data.Hashable as H
 --------------------------------------------
 import           Util.MyCompose
-import           Util.HRecursionSchemes -- YOLO 420 SHINY AND CHROME
+import           Util.HRecursionSchemes
 --------------------------------------------
 
 type HashTagged f = Pair (Const HashPointer) f
 
+-- | Remove hash annotations from some HashTagged structure
 stripTags :: HFunctor f => Term (HashTagged f) :-> Term f
 stripTags = cata (Term . pelem)
 
+-- | Flatten a HashTagged structure
+flatten
+  :: HFunctor f
+  => f (Term (HashTagged f)) :-> f (Const HashPointer)
+flatten = hfmap pointer
+
+-- | Annotate each layer of some structure with its hash
+hashTag
+  :: HFunctor f
+  => HashFunction f
+  -> Term f :-> Term (HashTagged f)
+hashTag hf = cata (\x -> Term $ Pair (hf $ flatten x) x)
+
 type HashIndirect f = HashTagged (Compose Maybe :++ f)
 
--- handleHI
---   :: (Const HashPointer :-> x)
---   -> (Pair (Const HashPointer) (f g) :-> x)
---   -> HashIndirect f g :-> x
--- handleHI f _ (Pair p (HC (Compose Nothing))) = f p
--- handleHI _ g (Pair p (HC (Compose (Just x)))) = f $ Pair p x
-
+-- | Make some fully substantiated hash tagged structure 'indirect'
+makeIndirect
+  :: HFunctor f
+  => Term (HashTagged f) :-> Term (HashIndirect f)
+makeIndirect = cata (\(Pair p e) -> Term $ Pair p $ HC $ Compose $ Just e)
 
 type LazyHashTagged m f = HashTagged (Compose m :++ f)
 
@@ -35,14 +47,18 @@ derefLayer
             (f (Term (LazyHashTagged m f)))
 derefLayer (Term (Pair _ (HC (Compose m)))) = m
 
+
+type HashFunction f = f (Const HashPointer) :-> Const HashPointer
+
 -- | Hash pointer (points to value from which hash was derived),
 newtype HashPointer = HashPointer { unHashPointer :: String }
   deriving (Eq, Ord)
+
 instance Show HashPointer where
   show (HashPointer x) = "#[" ++ x ++ "]"
 
 instance H.Hashable HashPointer where
-  hashWithSalt i a = i `H.hashWithSalt` (H.hash a)
+  hashWithSalt i (HashPointer a) = i `H.hashWithSalt` (H.hash a)
 
 instance AE.ToJSON HashPointer where
   toJSON (HashPointer x) = AE.toJSON x
