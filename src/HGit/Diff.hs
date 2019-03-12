@@ -35,12 +35,15 @@ diffMerkleDirs = compareDir []
       -> Term (LazyHashTagged m HGit) 'DirTag
       -- todo: writer w/ stack (?) so I can push/path segments to go with changes to tag diffs with loc...
       -> m [([PartialFilePath], Diff)]
-    compareDir h dir1 dir2 = do
-      ns1' <- dirEntries <$> derefLayer dir1
-      ns2' <- dirEntries <$> derefLayer dir2
+    compareDir h dir1 dir2 =
+      if pointer dir1 == pointer dir2
+          then pure []
+          else do
+            ns1' <- dirEntries <$> derefLayer dir1
+            ns2' <- dirEntries <$> derefLayer dir2
 
-      fmap join . traverse (resolveMapDiff h)
-                $ mapCompare (Map.fromList ns1') (Map.fromList ns2')
+            fmap join . traverse (resolveMapDiff h)
+                      $ mapCompare (Map.fromList ns1') (Map.fromList ns2')
 
     resolveMapDiff
       :: [PartialFilePath]

@@ -26,9 +26,8 @@ writeTree
 writeTree outdir tree = evalStateT (writeDir tree) [outdir]
   where
     writeFileChunk :: Term HGit 'BlobTag -> StateT [FilePath] m ()
-    -- append - will open file handle multiple times, w/e, can cache via state later
     writeFileChunk (Term (Blob contents)) =
-      gets (List.intercalate "/" . reverse) >>=  liftIO . flip appendFile contents
+      gets (List.intercalate "/" . reverse) >>=  liftIO . flip writeFile contents
     writeDir :: Term HGit 'DirTag -> StateT [FilePath] m ()
     writeDir (Term (Dir children)) = flip traverse_ children $ \(pathChunk, e) -> do
       modify (push pathChunk)

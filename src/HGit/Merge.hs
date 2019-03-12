@@ -58,16 +58,19 @@ mergeMerkleDirs' store = mergeDirs []
       -> Term (LazyHashTagged m HGit) 'DirTag
       -> ExceptT MergeViolation m $ Term (LazyHashTagged m HGit) 'DirTag
     mergeDirs h dir1 dir2 = do
-      ns1' <- ExceptT $ Right . dirEntries <$> derefLayer dir1
-      ns2' <- ExceptT $ Right . dirEntries <$> derefLayer dir2
+      if pointer dir1 == pointer dir2
+          then pure dir1 -- if both pointers == then they're identical, either is fine for merge res
+          else do
+            ns1' <- ExceptT $ Right . dirEntries <$> derefLayer dir1
+            ns2' <- ExceptT $ Right . dirEntries <$> derefLayer dir2
 
-      entries <- traverse (resolveMapDiff h)
-                $ mapCompare (Map.fromList ns1') (Map.fromList ns2')
+            entries <- traverse (resolveMapDiff h)
+                      $ mapCompare (Map.fromList ns1') (Map.fromList ns2')
 
-      let dir = Dir entries
-          dir' = hfmap pointer dir
-      p <- ExceptT $ Right <$> sUploadShallow store dir'
-      pure $ Term $ Pair p $ HC $ FC.Compose $ pure dir
+            let dir = Dir entries
+                dir' = hfmap pointer dir
+            p <- ExceptT $ Right <$> sUploadShallow store dir'
+            pure $ Term $ Pair p $ HC $ FC.Compose $ pure dir
 
     resolveMapDiff
       :: [PartialFilePath]
