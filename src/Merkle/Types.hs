@@ -11,6 +11,9 @@ import           Util.HRecursionSchemes
 
 type HashTagged f = Pair (Const HashPointer) f
 
+pointer :: forall f . Term (HashTagged f) :-> Const HashPointer
+pointer (Term (Pair p _)) = p
+
 -- | Remove hash annotations from some HashTagged structure
 stripTags :: HFunctor f => Term (HashTagged f) :-> Term f
 stripTags = cata (Term . pelem)
@@ -38,8 +41,24 @@ makeIndirect = cata (\(Pair p e) -> Term $ Pair p $ HC $ Compose $ Just e)
 
 type LazyHashTagged m f = HashTagged (Compose m :++ f)
 
-pointer :: forall f . Term (HashTagged f) :-> Const HashPointer
-pointer (Term (Pair p _)) = p
+-- | Make some fully substantiated hash tagged structure 'indirect'
+makeLazy
+  :: HFunctor f
+  => Monad m
+  => Term (HashTagged f) :-> Term (LazyHashTagged m f)
+makeLazy = cata (\(Pair p e) -> Term $ Pair p $ HC $ Compose $ pure e)
+
+
+-- | Fully consumes potentially-infinite effectful stream and may not terminate
+makeStrict
+  :: forall m p
+   . HTraversable p
+  => Monad m
+  => NatM m (Term (LazyHashTagged m p)) (Term (HashTagged p))
+makeStrict = anaM alg
+  where
+    alg :: CoalgM m (HashTagged p) (Term (LazyHashTagged m p))
+    alg (Term (Pair p (HC (Compose e)))) = Pair p <$> e
 
 derefLayer
   :: forall f m

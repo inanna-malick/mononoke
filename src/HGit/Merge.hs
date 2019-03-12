@@ -1,4 +1,4 @@
-module HGit.Merge (mergeMerkleDirs) where
+module HGit.Merge where
 
 --------------------------------------------
 import           Control.Monad.IO.Class
@@ -17,7 +17,7 @@ import           Util.HRecursionSchemes
 
 
 data MergeViolation = MergeViolation { mergeViolationPath :: [PartialFilePath] }
-  deriving Show
+  deriving (Eq, Show)
 
 
 mergeMerkleDirs
@@ -45,6 +45,7 @@ mergeMerkleDirs'
   -- sequence actions in it to deref successive layers (because monad)
    . Monad m
   => MonadIO m
+  -- TODO: is this really needed? could upload in later phase, don't like upload even if partial failure
   => Store m HGit
   -> Term (LazyHashTagged m HGit) 'DirTag
   -> Term (LazyHashTagged m HGit) 'DirTag

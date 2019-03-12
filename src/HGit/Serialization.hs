@@ -20,17 +20,6 @@ import           Util.MyCompose
 --------------------------------------------
 
 
-{-
-ideas for lazy fetch
-- file/dir pointer fs entities (fname.dir.pointer/fname.file.pointer w/ pointer as contents)
-- each dir has a .hgit-substantiation.json file with this structure
--- SubstantiationState = Substantiated (HashPointer, FilePath) | UnSubstantiated Pointer
--- actually, [NamedFilePointer (Const (HashPointer, Maybe FilePath)] will work
---   idea is that on (lazy/strict) checkout this gets populated with the file paths and hashes
---   for all fetched files, and on read this gets read and consulted - can also be used for 'status'
---   style fsstate vs. repo pointer diff - but actually that's bad, ideally logic gets used once..
--}
-
 sdecode :: NatM Parser (Const Value) (HGit (Const HashPointer))
 sdecode = sdecode' sing . getConst
 
@@ -126,6 +115,10 @@ sencode x =  Const $ case x of
     mkThingy = encodeNamedDir (pure . ("pointer" .=) . unHashPointer . getConst)
                               (pure . ("pointer" .=) . unHashPointer . getConst)
 
+
+
+
+-- TODO: move this? yes.
 structuralHash :: HGit (Const HashPointer) :-> Const HashPointer
 -- special cases
 structuralHash (Dir []) = emptyDirHash
@@ -149,8 +142,6 @@ structuralHash (Commit msg root parents)
   , H.hash parents
   ]
 
-
-
 -- | Compare two hash indirect structures, returning True only if both are exactly equal
 --   (eg not just equal via pointer comparison, all substantiations and list orderings must be identical)
 eqStructuralUgh :: forall i . Term (HGit) i -> Term (HGit) i -> Bool
@@ -170,6 +161,13 @@ eqStructuralUgh (Term me1) (Term me2) = case (me1, me2) of
     eqFTE (n1, FileEntity f1) (n2, FileEntity f2) = n1 == n2 && eqStructuralUgh f1 f2
     eqFTE _ _ = False
 
+
+-- shit name, investigate Eq1 and such
+newtype HashTaggedNT i = HashTaggedNT (Term (HashTagged HGit) i)
+instance Show (HashTaggedNT i) where
+  show _ = "todo"
+instance SingI i => Eq (HashTaggedNT i) where
+  (HashTaggedNT a) == (HashTaggedNT b) = eqStructural a b
 
 -- | Compare two hash indirect structures, returning True only if both are exactly equal
 --   (eg not just equal via pointer comparison, all substantiations and list orderings must be identical)
@@ -260,7 +258,6 @@ instance SingI i => FromJSON (HashIndirectTerm i) where
               name <- o .: "msg"
               root <- o .: "root"
               parents <- o .: "parents"
-              -- pure $ HC $ Compose $ C (p, Just $ Commit name (Const root) (fmap Const parents))
               pure $ Pair p $ HC $ Compose $ Just $ Commit name (Const root) (fmap Const parents)
 
 

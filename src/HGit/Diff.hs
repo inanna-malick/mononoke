@@ -10,35 +10,15 @@ import qualified Data.HashMap.Strict as Map
 --------------------------------------------
 import           HGit.Diff.Types
 import           HGit.Types
-import           Merkle.Store (Store)
-import           Merkle.Store.Deref (lazyDeref)
 import           Merkle.Types
 import           Util.These (These(..), mapCompare)
 import           Util.HRecursionSchemes
 --------------------------------------------
 
--- | Diff two merkle trees, producing diffs and a record of expansions/derefs performed
---   lazily fetches structure of the two trees such that only the parts required
---   to do this comparison are fetched from the global state store (via 'network call')
-diffMerkleDirs
-  :: forall m
-  -- no knowledge about actual monad stack - just knows it's the same
-  -- as used by the store, which lets us create a lazy effectful streaming structure
-   . Monad m
-  => MonadIO m
-  => Store m HGit
-  -> Const HashPointer 'DirTag -- top level interface is just pointers!
-  -> Const HashPointer 'DirTag -- top level interface is just pointers!
-  -> m [([PartialFilePath], Diff)]
-diffMerkleDirs store mt1 mt2 =
-  -- transform merkle trees (hash-addressed indirection) into lazily streaming data structures
-  -- before passing to diffing alg
-  diffMerkleDirs' (lazyDeref store mt1) (lazyDeref store mt2)
-
 
 -- | Diff two merkle trees where the hash-identified nodes have been
 --   converted to lazily-expanded effectful streams of values in some monadic stack 'm'
-diffMerkleDirs'
+diffMerkleDirs
   :: forall m
   -- no knowledge about actual monad stack - just knows it can
   -- sequence actions in it to deref successive layers (because monad)
@@ -47,7 +27,7 @@ diffMerkleDirs'
   => Term (LazyHashTagged m HGit) 'DirTag
   -> Term (LazyHashTagged m HGit) 'DirTag
   -> m [([PartialFilePath], Diff)]
-diffMerkleDirs' = compareDir []
+diffMerkleDirs = compareDir []
   where
     compareDir
       :: [PartialFilePath]

@@ -14,8 +14,6 @@ import qualified System.Directory as Dir
 import           Util.MyCompose
 import           Util.HRecursionSchemes
 import           HGit.Types
-import           Merkle.Store
-import           Merkle.Types (HashPointer)
 --------------------------------------------
 
 -- | Write strict hgit dirtree to file path
@@ -48,38 +46,14 @@ writeTree outdir tree = evalStateT (writeDir tree) [outdir]
     pop []    = []
 
 
-readAndStore
-  :: forall m
-   . MonadIO m
-  => Store m HGit
-  -> FilePath
-  -> m (Const HashPointer 'DirTag)
-readAndStore store = fmap Const . getConst . cata alg . readTree
+readTreeStrict
+  :: MonadIO m
+  => FilePath
+  -> m $ Term (HGit) 'DirTag
+readTreeStrict = anaM alg . readTree
   where
-    alg :: Alg (FC.Compose m :++ HGit) (Const (m HashPointer))
-    alg (HC (FC.Compose eff)) = Const $ do
-      e <- eff
-      -- upload sub-trees and get hashes
-      let f :: forall i . HGit (Const (m HashPointer)) i -> m (HGit (Const (HashPointer)) i)
-          f = \case
-                Blob x -> pure $ Blob x
-                Dir xs -> do
-                  xs' <- traverse (\(n, et) ->
-                                    (n,) <$> fte (fmap (FileEntity . Const) . getConst)
-                                                 (fmap (DirEntity . Const) . getConst)
-                                                  et
-                                  ) xs
-                  pure $ Dir xs'
-                Commit msg a b -> do
-                  a' <- getConst a
-                  b' <- traverse getConst b
-                  pure $ Commit msg (Const a') (fmap Const b')
-                NullCommit ->
-                  pure $ NullCommit
-      e' <- f e
-
-      -- hax (todo chain through)
-      fmap getConst $ sUploadShallow store e'
+    alg :: CoalgM m HGit (Term (FC.Compose m :++ HGit))
+    alg (Term (HC (FC.Compose eff))) = eff
 
 -- | Lazily read some directory tree into memory
 -- NOTE: this needs to be a futu so file steps can read the full file into memory instead of recursing into filepointers (note 2: is this till true? idk lol)
@@ -91,7 +65,7 @@ readTree
   -- type-level guarantee that there is no hash identified
   -- entity indirection allowed here
   -> Term (FC.Compose m :++ HGit) 'DirTag
-readTree = futu alg . Const
+readTree = futu alg . Const -- NOTE: might not need to be futu now that now BLOBTREE!
   where
     alg :: CVCoalg (FC.Compose m :++ HGit) (Const FilePath)
     alg (Const path) = readTree' sing path
@@ -112,6 +86,8 @@ readTree' s path = HC $ FC.Compose $ case s of
           dirContents'' <- traverse categorize dirContents'
           pure $ Dir $ fmap (\(p,e) -> (justTheName p, e)) dirContents''
 
+      -- IDEA: use some kind of type-level hlist of SBlobTag, SDirTag, etc to somehow restrict
+      --       to a subset of a datakind?
       -- unreachable
       _ -> fail ("quote 'unreachable' unquote")
 
