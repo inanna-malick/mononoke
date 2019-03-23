@@ -11,67 +11,44 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Functor.Compose
 import           Data.Functor.Const
-import           Data.Singletons
 --------------------------------------------
 import           Errors
-import           Merkle.Functors
 import           Merkle.Store
 import           Merkle.Types
-import           Util.HRecursionSchemes
-import           Util.MyCompose
+import           Util.RecursionSchemes
 --------------------------------------------
 
 -- | Filesystem backed store using the provided dir
 fsStore
-  :: forall m f w
+  :: forall m f
    . ( MonadIO m
      , MonadThrow m
-     , HFunctor f
+     , Functor f
      , Hashable f
-     , forall i. SingI i => AE.ToJSON (w i)
-     , forall i. SingI i => AE.FromJSON (w i)
+     , AE.ToJSON1   f
+     , AE.FromJSON1 f
      )
-  => Term (Tagged Hash :++ Indirect :++ f) :-> w
-  -> w :-> Term (Tagged Hash :++ Indirect :++ f)
-  -> (forall i x . SingI i => Hash i -> Maybe (f x i))
-  -> FilePath
+  => FilePath
   -> Store m f
-fsStore encode decode exceptions root
+fsStore root
   = Store
-  { sDeref = \p -> case exceptions p of
-      Just exception -> pure exception
-      Nothing -> handleDeref p
-  , sUploadShallow = \x -> do
-      let p = hash x
-          fakeDeep :: f Hash :-> f (Term (Tagged Hash :++ Indirect :++ f))
-          fakeDeep = hfmap f
-
-      liftIO . BL.writeFile (root ++ "/" ++ fn p)
-             . AE.encodingToLazyByteString . AE.toEncoding
-             . encode . Term . HC . Tagged p
-             . HC . Compose . Just $ fakeDeep x
-
-      pure p
-  }
-  where
-    f :: Hash :-> Term (Tagged Hash :++ Indirect :++ f)
-    f p = Term . HC . Tagged p . HC $ Compose Nothing
-
-    fn :: Hash i -> String
-    fn = show . hashToText . getConst
-
-    handleDeref :: forall i
-                 . SingI i
-                => Hash i
-                -> m $ f (Term (Tagged Hash :++ Indirect :++ f)) i
-    handleDeref p = do
+  { sDeref = \p -> do
       -- liftIO . putStrLn $ "attempt to deref " ++ show p ++ " via fs state store @ " ++ fn
       contents <- liftIO $ B.readFile (root ++ "/" ++ fn p)
       case AE.eitherDecodeStrict contents of
         Left  e -> throw . DecodeError $ show e
-        Right x -> case decode x of
-          Term (HC (Tagged p' (HC (Compose (Just x')))))
-            | p == p' -> pure x'
-            | otherwise -> throw . DecodeError $ "hash mismatch (data corruption? lmao idk, here be dragons)"
-          Term (HC (Tagged _ (HC (Compose Nothing)))) ->
-            throw . DecodeError $ "should always have first layer of structure substantiated"
+        -- todo: actually figure out a strategy re: this
+        Right (HashTerm x) -> pure $ fmap (\p' -> Fix $ Compose (p', Compose Nothing)) x
+
+  , sUploadShallow = \x -> do
+      let p = hash x
+      liftIO . BL.writeFile (root ++ "/" ++ fn p)
+             . AE.encodingToLazyByteString
+             . AE.toEncoding
+             $ HashTerm x
+
+      pure p
+  }
+  where
+    fn :: Hash i -> String
+    fn = show . hashToText . getConst

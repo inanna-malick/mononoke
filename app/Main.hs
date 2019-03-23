@@ -1,6 +1,7 @@
 module Main where
 
 --------------------------------------------
+import           Data.Functor.Compose
 import qualified Data.List as L
 import           Data.List.NonEmpty
 import qualified Data.Map as M
@@ -12,12 +13,11 @@ import           HGit.Diff (diffMerkleDirs)
 import           HGit.Repo
 import           HGit.Types
 import           HGit.Merge
-import           Util.HRecursionSchemes
+import           Util.RecursionSchemes
 import           Merkle.Functors
 import           Merkle.Store
 import           Merkle.Store.Deref
 import           Merkle.Types
-import           Util.MyCompose
 --------------------------------------------
 
 main :: IO ()
@@ -27,23 +27,25 @@ main = parse >>= \case
     writeState initialRepoState
 
   CheckoutBranch branch _ -> do
-    store        <- mkStore
+    dstore        <- mkStore "dirs"
+    bstore        <- mkStore "blobs"
+    cstore        <- mkStore "commits"
     base         <- baseDir
     repostate    <- readState
 
-    targetCommit <- getBranch branch repostate >>= sDeref store
+    targetCommit <- getBranch branch repostate >>= sDeref cstore
 
-    diffs        <- status base repostate store
+    diffs        <- status base repostate cstore dstore -- todo drop all these into a struct
     if not (null diffs)
       then do
         putStrLn "directory modified, cannot checkout. Changes:"
         _ <- traverse renderDiff diffs
         fail "womp womp"
       else do
-        currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref store
-        topLevelCurrentDir <- sDeref store $ commitRoot currentCommit
+        currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref cstore
+        topLevelCurrentDir <- sDeref dstore $ commitRoot currentCommit
 
-        setDirTo store base topLevelCurrentDir (commitRoot targetCommit)
+        setDirTo dstore bstore base topLevelCurrentDir (commitRoot targetCommit)
         writeState $ repostate
                   { currentBranch = branch
                   }
@@ -57,26 +59,35 @@ main = parse >>= \case
                }
 
   MkCommit msg -> do
-    store             <- mkStore
+    bstore            <- mkStore "blobs"
+    cstore            <- mkStore "commits"
+    dstore            <- mkStore "dirs"
     repostate         <- readState
     base              <- baseDir
     currentCommitHash <- getBranch (currentBranch repostate) repostate
 
-    currentStateHash <- readTreeStrict base >>= uploadDeep store
+    let uploadBlobs :: Fix (Dir (Fix Blob)) -> IO (Fix (Dir (Hash Blob)))
+        uploadBlobs = cataM (\(Dir xs) -> fmap (Fix . Dir) $
+                               traverse (traverse (fte (fmap FileEntity . uploadDeep bstore) (pure . DirEntity))) xs
+                            )
+
+    currentStateHash <- readTree base >>= uploadBlobs >>= uploadDeep dstore
 
     let commit = Commit msg currentStateHash (pure currentCommitHash)
-    rootHash <- sUploadShallow store commit
+    rootHash <- sUploadShallow cstore commit
     writeState $ repostate
                { branches = M.insert (currentBranch repostate) rootHash $ branches repostate
                }
 
   -- todo: n-way branch merge once I figure out UX
   MkMergeCommit targetBranch msg -> do
-    store             <- mkStore
+    cstore            <- mkStore "commits"
+    dstore            <- mkStore "dirs"
+    bstore            <- mkStore "blobs"
     repostate         <- readState
     base              <- baseDir
 
-    diffs        <- status base repostate store
+    diffs        <- status base repostate cstore dstore
     if not (null diffs)
       then do
         putStrLn "directory modified, cannot merge. Changes:"
@@ -87,30 +98,31 @@ main = parse >>= \case
         targetCommitHash  <- getBranch targetBranch repostate
         currentCommitHash <- getBranch (currentBranch repostate) repostate
 
-        currentCommit <- sDeref store currentCommitHash
-        targetCommit <- sDeref store targetCommitHash
+        currentCommit <- sDeref cstore currentCommitHash
+        targetCommit <- sDeref cstore targetCommitHash
 
-        mergeRes <- mergeMerkleDirs store (commitRoot currentCommit) (commitRoot targetCommit)
+        mergeRes <- mergeMerkleDirs dstore (commitRoot currentCommit) (commitRoot targetCommit)
 
         case mergeRes of
           Left err -> fail $ "merge nonviable due to: " ++ show err
           Right root -> do
-            let commit = Commit msg (pointer root) $ currentCommitHash :| [targetCommitHash]
-            rootHash <- sUploadShallow store commit
+            let commit = Commit msg (htPointer root) $ currentCommitHash :| [targetCommitHash]
+            rootHash <- sUploadShallow cstore commit
             writeState $ repostate
                        { branches = M.insert (currentBranch repostate) rootHash
                                   $ branches repostate
                        }
 
 
-            topLevelCurrentDir <- sDeref store $ commitRoot currentCommit
-            setDirTo store base topLevelCurrentDir $ pointer root
+            topLevelCurrentDir <- sDeref dstore $ commitRoot currentCommit
+            setDirTo dstore bstore base topLevelCurrentDir $ htPointer root
 
   GetStatus -> do
-    store     <- mkStore
+    cstore    <- mkStore "commits"
+    dstore    <- mkStore "dirs"
     repostate <- readState
     base      <- baseDir
-    diffs     <- status base repostate store
+    diffs     <- status base repostate cstore dstore
 
     putStrLn $ "current branch: " ++ currentBranch repostate
     putStrLn $ "diffs:"
@@ -118,27 +130,39 @@ main = parse >>= \case
     pure ()
 
   GetDiff branch1 branch2 -> do
-    store     <- mkStore
+    cstore    <- mkStore "commits"
+    dstore    <- mkStore "dirs"
     repostate <- readState
-    commit1   <- getBranch branch1 repostate >>= sDeref store
-    commit2   <- getBranch branch2 repostate >>= sDeref store
-    diffs     <- diffMerkleDirs (lazyDeref store $ commitRoot commit1)
-                                (lazyDeref store $ commitRoot commit2)
+    commit1   <- getBranch branch1 repostate >>= sDeref cstore
+    commit2   <- getBranch branch2 repostate >>= sDeref cstore
+    diffs     <- diffMerkleDirs (lazyDeref dstore $ commitRoot commit1)
+                                (lazyDeref dstore $ commitRoot commit2)
     _ <- traverse renderDiff diffs
     pure ()
 
   where
     renderDiff (fps, d) = putStrLn $ "\t" ++ show d ++ " at " ++ (L.intercalate "/" fps)
 
-    status base repostate store = do
-      currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref store
-      strictCurrentState  <- readTreeStrict base
-      let currentState = makeLazy $ hashTag strictCurrentState
-      diffMerkleDirs (lazyDeref store $ commitRoot currentCommit) currentState
+    status base repostate cstore dstore = do
+      currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref cstore
+      strictCurrentState  <- readTree base
+
+      -- TODO: beautify
+      let currentState :: Fix (HashTagged (Dir (Hash Blob)) `Compose` IO `Compose` Dir (Hash Blob))
+          currentState
+            = cata (\(Dir xs) ->
+                      let xs' = fmap (fmap (ftem (cata hash) id)) xs
+                       in Fix $ Compose (hash $ Dir $ fmap (fmap (ftem id htPointer)) xs', Compose $ pure $ Dir xs')
+                   ) strictCurrentState
+      diffMerkleDirs (lazyDeref dstore $ commitRoot currentCommit) currentState
 
 
 
-    setDirTo store base topLevelCurrentDir targetDir = do
+    -- x, y, don't matter..
+    setDirTo :: forall x y. Store IO (Dir (Hash Blob)) -> Store IO Blob
+             -> FilePath -> Dir x y -> Hash (Dir (Hash Blob))
+             -> IO ()
+    setDirTo dstore bstore base topLevelCurrentDir targetDir = do
       let toDelete = dirEntries topLevelCurrentDir
 
       -- NOTE: basically only use in a docker container for a bit, lol
@@ -148,13 +172,18 @@ main = parse >>= \case
           cleanup (p, FileEntity _) = Dir.removeFile p
       _ <- traverse cleanup toDelete
 
-      x <- makeStrict $ lazyDeref store targetDir
-      writeTree base $ stripTags x
+      (x :: Fix (Dir (Hash Blob))) <- fmap stripTags $ strictDeref $ lazyDeref dstore targetDir
+
+      let f :: forall x' m' y' . (x' -> m' y') -> Fix (Dir x') -> m' (Fix (Dir y'))
+          f = undefined
+
+      (x' :: Fix (Dir (Fix Blob))) <- f (fmap stripTags . strictDeref . lazyDeref bstore) x
+
+      writeTree base x'
 
 
 commitRoot
-  :: forall f
-   . HGit (Term (Tagged Hash :++ f)) 'CommitTag
-  -> Hash 'DirTag
-commitRoot (Commit _ (Term (HC (Tagged p _))) _) = p
-commitRoot NullCommit        = emptyDirHash
+  :: Commit (Hash (Dir (Hash Blob))) b
+  -> Hash (Dir (Hash Blob))
+commitRoot (Commit _ x _) = x
+commitRoot NullCommit     = emptyHash

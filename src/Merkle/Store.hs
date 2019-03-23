@@ -1,23 +1,25 @@
 module Merkle.Store where
 
 --------------------------------------------
+import           Data.Functor.Compose
 import           Data.Kind (Type)
-import           Merkle.Functors (Indirect)
+import           Merkle.Functors (HashTagged)
 import           Merkle.Types (Hash)
 import           Util.MyCompose
-import           Util.HRecursionSchemes
+import           Util.RecursionSchemes
 --------------------------------------------
 
-data Store m (f :: (k -> Type) -> k -> Type)
+data Store m (f :: Type -> Type)
   = Store
-  { sDeref :: NatM m Hash (f (Term (Tagged Hash :++ Indirect :++ f)))
-  , sUploadShallow :: AlgM m f Hash
+  { sDeref :: Hash f -> m $ f $ Fix (HashTagged f `Compose` Maybe `Compose` f)
+  , sUploadShallow :: AlgebraM m f (Hash f)
   }
 
 uploadDeep
   :: forall m f
-   . HTraversable f
+   . Traversable f
   => Monad m
   => Store m f
-  -> NatM m (Term f) Hash
+  -> (Fix f)
+  -> m (Hash f)
 uploadDeep store = cataM (sUploadShallow store)

@@ -6,14 +6,12 @@ import Data.Functor.Compose
 import Control.Monad.IO.Class
 import qualified Data.Aeson as AE
 import Test.Hspec
-import HGit.Serialization
 import HGit.Diff
 import HGit.Merge
 import HGit.Diff.Types
-import HGit.Gen
 import HGit.Types.HGit
 import Util.MyCompose
-import Util.HRecursionSchemes
+import Util.RecursionSchemes
 import Merkle.Functors
 import Merkle.Store
 import Merkle.Types
@@ -29,12 +27,9 @@ main :: IO ()
 main = do
   let dir xs = Term $ Dir xs
       dir' n xs = (n,) . DirEntity $ dir xs
-      -- TODO/IDEA: store commit messages as blobs!
       blob body = Term $ Blob body -- todo delete blobtree
       file n  = (n,) . FileEntity . blob
       commit msg r ps  = Term $ Commit msg r ps
-      liftHD :: Term HGit :-> Term (Tagged Hash :++ Indirect :++ HGit)
-      liftHD = makeIndirect . hashTag
 
   let roundtrip :: forall i . SingI i => HashTaggedIndirectTerm i -> Either String (HashTaggedIndirectTerm i)
       roundtrip = AE.eitherDecode . AE.encode
@@ -43,17 +38,17 @@ main = do
   -- let x' = liftHD $ dir [file "fname" "fblob"]
   -- let x = HashTaggedIndirectTerm $ liftHD' $ x'
 
-  let propRoundtrip s =
-        property $ do
-          dt <- forAll $ (HashTaggedIndirectTerm <$> genIndTagged s)
-          -- liftIO $ print $ AE.encode dt
-          roundtrip dt === Right dt
+  -- let propRoundtrip s =
+  --       property $ do
+  --         dt <- forAll $ (HashTaggedIndirectTerm <$> genIndTagged s)
+  --         -- liftIO $ print $ AE.encode dt
+  --         roundtrip dt === Right dt
 
-  propres <- checkParallel $ Group "Encoding.RoundTrip" [
-        ("dir tag round trip", propRoundtrip SDirTag),
-        ("file tag round trip", propRoundtrip SBlobTag),
-        ("commit tag round trip", propRoundtrip SCommitTag)
-      ]
+  -- propres <- checkParallel $ Group "Encoding.RoundTrip" [
+  --       ("dir tag round trip", propRoundtrip SDirTag),
+  --       ("file tag round trip", propRoundtrip SBlobTag),
+  --       ("commit tag round trip", propRoundtrip SCommitTag)
+  --     ]
 
   putStrLn $ "hedgehog prop res: " ++ show propres
 

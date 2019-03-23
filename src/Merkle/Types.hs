@@ -13,13 +13,16 @@ import           Data.Kind (Type)
 import           Data.Text (Text, unpack, pack)
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 --------------------------------------------
-import           Util.HRecursionSchemes (Alg)
+import           Util.RecursionSchemes (Algebra)
 --------------------------------------------
 
-class Hashable (f :: (k -> Type) -> k -> Type) where
+class Hashable (f :: Type -> Type) where
   -- flatten a single layer of structure where all
   -- sub-layers are hash pointers down to a hash
-  hash :: Alg f Hash
+  hash :: Algebra f (Hash f)
+
+emptyHash :: forall x. Hash x
+emptyHash = doHash [mempty]
 
 -- | Type-tagged hash pointer
 type Hash = Const RawHash
@@ -52,10 +55,19 @@ instance AE.FromJSON RawHash where
       (maybe (fail "parsing failed") pure . textToHash)
 
 
+newtype HashTerm f = HashTerm { unHashTerm :: f (Hash f)}
+
+
+instance AE.ToJSON1 f => AE.ToJSON (HashTerm f) where
+  toJSON = AE.liftToJSON AE.toJSON AE.toJSONList . unHashTerm
+
+instance AE.FromJSON1 f => AE.FromJSON (HashTerm f) where
+  parseJSON = fmap HashTerm . AE.liftParseJSON AE.parseJSON AE.parseJSONList
+
 unpackString :: String -> ByteString
 unpackString = encodeUtf8 . pack
 
-unpackHash :: Hash i -> ByteString
+unpackHash :: Hash x -> ByteString
 unpackHash = BA.pack . BA.unpack . unRawHash . getConst
 
 -- | do actual hash computation type stuff. blake2b!

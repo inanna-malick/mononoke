@@ -8,13 +8,11 @@ import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Map as M
-import           Data.Singletons
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Errors
-import qualified HGit.Serialization as Ser
 import           HGit.Types
-import           Merkle.Types (Hash)
+import           Merkle.Types
 import           Merkle.Store
 import           Merkle.Store.FileSystem (fsStore)
 --------------------------------------------
@@ -40,29 +38,23 @@ mkHgitDir = do
   liftIO $ Dir.createDirectory path2
 
 mkStore
-  :: MonadIO m
-  => MonadThrow m
-  => m (Store m HGit)
-mkStore = fsStore Ser.HashTaggedIndirectTerm
-                  Ser.unHashTaggedIndirectTerm
-                  exceptions <$> hgitStore'
-  where
-    exceptions :: forall i x . SingI i => Hash i -> Maybe (HGit x i)
-    exceptions x = case sing @i of
-      SCommitTag -> if x == nullCommitHash
-                 then Just NullCommit
-                 else Nothing
-      SDirTag -> if x == emptyDirHash
-                 then Just (Dir [])
-                 else Nothing
-      _ -> Nothing
+  :: ( MonadIO      m
+     , MonadThrow   m
+     , AE.ToJSON1   f
+     , AE.FromJSON1 f
+     , Functor      f
+     , Hashable     f
+     )
+  => String
+  -> m (Store m f)
+mkStore prefix = fsStore . (++ "/" ++ prefix) <$> hgitStore'
 
 -- | get branch from state, fail if not found
 getBranch
   :: MonadThrow m
   => BranchName
   -> RepoState
-  -> m (Hash 'CommitTag)
+  -> m (Hash (Commit (Hash (Dir (Hash Blob)))))
 getBranch b
   = maybe (throw $ BranchNotFound b) pure . M.lookup b . branches
 

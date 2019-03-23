@@ -13,7 +13,7 @@ import           Merkle.Store.Deref (lazyDeref)
 import           Merkle.Types
 import           Util.These (These(..), mapCompare)
 import           Util.MyCompose
-import           Util.HRecursionSchemes
+import           Util.RecursionSchemes
 --------------------------------------------
 
 
@@ -22,15 +22,16 @@ data MergeViolation = MergeViolation { mergeViolationPath :: [PartialFilePath] }
 
 
 mergeMerkleDirs
-  :: forall m
+  :: forall m x
   -- no knowledge about actual monad stack - just knows it can
   -- sequence actions in it to deref successive layers (because monad)
    . Monad m
   => MonadIO m
-  => Store m HGit
-  -> Hash 'DirTag
-  -> Hash 'DirTag
-  -> m $ Either MergeViolation $ Term (Tagged Hash :++ Lazy m :++  HGit) 'DirTag
+  => Eq x
+  => Store m (Dir x)
+  -> Hash (Dir x)
+  -> Hash (Dir x)
+  -> m $ Either MergeViolation $ Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
 mergeMerkleDirs store p1 p2 =
   runExceptT $ mergeMerkleDirs' store (lazyDeref store p1) (lazyDeref store p2)
 
@@ -41,45 +42,46 @@ mergeMerkleDirs store p1 p2 =
 --   up uploading some directories then failing due to a non-resolvable merge conflict,
 --   could be fixed via future optimization, exercise for the reader, etc etc
 mergeMerkleDirs'
-  :: forall m
+  :: forall m x
   -- no knowledge about actual monad stack - just knows it can
   -- sequence actions in it to deref successive layers (because monad)
    . Monad m
   => MonadIO m
+  => Eq x
   -- TODO: is this really needed? could upload in later phase, don't like upload even if partial failure
-  => Store m HGit
-  -> Term (Tagged Hash :++ Lazy m :++  HGit) 'DirTag
-  -> Term (Tagged Hash :++ Lazy m :++  HGit) 'DirTag
-  -> ExceptT MergeViolation m $ Term (Tagged Hash :++ Lazy m :++  HGit) 'DirTag
+  => Store m (Dir x)
+  -> Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
+  -> Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
+  -> ExceptT MergeViolation m $ Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
 mergeMerkleDirs' store = mergeDirs []
   where
     mergeDirs
       :: [PartialFilePath]
-      -> Term (Tagged Hash :++ Lazy m :++  HGit) 'DirTag
-      -> Term (Tagged Hash :++ Lazy m :++  HGit) 'DirTag
-      -> ExceptT MergeViolation m $ Term (Tagged Hash :++ Lazy m :++  HGit) 'DirTag
+      -> Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
+      -> Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
+      -> ExceptT MergeViolation m $ Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
     mergeDirs h dir1 dir2 = do
-      if pointer dir1 == pointer dir2
-          then pure dir1 -- if both pointers == then they're identical, either is fine for merge res
+      if htPointer dir1 == htPointer dir2
+          then pure dir1 -- if both htPointers == then they're identical, either is fine for merge res
           else do
-            ns1' <- ExceptT $ Right . dirEntries <$> derefLayer dir1
-            ns2' <- ExceptT $ Right . dirEntries <$> derefLayer dir2
+            ns1' <- ExceptT . fmap (Right . dirEntries) . getCompose $ htElem dir1
+            ns2' <- ExceptT . fmap (Right . dirEntries) . getCompose $ htElem dir2
 
             entries <- traverse (resolveMapDiff h)
                       $ mapCompare (Map.fromList ns1') (Map.fromList ns2')
 
             let dir = Dir entries
-                dir' = hfmap pointer dir
+                dir' = fmap htPointer dir
             p <- ExceptT $ Right <$> sUploadShallow store dir'
-            pure $ Term . HC . Tagged p . HC $ Compose $ pure dir
+            pure $ Fix . Compose . (p,) . Compose $ pure dir
 
     resolveMapDiff
       :: [PartialFilePath]
       -> ( PartialFilePath
-         , These (FileTreeEntity (Term (Tagged Hash :++ Lazy m :++  HGit)))
-                 (FileTreeEntity (Term (Tagged Hash :++ Lazy m :++  HGit)))
+         , These (FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)))
+                 (FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)))
          )
-      -> ExceptT MergeViolation m $ NamedFileTreeEntity (Term (Tagged Hash :++ Lazy m :++  HGit))
+      -> ExceptT MergeViolation m $ NamedFileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x))
     resolveMapDiff _
       (n, This x) = pure (n, x) -- non-conflicting change, keep
     resolveMapDiff h
@@ -92,20 +94,19 @@ mergeMerkleDirs' store = mergeDirs []
     compareDerefed
       :: [PartialFilePath]
       -> PartialFilePath
-      -> FileTreeEntity (Term (Tagged Hash :++ Lazy m :++  HGit))
-      -> FileTreeEntity (Term (Tagged Hash :++ Lazy m :++  HGit))
-      -> ExceptT MergeViolation m $ NamedFileTreeEntity (Term (Tagged Hash :++ Lazy m :++  HGit))
+      -> FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x))
+      -> FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x))
+      -> ExceptT MergeViolation m $ NamedFileTreeEntity x
+                                  (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x))
     compareDerefed h path (DirEntity _) (FileEntity _)
       = throwE . MergeViolation $ h ++ [path]
     compareDerefed h path (FileEntity _) (DirEntity _)
       = throwE . MergeViolation $ h ++ [path]
-    compareDerefed h path (FileEntity fc1) (FileEntity fc2)
-      | pointer fc1 /= pointer fc2
-      = throwE . MergeViolation $ h ++ [path]
-      | otherwise
-      = pure (path, FileEntity fc1)
+    compareDerefed h path (FileEntity x1) (FileEntity x2)
+      | x1 /= x2  = throwE . MergeViolation $ h ++ [path]
+      | otherwise = pure (path, FileEntity x1)
     compareDerefed h path (DirEntity dir1) (DirEntity dir2)
-      | pointer dir1 == pointer dir2
+      | htPointer dir1 == htPointer dir2
       = pure (path, DirEntity dir1) -- they're identical, just stop here
       | otherwise
       = (path,) . DirEntity <$> mergeDirs (h ++ [path]) dir1 dir2

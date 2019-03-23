@@ -16,21 +16,18 @@ library
         FileIO
         HGit.Diff
         HGit.Diff.Types
-        HGit.Gen
         HGit.Merge
         HGit.Repo
-        HGit.Serialization
         Merkle.Functors
         Merkle.Store
         Merkle.Store.Deref
         Merkle.Store.FileSystem
         Merkle.Types
-        HGit.Hash
         HGit.Types
         HGit.Types.Common
         HGit.Types.HGit
         HGit.Types.RepoState
-        Util.HRecursionSchemes
+        Util.RecursionSchemes
         Util.MyCompose
         Util.These
   -- other-modules: todo figure out what actually needs to be exposed vs not
@@ -42,6 +39,7 @@ library
                , containers
                , cryptonite
                , directory
+               , free
                , hedgehog
                , memory
                , mtl
