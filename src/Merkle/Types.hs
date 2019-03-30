@@ -12,6 +12,7 @@ import           Data.Functor.Const (Const(..))
 import           Data.Kind (Type)
 import           Data.Text (Text, unpack, pack)
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
+import           Servant.API
 --------------------------------------------
 import           Util.RecursionSchemes (Algebra)
 --------------------------------------------
@@ -43,8 +44,17 @@ textToHash = fmap RawHash . f . B16.decode . encodeUtf8
       | remainder == B.empty = CH.digestFromByteString x
       | otherwise = Nothing
 
+-- no instance is defined for ToHttpApiData a => Const a x
+instance ToHttpApiData (Const RawHash x) where
+  toUrlPiece = hashToText . getConst
+
+-- no instance is defined for FromHttpApiData a => Const a x
+instance FromHttpApiData (Const RawHash x) where
+  parseUrlPiece = maybe (Left "unable to parse hash as base16") (Right . Const) . textToHash
+
 instance Show RawHash where
-  show x = "#[" ++ unpack (hashToText x) ++ "]"
+  -- only take 5, for diag.
+  show x = "#[" ++ take 5 (unpack (hashToText x)) ++ "]"
 
 instance AE.ToJSON RawHash where
   toJSON = AE.String . hashToText
@@ -54,9 +64,7 @@ instance AE.FromJSON RawHash where
     AE.withText "RawHash"
       (maybe (fail "parsing failed") pure . textToHash)
 
-
 newtype HashTerm f = HashTerm { unHashTerm :: f (Hash f)}
-
 
 instance AE.ToJSON1 f => AE.ToJSON (HashTerm f) where
   toJSON = AE.liftToJSON AE.toJSON AE.toJSONList . unHashTerm

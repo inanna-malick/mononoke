@@ -1,5 +1,3 @@
-{-# LANGUAGE QuantifiedConstraints #-}
-
 module Merkle.Store.FileSystem where
 
 --------------------------------------------
@@ -33,11 +31,11 @@ fsStore
 fsStore root
   = Store
   { sDeref = \p -> do
-      -- liftIO . putStrLn $ "attempt to deref " ++ show p ++ " via fs state store @ " ++ fn
+      -- TODO: check if it exists first
       contents <- liftIO $ B.readFile (root ++ "/" ++ fn p)
       case AE.eitherDecodeStrict contents of
+        -- throw if deserialization fails
         Left  e -> throw . DecodeError $ show e
-        -- todo: actually figure out a strategy re: this
         Right (HashTerm x) -> pure $ fmap (\p' -> Fix $ Compose (p', Compose Nothing)) x
 
   , sUploadShallow = \x -> do

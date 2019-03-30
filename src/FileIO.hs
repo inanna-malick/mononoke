@@ -10,7 +10,7 @@ import           Data.Foldable (traverse_)
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Util.RecursionSchemes
-import           HGit.Types
+import           HGit.Types.HGit
 --------------------------------------------
 import           System.IO
 

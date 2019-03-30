@@ -4,6 +4,7 @@ module HGit.Repo where -- (writeState, readState, mkStore, getBranch) where
 
 --------------------------------------------
 import           Control.Exception.Safe (MonadThrow, throw)
+import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Data.Aeson as AE
 import qualified Data.ByteString.Lazy as B
@@ -11,7 +12,8 @@ import qualified Data.Map as M
 import qualified System.Directory as Dir
 --------------------------------------------
 import           Errors
-import           HGit.Types
+import           HGit.Types.HGit
+import           HGit.Types.RepoState
 import           Merkle.Types
 import           Merkle.Store
 import           Merkle.Store.FileSystem (fsStore)
@@ -30,12 +32,13 @@ hgitDir'   = (++ "/" ++ hgitDir)       <$> baseDir
 hgitState' = (++ "/" ++ hgitStateFile) <$> hgitDir'
 hgitStore' = (++ "/" ++ hgitStoreDir)  <$> hgitDir'
 
+
 mkHgitDir :: MonadIO m => m ()
 mkHgitDir = do
-  path1 <- hgitDir'
-  path2 <- hgitStore'
-  liftIO $ Dir.createDirectory path1
-  liftIO $ Dir.createDirectory path2
+  hgitDir' >>= liftIO . Dir.createDirectory
+  storeDir <- hgitStore'
+  liftIO $ Dir.createDirectory storeDir
+  void $ traverse (liftIO . Dir.createDirectory . (\x -> storeDir ++ "/" ++ x)) ["dir", "blob", "commit"]
 
 mkStore
   :: ( MonadIO      m
@@ -78,3 +81,13 @@ writeState
 writeState rs = do
   path <- hgitState'
   liftIO . B.writeFile path $ AE.encode rs
+
+data RepoCaps m
+  = RepoCaps
+  { _blobStore   :: Store m Blob
+  , _dirStore    :: Store m HashableDir
+  , _commitStore :: Store m HashableCommit
+  }
+
+mkCaps :: (MonadThrow m, MonadIO m) => m (RepoCaps m)
+mkCaps = RepoCaps <$> mkStore "blob" <*> mkStore "dir" <*> mkStore "commit"

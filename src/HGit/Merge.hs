@@ -6,7 +6,7 @@ import           Control.Monad.Trans.Except
 import qualified Data.Map.Strict as Map
 import           Data.Functor.Compose
 --------------------------------------------
-import           HGit.Types
+import           HGit.Types.HGit
 import           Merkle.Functors
 import           Merkle.Store
 import           Merkle.Store.Deref (lazyDeref)
@@ -31,7 +31,7 @@ mergeMerkleDirs
   => Store m (Dir x)
   -> Hash (Dir x)
   -> Hash (Dir x)
-  -> m $ Either MergeViolation $ Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
+  -> m $ MergeViolation `Either` Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
 mergeMerkleDirs store p1 p2 =
   runExceptT $ mergeMerkleDirs' store (lazyDeref store p1) (lazyDeref store p2)
 
@@ -70,7 +70,7 @@ mergeMerkleDirs' store = mergeDirs []
             entries <- traverse (resolveMapDiff h)
                       $ mapCompare (Map.fromList ns1') (Map.fromList ns2')
 
-            let dir = Dir entries
+            let dir = Dir $ canonicalOrdering entries
                 dir' = fmap htPointer dir
             p <- ExceptT $ Right <$> sUploadShallow store dir'
             pure $ Fix . Compose . (p,) . Compose $ pure dir

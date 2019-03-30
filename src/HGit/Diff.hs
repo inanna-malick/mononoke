@@ -10,7 +10,7 @@ import           Data.Functor.Compose
 import qualified Data.Map.Strict as Map
 --------------------------------------------
 import           HGit.Diff.Types
-import           HGit.Types
+import           HGit.Types.HGit
 import           Merkle.Functors
 import           Util.These (These(..), mapCompare)
 import           Util.RecursionSchemes

@@ -6,7 +6,6 @@ import           Data.Aeson
 import qualified Data.Map as M
 import           GHC.Generics
 --------------------------------------------
-import           HGit.Types.Common
 import           HGit.Types.HGit
 import           Merkle.Types (Hash, emptyHash)
 --------------------------------------------

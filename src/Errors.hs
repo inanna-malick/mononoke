@@ -4,7 +4,7 @@ module Errors where
 import           Control.Exception (Exception)
 --------------------------------------------
 import           Merkle.Types (RawHash)
-import           HGit.Types   (BranchName)
+import           HGit.Types.HGit (BranchName)
 --------------------------------------------
 
 data MerkleTreeLookupError
