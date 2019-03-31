@@ -40,18 +40,6 @@ mkHgitDir = do
   liftIO $ Dir.createDirectory storeDir
   void $ traverse (liftIO . Dir.createDirectory . (\x -> storeDir ++ "/" ++ x)) ["dir", "blob", "commit"]
 
-mkStore
-  :: ( MonadIO      m
-     , MonadThrow   m
-     , AE.ToJSON1   f
-     , AE.FromJSON1 f
-     , Functor      f
-     , Hashable     f
-     )
-  => String
-  -> m (Store m f)
-mkStore prefix = fsStore . (++ "/" ++ prefix) <$> hgitStore'
-
 -- | get branch from state, fail if not found
 getBranch
   :: MonadThrow m
@@ -91,3 +79,6 @@ data RepoCaps m
 
 mkCaps :: (MonadThrow m, MonadIO m) => m (RepoCaps m)
 mkCaps = RepoCaps <$> mkStore "blob" <*> mkStore "dir" <*> mkStore "commit"
+  where
+    mkStore prefix = fsStore . (++ "/" ++ prefix) <$> hgitStore'
+

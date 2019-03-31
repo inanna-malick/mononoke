@@ -9,6 +9,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import           Data.Functor.Compose
 import           Data.Functor.Const
+import           System.Directory (doesFileExist)
 --------------------------------------------
 import           Errors
 import           Merkle.Store
@@ -31,12 +32,16 @@ fsStore
 fsStore root
   = Store
   { sDeref = \p -> do
-      -- TODO: check if it exists first
-      contents <- liftIO $ B.readFile (root ++ "/" ++ fn p)
-      case AE.eitherDecodeStrict contents of
-        -- throw if deserialization fails
-        Left  e -> throw . DecodeError $ show e
-        Right (HashTerm x) -> pure $ fmap (\p' -> Fix $ Compose (p', Compose Nothing)) x
+      let fp = root ++ "/" ++ fn p
+      exists <- liftIO $ doesFileExist fp
+      if not exists
+        then pure Nothing
+        else do
+          contents <- liftIO $ B.readFile fp
+          case AE.eitherDecodeStrict contents of
+            -- throw if deserialization fails
+            Left  e -> throw . DecodeError $ show e
+            Right (HashTerm x) -> pure . Just $ fmap (\p' -> Fix $ Compose (p', Compose Nothing)) x
 
   , sUploadShallow = \x -> do
       let p = hash x
@@ -44,7 +49,6 @@ fsStore root
              . AE.encodingToLazyByteString
              . AE.toEncoding
              $ HashTerm x
-
       pure p
   }
   where

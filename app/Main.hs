@@ -30,8 +30,9 @@ main = do
   cmd       <- parse
   case cmd of
     (Left InitRepo) -> initRepo
-    (Left InitServer) -> do
-      undefined
+    (Left (InitServer _port)) -> undefined
+      -- TODO: ideal is to lift server up into multiple subpath servers or similar
+      -- Warp.run port . app $ (fsStore netpath :: Store IO HashableDir)
     (Right repoCmd) -> do
       base  <- baseDir
       state <- readState
@@ -48,7 +49,7 @@ initRepo = do
 runCommand :: FilePath -> RepoCaps IO -> RepoState -> RepoCommand -> IO (Maybe RepoState)
 runCommand base caps repostate = \case
   CheckoutBranch branch -> do
-    targetCommit <- getBranch branch repostate >>= sDeref (_commitStore caps)
+    targetCommit <- getBranch branch repostate >>= sDeref' (_commitStore caps)
     diffs        <- status
 
     if not (null diffs)
@@ -57,11 +58,15 @@ runCommand base caps repostate = \case
         _ <- traverse renderDiff diffs
         pure Nothing
       else do
-        currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref (_commitStore caps)
-        topLevelCurrentDir <- sDeref (_dirStore caps) $ commitRoot currentCommit
+        currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref' (_commitStore caps)
+        topLevelCurrentDir <- sDeref' (_dirStore caps) $ commitRoot currentCommit
 
         setDirTo topLevelCurrentDir (commitRoot targetCommit)
         pure $ Just repostate { currentBranch = branch }
+
+
+  SetRemoteRepo path port -> pure $ Just repostate { remote = Just (path, port)}
+  UnsetRemoteRepo         -> pure $ Just repostate { remote = Nothing}
 
   MkBranch branch -> do
     current   <- getBranch (currentBranch repostate) repostate
@@ -97,8 +102,8 @@ runCommand base caps repostate = \case
         targetCommitHash  <- getBranch targetBranch repostate
         currentCommitHash <- getBranch (currentBranch repostate) repostate
 
-        currentCommit <- sDeref (_commitStore caps) currentCommitHash
-        targetCommit <- sDeref (_commitStore caps) targetCommitHash
+        currentCommit <- sDeref' (_commitStore caps) currentCommitHash
+        targetCommit <- sDeref' (_commitStore caps) targetCommitHash
 
         mergeRes <- mergeMerkleDirs (_dirStore caps) (commitRoot currentCommit) (commitRoot targetCommit)
 
@@ -108,7 +113,7 @@ runCommand base caps repostate = \case
             let commit = Commit msg (htPointer root) $ currentCommitHash :| [targetCommitHash]
             rootHash <- sUploadShallow (_commitStore caps) commit
 
-            topLevelCurrentDir <- sDeref (_dirStore caps) $ commitRoot currentCommit
+            topLevelCurrentDir <- sDeref' (_dirStore caps) $ commitRoot currentCommit
             setDirTo topLevelCurrentDir $ htPointer root
 
             pure $ Just $ repostate
@@ -125,10 +130,10 @@ runCommand base caps repostate = \case
     pure Nothing
 
   GetDiff branch1 branch2 -> do
-    commit1   <- getBranch branch1 repostate >>= sDeref (_commitStore caps)
-    commit2   <- getBranch branch2 repostate >>= sDeref (_commitStore caps)
-    diffs     <- diffMerkleDirs (lazyDeref (_dirStore caps) $ commitRoot commit1)
-                                (lazyDeref (_dirStore caps) $ commitRoot commit2)
+    commit1   <- getBranch branch1 repostate >>= sDeref' (_commitStore caps)
+    commit2   <- getBranch branch2 repostate >>= sDeref' (_commitStore caps)
+    diffs     <- diffMerkleDirs (lazyDeref' (_dirStore caps) $ commitRoot commit1)
+                                (lazyDeref' (_dirStore caps) $ commitRoot commit2)
     _ <- traverse renderDiff diffs
     pure Nothing
 
@@ -136,19 +141,19 @@ runCommand base caps repostate = \case
     renderDiff (fps, d) = putStrLn $ "\t" ++ show d ++ " at " ++ (L.intercalate "/" fps)
 
     status = do
-      currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref (_commitStore caps)
+      currentCommit <- getBranch (currentBranch repostate) repostate >>= sDeref' (_commitStore caps)
       strictCurrentState  <- readTree base
 
       -- transform the strict directory tree into a hash-tagged 'lazy' tree.
       -- TODO: better name!
-      let currentState :: Fix (HashTagged (Dir (Hash Blob)) `Compose` IO `Compose` Dir (Hash Blob))
+      let currentState :: Fix (HashAnnotated (Dir (Hash Blob)) `Compose` IO `Compose` Dir (Hash Blob))
           currentState = cata (\(Dir xs) ->
                                   let xs' = fmap (fmap (first (cata hash))) xs
                                       h   = hash . Dir $ fmap (fmap (fmap htPointer)) xs'
                                   in Fix $ Compose (h, Compose $ pure $ Dir xs')
                               ) strictCurrentState
 
-      diffMerkleDirs (lazyDeref (_dirStore caps) $ commitRoot currentCommit) currentState
+      diffMerkleDirs (lazyDeref' (_dirStore caps) $ commitRoot currentCommit) currentState
 
 
     -- x, y, don't matter..
@@ -163,9 +168,9 @@ runCommand base caps repostate = \case
           cleanup (p, FileEntity _) = Dir.removeFile p
       _ <- traverse cleanup toDelete
 
-      (x :: Fix HashableDir) <- fmap stripTags . strictDeref $ lazyDeref (_dirStore caps) targetDir
+      (x :: Fix HashableDir) <- fmap stripTags . strictDeref $ lazyDeref' (_dirStore caps) targetDir
 
-      let f = fmap stripTags . strictDeref . lazyDeref (_blobStore caps )
+      let f = fmap stripTags . strictDeref . lazyDeref' (_blobStore caps )
 
       x' <-  cataM (fmap Fix . traverseDirBlobs f) x
 

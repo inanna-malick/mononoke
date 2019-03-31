@@ -1,4 +1,6 @@
+-- FIXME: can I remove this?
 {-# LANGUAGE IncoherentInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.Aeson.Orphans where
 

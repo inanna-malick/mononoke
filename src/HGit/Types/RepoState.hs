@@ -15,6 +15,7 @@ data RepoState
   = RepoState
   { branches      :: M.Map BranchName (Hash (Commit (Hash (Dir (Hash Blob)))))
   , currentBranch :: BranchName
+  , remote        :: Maybe (String, Int) -- optional host and port for remote (single, #YOLO)
   } deriving (Generic)
 
 initialRepoState :: RepoState
@@ -22,6 +23,7 @@ initialRepoState
   = RepoState
   { branches      = M.fromList [(initial, emptyHash)]
   , currentBranch = initial
+  , remote        = Nothing
   }
   where
     initial = "default"

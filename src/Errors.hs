@@ -7,12 +7,11 @@ import           Merkle.Types (RawHash)
 import           HGit.Types.HGit (BranchName)
 --------------------------------------------
 
-data MerkleTreeLookupError
-  = EntityNotFoundInStore RawHash
+data LookupError
+  = LookupError RawHash
   deriving Show
 
-instance Exception MerkleTreeLookupError
-
+instance Exception LookupError
 
 data RepoStateError
   = DecodeError String

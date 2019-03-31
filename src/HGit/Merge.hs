@@ -1,6 +1,7 @@
 module HGit.Merge where
 
 --------------------------------------------
+import           Control.Exception.Safe (MonadThrow)
 import           Control.Monad.IO.Class
 import           Control.Monad.Trans.Except
 import qualified Data.Map.Strict as Map
@@ -9,7 +10,7 @@ import           Data.Functor.Compose
 import           HGit.Types.HGit
 import           Merkle.Functors
 import           Merkle.Store
-import           Merkle.Store.Deref (lazyDeref)
+import           Merkle.Store.Deref (lazyDeref')
 import           Merkle.Types
 import           Util.These (These(..), mapCompare)
 import           Util.MyCompose
@@ -25,15 +26,17 @@ mergeMerkleDirs
   :: forall m x
   -- no knowledge about actual monad stack - just knows it can
   -- sequence actions in it to deref successive layers (because monad)
-   . Monad m
-  => MonadIO m
-  => Eq x
+   . ( Monad m
+     , MonadIO m
+     , MonadThrow m
+     , Eq x
+     )
   => Store m (Dir x)
   -> Hash (Dir x)
   -> Hash (Dir x)
-  -> m $ MergeViolation `Either` Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
+  -> m $ MergeViolation `Either` Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)
 mergeMerkleDirs store p1 p2 =
-  runExceptT $ mergeMerkleDirs' store (lazyDeref store p1) (lazyDeref store p2)
+  runExceptT $ mergeMerkleDirs' store (lazyDeref' store p1) (lazyDeref' store p2)
 
 
 -- | Merge two merkle trees and either fail (if partial derefing detects a conflict)
@@ -50,16 +53,16 @@ mergeMerkleDirs'
   => Eq x
   -- TODO: is this really needed? could upload in later phase, don't like upload even if partial failure
   => Store m (Dir x)
-  -> Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
-  -> Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
-  -> ExceptT MergeViolation m $ Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
+  -> Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)
+  -> Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)
+  -> ExceptT MergeViolation m $ Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)
 mergeMerkleDirs' store = mergeDirs []
   where
     mergeDirs
       :: [PartialFilePath]
-      -> Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
-      -> Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
-      -> ExceptT MergeViolation m $ Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)
+      -> Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)
+      -> Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)
+      -> ExceptT MergeViolation m $ Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)
     mergeDirs h dir1 dir2 = do
       if htPointer dir1 == htPointer dir2
           then pure dir1 -- if both htPointers == then they're identical, either is fine for merge res
@@ -78,10 +81,10 @@ mergeMerkleDirs' store = mergeDirs []
     resolveMapDiff
       :: [PartialFilePath]
       -> ( PartialFilePath
-         , These (FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)))
-                 (FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x)))
+         , These (FileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)))
+                 (FileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)))
          )
-      -> ExceptT MergeViolation m $ NamedFileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x))
+      -> ExceptT MergeViolation m $ NamedFileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x))
     resolveMapDiff _
       (n, This x) = pure (n, x) -- non-conflicting change, keep
     resolveMapDiff h
@@ -94,10 +97,10 @@ mergeMerkleDirs' store = mergeDirs []
     compareDerefed
       :: [PartialFilePath]
       -> PartialFilePath
-      -> FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x))
-      -> FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x))
+      -> FileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x))
+      -> FileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x))
       -> ExceptT MergeViolation m $ NamedFileTreeEntity x
-                                  (Fix (HashTagged (Dir x) `Compose` m `Compose`  Dir x))
+                                  (Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x))
     compareDerefed h path (DirEntity _) (FileEntity _)
       = throwE . MergeViolation $ h ++ [path]
     compareDerefed h path (FileEntity _) (DirEntity _)

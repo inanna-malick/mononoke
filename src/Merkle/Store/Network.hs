@@ -13,10 +13,12 @@ import           Merkle.Types (Hash)
 --------------------------------------------
 
 
-type DerefAPI f = "deref"   :> Capture "hash" (Hash f) :> Get '[JSON] (DerefRes f)
+type DerefAPI f = "deref"   :> Capture "hash" (Hash f) :> Get '[JSON] (Maybe (DerefRes f))
 type UploadAPI f = "upload" :> ReqBody '[JSON] (f (Hash f)) :> Post '[JSON] (Hash f)
 type StoreAPI f = DerefAPI f :<|> UploadAPI f
 
+-- TODO: use to implement hash-based sharding
+-- should only be a few lines, just make a node like this
 -- | Filesystem backed store using the provided dir
 netStore
   :: forall f

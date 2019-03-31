@@ -18,12 +18,14 @@ parse = execParser opts
 -- initialize repo structure
 data MetaCommand
   = InitRepo
-  | InitServer
+  | InitServer Int
 
 data RepoCommand
   -- switch directory state to that of new branch (nuke and rebuild via store)
   -- fails if any changes exist in current dir (diff via status /= [])
   = CheckoutBranch BranchName
+  | SetRemoteRepo String Int
+  | UnsetRemoteRepo
   -- create new branch with same root commit as current branch. changes are fine
   | MkBranch BranchName
   -- merge some branch into the current one (requires no changes)
@@ -57,7 +59,7 @@ parser
           ( metavar "BRANCHNAME"
          <> help "branch to create"
           )
-    initSOptions  = pure InitServer
+    initSOptions  = pure $ InitServer 8888
     initROptions  = pure InitRepo
     commitOptions
         = MkCommit

@@ -26,15 +26,15 @@ diffMerkleDirs
    . Monad m
   => Eq x
   => MonadIO m
-  => Fix (HashTagged (Dir x) `Compose` m `Compose` Dir x)
-  -> Fix (HashTagged (Dir x) `Compose` m `Compose` Dir x)
+  => Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x)
+  -> Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x)
   -> m [([PartialFilePath], Diff)]
 diffMerkleDirs = compareDir []
   where
     compareDir
       :: [PartialFilePath]
-      -> Fix (HashTagged (Dir x) `Compose` m `Compose` Dir x)
-      -> Fix (HashTagged (Dir x) `Compose` m `Compose` Dir x)
+      -> Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x)
+      -> Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x)
       -- todo: writer w/ stack (?) so I can push/path segments to go with changes to tag diffs with loc...
       -> m [([PartialFilePath], Diff)]
     compareDir h dir1 dir2 =
@@ -50,8 +50,8 @@ diffMerkleDirs = compareDir []
     resolveMapDiff
       :: [PartialFilePath]
       -> ( PartialFilePath
-         , These (FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose` Dir x)))
-                 (FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose` Dir x)))
+         , These (FileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x)))
+                 (FileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x)))
          )
       -> m [([PartialFilePath], Diff)]
     resolveMapDiff h
@@ -67,8 +67,8 @@ diffMerkleDirs = compareDir []
     compareDerefed
       :: [PartialFilePath]
       -> PartialFilePath
-      -> FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose` Dir x))
-      -> FileTreeEntity x (Fix (HashTagged (Dir x) `Compose` m `Compose` Dir x))
+      -> FileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x))
+      -> FileTreeEntity x (Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x))
       -> m [([PartialFilePath], Diff)]
     compareDerefed h path (DirEntity _) (FileEntity _)
       = pure [(h ++ [path], DirReplacedWithFile)]
