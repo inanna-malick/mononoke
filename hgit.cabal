@@ -18,6 +18,7 @@ library
         HGit.Diff
         HGit.Diff.Types
         HGit.Merge
+        HGit.Network
         HGit.Repo
         Merkle.Functors
         Merkle.Store
@@ -30,8 +31,6 @@ library
         Util.RecursionSchemes
         Util.MyCompose
         Util.These
-  -- other-modules: todo figure out what actually needs to be exposed vs not
-  --   HaskellStarter.Util
   build-depends: base >=4.8
                , aeson
                , base16-bytestring
@@ -42,6 +41,7 @@ library
                , directory
                , deriving-compat
                , free
+               , http-client
                , hedgehog
                , memory
                , mtl
@@ -142,6 +142,12 @@ executable hgit
                , containers
                , directory
                , hgit
+               , safe-exceptions
+               , servant-client
+               , servant-server
+               , http-client
+               , http-types
+               , warp
   extensions: DeriveFunctor
             , DeriveFoldable
             , DeriveGeneric

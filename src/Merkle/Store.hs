@@ -20,9 +20,18 @@ data Store m (f :: Type -> Type)
   , sUploadShallow :: f (Hash f) -> m (Hash f)
   }
 
-
 sDeref' :: MonadThrow m => Store m f -> Hash f -> m (DerefRes f)
 sDeref' s h = sDeref s h >>= maybe (throw . LookupError $ getConst h) pure
+
+
+-- technically store is now a semigroup
+withFallback :: Monad m => Store m f -> Store m f -> Store m f
+withFallback main fallback = Store deref' (sUploadShallow main)
+  where
+    deref' h = do
+      sDeref main h >>= \case
+        Just mainRes -> pure $ Just mainRes
+        Nothing -> sDeref fallback h
 
 uploadDeep
   :: forall m f

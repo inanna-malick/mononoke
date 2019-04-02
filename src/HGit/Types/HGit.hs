@@ -13,9 +13,11 @@ import           GHC.Generics
 import           Text.Show.Deriving
 --------------------------------------------
 import           Merkle.Types
+import           Util.RecursionSchemes
 --------------------------------------------
 import Data.Bifunctor.TH
-import Data.Bitraversable (bitraverse)
+import Data.Bitraversable (Bitraversable(..))
+
 
 
 type PartialFilePath = String
@@ -59,9 +61,6 @@ type NamedFileTreeEntity a b
 data Dir a b = Dir { dirEntries :: [NamedFileTreeEntity a b] }
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic1)
 
-traverseDirBlobs :: Applicative m => (a -> m b) -> Dir a c -> m (Dir b c)
-traverseDirBlobs f = bitraverse f pure
-
 type HashableDir = Dir (Hash Blob)
 
 $(deriveBifoldable    ''Dir)
@@ -80,46 +79,48 @@ instance AE.FromJSON1 (Dir (Hash (Blob)))
 data Commit a b = NullCommit | Commit String a (NonEmpty b)
   deriving  (Eq, Ord, Functor, Foldable, Traversable, Generic1)
 
+$(deriveBifoldable    ''Commit)
+$(deriveBifunctor     ''Commit)
+$(deriveBitraversable ''Commit)
+
+$(deriveShow1 ''Commit)
+$(deriveShow2 ''Commit)
+$(deriveEq2   ''Commit)
+$(deriveEq1   ''Commit)
+
 type HashableCommit = Commit (Hash HashableDir)
 
 instance AE.ToJSON1 (Commit (Hash (Dir (Hash Blob))))
 instance AE.FromJSON1 (Commit (Hash (Dir (Hash Blob))))
 
--- | sort dir here by file name, order is irrelevant
+-- | sort dir here by file name, specific order is irrelevant
 canonicalOrdering :: [NamedFileTreeEntity a b] -> [NamedFileTreeEntity a b]
 canonicalOrdering = sortOn fst
 
--- todo: literally just bifunctor/bifoldable
-fte :: (a -> c)
-    -> (b -> c)
-    -> FileTreeEntity a b
-    -> c
-fte f _ (FileEntity x) = f x
-fte _ g (DirEntity  x) = g x
+bitraverseSecond
+  :: Bitraversable f => Applicative m
+  => (a -> m b) -> f a c -> m (f b c)
+bitraverseSecond f = bitraverse f pure
 
-ftem :: (a -> b)
-     -> (c -> d)
-     -> FileTreeEntity a c
-     -> FileTreeEntity b d
-ftem f _ (FileEntity x) = FileEntity $ f x
-ftem _ g (DirEntity  x) = DirEntity $ g x
-
+bitraverseFix
+  :: Bitraversable f => Monad m => Traversable (f a)
+  => (a -> m b) -> Fix (f a) -> m (Fix (f b))
+bitraverseFix f = cataM (fmap Fix . bitraverseSecond f)
 
 instance Hashable Blob where
   -- file-type entities
   hash (Chunk chunk next) = doHash $ ["blob", unpackString chunk, unpackHash next]
   hash (Empty) = emptyHash
 
-instance Hashable (Dir (Hash Blob)) where
+instance Hashable HashableDir where
   hash (Dir []) = emptyHash
   -- non-empty dir-type entities
-  hash (Dir xs) = doHash $ ["dir" :: ByteString] ++ join (fmap hashNFTE $ canonicalOrdering xs)
-    where hashNFTE (name, f) = [unpackString name] ++ hashFTE f
-          hashFTE =
-            fte (\(chp :: Hash Blob) -> ["subfile", unpackHash chp])
-                (\(chp :: Hash (Dir (Hash Blob)))  -> ["subdir", unpackHash chp])
+  hash (Dir xs) = doHash $ ["dir" :: ByteString] ++ join (fmap hash' $ canonicalOrdering xs)
+    where
+      hash' (n, FileEntity h) = ["subfile", unpackString n, unpackHash h]
+      hash' (n, DirEntity  h) = ["subdir",  unpackString n, unpackHash h]
 
-instance Hashable (Commit (Hash (Dir (Hash Blob)))) where
+instance Hashable HashableCommit where
   -- commit-type entities
   hash NullCommit = emptyHash
   hash (Commit msg root parents)

@@ -14,6 +14,7 @@ import           HGit.Repo
 import           HGit.Types.HGit
 import           HGit.Types.RepoState
 import           HGit.Merge
+import           HGit.Network
 import           Util.RecursionSchemes
 import           Merkle.Functors
 import           Merkle.Store
@@ -21,6 +22,11 @@ import           Merkle.Store.Deref
 import           Merkle.Types
 --------------------------------------------
 import Data.Bifunctor
+import qualified Network.Wai.Handler.Warp         as Warp
+import           Control.Exception.Safe                (throw)
+import           Servant.Client (mkClientEnv, runClientM, Scheme(..), BaseUrl(..))
+import Network.HTTP.Client (newManager, defaultManagerSettings)
+
 
 -- | TODO HERE
 -- 1. fn for making/working with all relevant stores (put in RepoState)
@@ -30,13 +36,13 @@ main = do
   cmd       <- parse
   case cmd of
     (Left InitRepo) -> initRepo
-    (Left (InitServer _port)) -> undefined
-      -- TODO: ideal is to lift server up into multiple subpath servers or similar
-      -- Warp.run port . app $ (fsStore netpath :: Store IO HashableDir)
+    (Left (InitServer port)) -> do
+      caps  <- mkLocalCaps
+      Warp.run port $ hgitApp caps
     (Right repoCmd) -> do
       base  <- baseDir
       state <- readState
-      caps  <- mkCaps
+      caps  <- mkCaps state
       mNextState <- runCommand base caps state repoCmd
       maybe (pure ()) writeState mNextState
 
@@ -68,6 +74,46 @@ runCommand base caps repostate = \case
   SetRemoteRepo path port -> pure $ Just repostate { remote = Just (path, port)}
   UnsetRemoteRepo         -> pure $ Just repostate { remote = Nothing}
 
+  PullBranch bn -> do
+    r <- getRemote repostate
+    -- just overwrite without trying to determine ancestry. TODO: not that
+    runC r $ do
+      -- no need to pull full branch structure now (eagerly) because we can do it as-required
+      remoteHash <- pullBranchHash bn
+      pure $ Just repostate { branches = M.insert bn remoteHash $ branches repostate }
+
+  PushBranch bn -> do
+    r <- getRemote repostate
+    localHash <- getBranch bn repostate
+
+    remoteCaps <- netStore r
+
+    -- from local store, presumably
+    commits <- strictDeref (lazyDeref' (_commitStore caps) localHash)
+
+    -- upload branch fully (required because remote relationship is not bidirectional)
+    -- commits with full deref of blobs and dirs (will be large, todo is incremental download and upload)
+    let handleDirs dh = do
+          dirs <- strictDeref $ lazyDeref' (_dirStore caps) dh
+          _ <- bitraverseFix handleBlobs $ stripTags dirs
+
+          -- upload to remote store
+          _ <- uploadDeep (_dirStore remoteCaps) $ stripTags dirs
+          pure dh
+
+        handleBlobs bh = do
+          blobs <- strictDeref $ lazyDeref' (_blobStore caps) bh
+
+          -- upload to remote store
+          _ <- uploadDeep (_blobStore remoteCaps) $ stripTags blobs
+          pure bh
+
+    _ <- bitraverseFix handleDirs $ stripTags commits
+    _ <- uploadDeep (_commitStore remoteCaps) $ stripTags commits
+
+    runC r $ pushBranchHash bn localHash
+    pure Nothing
+
   MkBranch branch -> do
     current   <- getBranch (currentBranch repostate) repostate
     pure $ Just $ repostate
@@ -79,7 +125,7 @@ runCommand base caps repostate = \case
     currentCommitHash <- getBranch (currentBranch repostate) repostate
 
     let uploadBlob  = uploadDeep $ _blobStore caps
-        uploadBlobs = cataM (fmap Fix . traverseDirBlobs uploadBlob)
+        uploadBlobs = bitraverseFix uploadBlob
 
     currentStateHash <- readTree base >>= uploadBlobs >>= uploadDeep (_dirStore caps)
 
@@ -138,6 +184,11 @@ runCommand base caps repostate = \case
     pure Nothing
 
   where
+    runC (path, port) mx = do
+      manager <- newManager defaultManagerSettings
+      let env = mkClientEnv manager (BaseUrl Http path port "")
+      runClientM mx env >>= either throw pure
+
     renderDiff (fps, d) = putStrLn $ "\t" ++ show d ++ " at " ++ (L.intercalate "/" fps)
 
     status = do
@@ -168,11 +219,11 @@ runCommand base caps repostate = \case
           cleanup (p, FileEntity _) = Dir.removeFile p
       _ <- traverse cleanup toDelete
 
-      (x :: Fix HashableDir) <- fmap stripTags . strictDeref $ lazyDeref' (_dirStore caps) targetDir
+      x <- fmap stripTags . strictDeref $ lazyDeref' (_dirStore caps) targetDir
 
       let f = fmap stripTags . strictDeref . lazyDeref' (_blobStore caps )
 
-      x' <-  cataM (fmap Fix . traverseDirBlobs f) x
+      x' <-  bitraverseFix f x
 
       writeTree base x'
 

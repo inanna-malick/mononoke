@@ -16,6 +16,7 @@ instance Exception LookupError
 data RepoStateError
   = DecodeError String
   | BranchNotFound BranchName
+  | RemoteNotFound
   deriving Show
 
 instance Exception RepoStateError

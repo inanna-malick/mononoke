@@ -54,7 +54,7 @@ instance FromHttpApiData (Const RawHash x) where
 
 instance Show RawHash where
   -- only take 5, for diag.
-  show x = "#[" ++ take 5 (unpack (hashToText x)) ++ "]"
+  show x = "#[" ++ unpack (hashToText x) ++ "]"
 
 instance AE.ToJSON RawHash where
   toJSON = AE.String . hashToText

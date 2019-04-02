@@ -13,6 +13,7 @@ import           Util.RecursionSchemes
 import           HGit.Types.HGit
 --------------------------------------------
 import           System.IO
+import Data.Bitraversable (bitraverse)
 
 
 -- | Write strict hgit dirtree to file path
@@ -32,9 +33,8 @@ writeTree outdir tree = evalStateT (cataM writeDir tree) [outdir]
     writeDir :: AlgebraM (StateT [FilePath] m) (Dir (Fix Blob)) ()
     writeDir (Dir children) = flip traverse_ children $ \(pathChunk, e) -> do
       modify (push pathChunk)
-      fte (\(_ :: Fix Blob) -> touch) -- todo: erro if file already exists
-          (\(_ :: ()      ) -> mkDir) e
-      fte (cataM writeFileChunk) (const $ pure ()) e
+      _ <- bitraverse (\fb -> touch >> cataM writeFileChunk fb) -- todo: error if file already exists
+                      (\() -> mkDir) e
       modify pop
 
     mkDir = gets (List.intercalate "/" . reverse) >>= liftIO . Dir.createDirectory

@@ -1,5 +1,4 @@
-module HGit.Repo where -- (writeState, readState, mkStore, getBranch) where
-
+module HGit.Repo where
 
 
 --------------------------------------------
@@ -45,9 +44,17 @@ getBranch
   :: MonadThrow m
   => BranchName
   -> RepoState
-  -> m (Hash (Commit (Hash (Dir (Hash Blob)))))
+  -> m (Hash HashableCommit)
 getBranch b
   = maybe (throw $ BranchNotFound b) pure . M.lookup b . branches
+
+-- | get remote addr from state, fail if not found
+getRemote
+  :: MonadThrow m
+  => RepoState
+  -> m (String, Int)
+getRemote = maybe (throw RemoteNotFound) pure . remote
+
 
 -- | Filesystem backed store using the provided dir
 readState
@@ -77,8 +84,15 @@ data RepoCaps m
   , _commitStore :: Store m HashableCommit
   }
 
-mkCaps :: (MonadThrow m, MonadIO m) => m (RepoCaps m)
-mkCaps = RepoCaps <$> mkStore "blob" <*> mkStore "dir" <*> mkStore "commit"
-  where
-    mkStore prefix = fsStore . (++ "/" ++ prefix) <$> hgitStore'
+withFallbackRC :: Monad m => RepoCaps m -> RepoCaps m -> RepoCaps m
+withFallbackRC main fallback
+  = RepoCaps
+  { _blobStore   = withFallback (_blobStore main)   (_blobStore fallback)
+  , _dirStore    = withFallback (_dirStore main)    (_dirStore fallback)
+  , _commitStore = withFallback (_commitStore main) (_commitStore fallback)
+  }
 
+-- TODO: create dir structure?
+mkLocalCaps :: IO (RepoCaps IO)
+mkLocalCaps = RepoCaps <$> mkStore "blob" <*> mkStore "dir" <*> mkStore "commit"
+  where mkStore prefix = fsStore . (++ "/" ++ prefix) <$> hgitStore'

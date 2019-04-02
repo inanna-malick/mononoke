@@ -19,7 +19,7 @@ import Merkle.Store.Deref
 import Merkle.Types
 import Data.Map (Map)
 import qualified Data.Map as M
-import           Control.Monad.Trans.State.Lazy (StateT, gets, get, put, runStateT, modify)
+import           Control.Monad.Trans.State.Lazy (StateT, gets, runStateT, modify)
 import           Control.Monad.Trans.Except (runExceptT)
 
 import           Hedgehog
@@ -30,16 +30,11 @@ import System.IO
 
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import Network.Wai
 import qualified Control.Concurrent               as C
 import qualified Network.Wai.Handler.Warp         as Warp
-import           Servant
-import           Servant.Client
-import           Servant.Server
-import           Network.HTTP.Types
-import           Network.Wai
+import           Servant.Client (mkClientEnv, runClientM, Scheme(..), BaseUrl(..))
 
-import Network.HTTP.Client
+import Network.HTTP.Client (newManager, defaultManagerSettings)
 
 import Data.Aeson.Orphans ()
 
@@ -117,7 +112,7 @@ main = do
       let env = mkClientEnv manager (BaseUrl Http "localhost" port "")
       let netStore' :: Store (PropertyT IO) HashableDir
           netStore' = liftStore (\mx -> liftIO (runClientM mx env) >>= either throw pure) netStore
-      bracket (liftIO . C.forkIO . Warp.run port . app $ (fsStore netpath :: Store IO HashableDir))
+      bracket (liftIO . C.forkIO . Warp.run port . app "dir" $ (fsStore netpath :: Store IO HashableDir))
         C.killThread $ \_ -> do
           checkSequential $ Group "Store.RoundTrip"
             [ ("fs: flat Dir merkle tree round trip via store", propRoundtripShallow $ fsStore fspath)
