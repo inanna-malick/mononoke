@@ -105,7 +105,7 @@ main = do
       let env = mkClientEnv manager (BaseUrl Http "localhost" port "")
       let netStore' :: Store (PropertyT IO) HashableDir
           netStore' = liftStore (\mx -> liftIO (runClientM mx env) >>= either throw pure) netStore
-      bracket (liftIO . C.forkIO . Warp.run port . app "dir" $ (fsStore netpath :: Store IO HashableDir))
+      bracket (liftIO . C.forkIO . Warp.run port $ app (fsStore netpath :: Store IO HashableDir))
         C.killThread $ \_ -> do
           checkSequential $ Group "Store.RoundTrip"
             [ ("fs: flat Dir merkle tree round trip via store", propRoundtripShallow $ fsStore fspath)

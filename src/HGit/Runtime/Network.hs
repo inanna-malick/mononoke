@@ -45,9 +45,9 @@ hgitServer caps = hgitBranchServer :<|> hgitStoreServer caps
 
 hgitStoreServer :: HgitStore IO -> Server HGitStoreAPI
 hgitStoreServer caps
-     = MN.server "blob"   (_blobStore   caps)
-  :<|> MN.server "dir"    (_dirStore    caps)
-  :<|> MN.server "commit" (_commitStore caps)
+     = MN.server (_blobStore   caps)
+  :<|> MN.server (_dirStore    caps)
+  :<|> MN.server (_commitStore caps)
 
 
 hgitBranchServer :: Server BranchAPI

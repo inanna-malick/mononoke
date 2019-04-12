@@ -35,23 +35,16 @@ default-extensions:
 dependencies:
   - base >=4.8
   - aeson
-  - base16-bytestring
   - bifunctors
-  - bytestring
   - containers
-  - cryptonite
+  - bytestring
   - directory
   - deriving-compat
-  - free
   - http-client
   - hedgehog
-  - memory
   - merkle-schemes
   - mtl
-  - unordered-containers
-  - pretty
   - optparse-applicative
-  - random
   - recursion-schemes
   - safe-exceptions
   - servant
@@ -60,7 +53,6 @@ dependencies:
   - singletons
   - text
   - transformers
-  - vector
   - warp
 
 library:
@@ -84,7 +76,6 @@ executable:
 
 tests:
   spec:
-    cpp-options: -DTEST
     main: Spec.hs
     source-dirs:
       - test
