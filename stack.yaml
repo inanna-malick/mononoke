@@ -2,3 +2,9 @@
 resolver: lts-13.8
 packages:
 - .
+
+extra-deps:
+- github: pkinsky/merkle-schemes
+  commit: 8b9cb1e28279050a7bca5bcb8fc977973f876f07
+
+

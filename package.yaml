@@ -46,6 +46,7 @@ dependencies:
   - http-client
   - hedgehog
   - memory
+  - merkle-schemes
   - mtl
   - unordered-containers
   - pretty
@@ -65,7 +66,6 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
-    - Data.Aeson.Orphans
     - HGit.Core.Diff
     - HGit.Core.Merge
     - HGit.Core.Types
@@ -75,13 +75,6 @@ library:
     - HGit.Runtime.Network
     - HGit.Runtime.RunCmd
     - HGit.Runtime.Types
-    - Merkle.Functors
-    - Merkle.Store
-    - Merkle.Store.Deref
-    - Merkle.Store.FileSystem
-    - Merkle.Store.Network
-    - Merkle.Types
-    - Util.RecursionSchemes
 
 executable:
   main: Main.hs
