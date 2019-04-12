@@ -80,7 +80,6 @@ tests:
     source-dirs:
       - test
     dependencies:
-      - hedgehog
       - hspec
       - hgit
       - temporary

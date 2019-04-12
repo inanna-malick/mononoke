@@ -5,6 +5,5 @@ packages:
 
 extra-deps:
 - github: pkinsky/merkle-schemes
-  commit: 8b9cb1e28279050a7bca5bcb8fc977973f876f07
-
+  commit: c94cf98320afde5e08f03dfc64bbfa17a9529727
 
