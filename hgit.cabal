@@ -109,7 +109,6 @@ test-suite spec
     , hgit
     , hspec
     , merkle-schemes
-    , merkle-schemes-ext
     , mtl
     , recursion-schemes
     , safe-exceptions
