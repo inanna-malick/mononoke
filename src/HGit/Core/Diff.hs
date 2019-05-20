@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 -- | Code for comparing two merkle trees in which any node can be
 -- either a hash-addressed htPointer to an entity in a remote store
 -- or a direct representation of a hash-addressed entity
@@ -18,10 +20,10 @@ import           Merkle.Functors
 diffMerkleDirs
   :: forall m x
   -- no knowledge about actual monad stack - just knows it can
-  -- sequence actions in it to deref successive layers (because monad)
-   . ( Monad m, Eq x)
-  => LazyMerkleDir m x
-  -> LazyMerkleDir m x
+  -- sequence actions in it to deref successive layers
+   . (Monad m, Eq x)
+  => LazyMerkle (Dir x) m -- each layer
+  -> LazyMerkle (Dir x) m
   -> m [([PartialFilePath], Diff)]
 diffMerkleDirs dir1 dir2 =
   if htPointer dir1 == htPointer dir2

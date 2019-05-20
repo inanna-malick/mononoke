@@ -3,10 +3,9 @@
 module HGit.Core.Types where
 
 --------------------------------------------
-import           Control.Monad (join)
+import           Control.Applicative (Const(..))
 import qualified Data.Aeson as AE
 import           Data.Bifunctor.TH
-import           Data.ByteString (ByteString)
 import           Data.Eq.Deriving
 import           Data.Functor.Compose
 import           Data.List.NonEmpty (NonEmpty, toList)
@@ -14,10 +13,30 @@ import qualified Data.Map.Strict as Map
 import           GHC.Generics
 import           Text.Show.Deriving
 --------------------------------------------
-import           Merkle.Types
-import           Merkle.Functors
+import qualified Merkle.Types as MT
+import qualified Merkle.Functors as MF
+import qualified Merkle.Store as MS
+import           Merkle.Types.IPFS
 import           Util.RecursionSchemes
 --------------------------------------------
+
+-- | Using IPFS as a store for this project, specialize a bunch of types to that hash
+type Hash = MT.Hash RawIPFSHash
+type HashAnnotated f = MF.HashAnnotated RawIPFSHash f
+type PutCapability m f = MS.PutCapability m RawIPFSHash f
+type GetCapability m f = MS.GetCapability m RawIPFSHash f
+type Store m f = MS.Store m RawIPFSHash f
+type ShallowStore m f = MS.ShallowStore m RawIPFSHash f
+
+unGetCapability
+  :: GetCapability m f
+  -> Hash f -> m (Maybe (MS.DerefRes RawIPFSHash f))
+unGetCapability (MS.GetCapability g) = g
+
+unPutCapability
+  :: PutCapability m f
+  -> f (Hash f) -> m (Hash f)
+unPutCapability (MS.PutCapability p) = p
 
 type PartialFilePath = String
 type BranchName      = String
@@ -28,6 +47,10 @@ data Blob a
   = Chunk String a
   | Empty
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic1)
+
+instance ExtractKeys Blob where
+  extractRawKeys (Chunk _x (Const rh)) = [rh]
+  extractRawKeys  Empty                = []
 
 instance AE.ToJSON1 Blob
 instance AE.FromJSON1 Blob
@@ -60,7 +83,17 @@ data Dir a b = Dir { dirEntries :: [NamedFileTreeEntity a b] }
 
 type HashableDir = Dir (Hash Blob)
 
-type LazyMerkleDir m x = Fix (HashAnnotated (Dir x) `Compose` m `Compose`  Dir x)
+instance ExtractKeys HashableDir where
+  extractRawKeys (Dir xs) =
+    let f (_n, FileEntity (Const rh)) = rh
+        f (_n, DirEntity  (Const rh)) = rh
+     in fmap f xs
+
+-- | A lazy structure in which each effectful fetch action is annotated with the
+-- hash of the structure to be fetched. For use with hash-addressed stores.
+type LazyMerkle f m = Fix (HashAnnotated f `Compose` m `Compose` f)
+
+type LazyMerkleDir m x = Fix (HashAnnotated (Dir x) `Compose` m `Compose` Dir x)
 
 $(deriveBifoldable    ''Dir)
 $(deriveBifunctor     ''Dir)
@@ -89,31 +122,14 @@ $(deriveEq1   ''Commit)
 
 type HashableCommit = Commit (Hash HashableDir)
 
+instance ExtractKeys HashableCommit where
+  extractRawKeys  NullCommit = []
+  extractRawKeys (Commit _msg (Const rh) rhs) = [rh] ++ (fmap getConst $ toList rhs)
+
+
 instance AE.ToJSON1   HashableCommit
 instance AE.FromJSON1 HashableCommit
 
 -- | sort dir here by file name, specific order is irrelevant
 canonicalOrdering :: [NamedFileTreeEntity a b] -> [NamedFileTreeEntity a b]
 canonicalOrdering = Map.toList . Map.fromList
-
-instance Hashable Blob where
-  -- file-type entities
-  hash (Chunk chunk next) = doHash $ ["blob", unpackString chunk, unpackHash next]
-  hash (Empty) = emptyHash
-
-instance Hashable HashableDir where
-  hash (Dir []) = emptyHash
-  -- non-empty dir-type entities
-  hash (Dir xs) = doHash $ ["dir" :: ByteString] ++ join (fmap hash' $ canonicalOrdering xs)
-    where
-      hash' (n, FileEntity h) = ["subfile", unpackString n, unpackHash h]
-      hash' (n, DirEntity  h) = ["subdir",  unpackString n, unpackHash h]
-
-instance Hashable HashableCommit where
-  -- commit-type entities
-  hash NullCommit = emptyHash
-  hash (Commit msg root parents)
-    = doHash $
-        [ unpackString msg
-        , unpackHash root
-        ] ++ toList (fmap unpackHash parents)

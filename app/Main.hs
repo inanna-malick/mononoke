@@ -3,21 +3,23 @@ module Main where
 --------------------------------------------
 import           Control.Monad.Reader (runReaderT)
 --------------------------------------------
-import           HGit.Runtime.Capabilities
-import           HGit.Runtime.Commands
-import           HGit.Runtime.Network
-import           HGit.Runtime.RunCmd
+import           Merkle.Store (liftShallowStore)
+import           Merkle.Store.IPFS
+import           Runtime.Capabilities
+import           Runtime.Commands
+import           Runtime.RunCmd
 --------------------------------------------
 
 
 main :: IO ()
 main = parse >>= \case
-  (Left InitRepo) -> initRepo
-  (Left (InitServer port)) -> mkLocalCaps >>= runServer port
-  (Right repoCmd) -> do
+  (ipfsNode, Left InitRepo) -> initRepo ipfsNode
+  (ipfsNode, Right repoCmd) -> do
     base  <- hgitBaseDir
     state <- readState
-    stores  <- mkCaps state
-    let caps = RepoCaps stores state base
+    let stores = HgitStore (liftShallowStore $ ipfsStore ipfsNode)
+                           (liftShallowStore $ ipfsStore ipfsNode)
+                           (liftShallowStore $ ipfsStore ipfsNode)
+        caps = RepoCaps stores state base
     mNextState <- runReaderT (runCommand repoCmd) caps
     maybe (pure ()) writeState mNextState

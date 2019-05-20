@@ -1,4 +1,4 @@
-module HGit.Runtime.Types (RepoState(..), initialRepoState) where
+module Runtime.Types (RepoState(..), initialRepoState) where
 
 --------------------------------------------
 import           Data.Aeson
@@ -6,26 +6,24 @@ import qualified Data.Map as M
 import           GHC.Generics
 --------------------------------------------
 import           HGit.Core.Types
-import           Merkle.Types (Hash, emptyHash)
 --------------------------------------------
 
 
 data RepoState
   = RepoState
-  { branches      :: M.Map BranchName (Hash (Commit (Hash (Dir (Hash Blob)))))
+  { branches      :: M.Map BranchName (Hash HashableCommit)
   , currentBranch :: BranchName
-  , remote        :: Maybe (String, Int) -- optional host and port for remote (single, #YOLO)
   } deriving (Generic)
 
-initialRepoState :: RepoState
-initialRepoState
+initialRepoState :: Hash HashableCommit -> RepoState
+initialRepoState initialHash
   = RepoState
-  { branches      = M.fromList [(initial, emptyHash)]
+  { branches      = M.fromList [(initial, initialHash)]
   , currentBranch = initial
-  , remote        = Nothing
   }
   where
     initial = "default"
+
 instance ToJSON RepoState where
     toEncoding = genericToEncoding defaultOptions
 

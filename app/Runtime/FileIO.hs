@@ -1,6 +1,6 @@
 -- | Functions for interacting with the filesystem to
 -- create dir trees from merkle trees or vice versa
-module HGit.Runtime.FileIO where
+module Runtime.FileIO where
 
 --------------------------------------------
 import           Control.Monad.Except
