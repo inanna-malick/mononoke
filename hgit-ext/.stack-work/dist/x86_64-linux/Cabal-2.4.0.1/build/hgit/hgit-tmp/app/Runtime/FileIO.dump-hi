@@ -1,0 +1,436 @@
+
+==================== FINAL INTERFACE ====================
+2019-05-20 21:43:56.937422348 UTC
+
+interface main:Runtime.FileIO 8063
+  interface hash: 996b8117cd6f8eec380ca4f6dd9bf21a
+  ABI hash: 8f4c25d6cf35785e714aa5fb5b19318e
+  export-list hash: d80ecce8ef241aa482f66becde486972
+  orphan hash: 693e9af84d3dfcc71e640e005bdc5e2e
+  flag hash: 0d573f0378d62f8692315b5e560c8adb
+  opt_hash: 6faf2de08de32d19db9870899d88e59a
+  hpc_hash: 93b885adfe0da089cdf634904fd59f71
+  plugin_hash: ad164012d6b1e14942349d58b1132007
+  sig of: Nothing
+  used TH splices: False
+  where
+exports:
+  Runtime.FileIO.justTheName
+  Runtime.FileIO.readBlob
+  Runtime.FileIO.readTree
+  Runtime.FileIO.writeTree
+module dependencies:
+package dependencies: aeson-1.4.2.0 array-0.5.3.0
+                      attoparsec-0.13.2.2 base-4.12.0.0 base-compat-0.10.5
+                      base-orphans-0.8 base64-bytestring-1.0.0.2 bifunctors-5.5.3
+                      binary-0.8.6.0 bytestring-0.10.8.2 comonad-5.0.4 containers-0.6.0.1
+                      deepseq-1.4.4.0 deriving-compat-0.5.4 directory-1.3.3.0
+                      distributive-0.6 dlist-0.8.0.5 exceptions-0.10.0 filepath-1.4.2.1
+                      free-5.1 ghc-boot-th-8.6.3 ghc-prim-0.5.3 hashable-1.2.7.0
+                      hgit-0.1.0.0 integer-gmp-1.0.2.0 integer-logarithms-1.0.2.2
+                      merkle-schemes-0.1.0.0 mtl-2.2.2 pretty-1.1.3.6 primitive-0.6.4.0
+                      profunctors-5.3 random-1.1 recursion-schemes-5.1.1
+                      scientific-0.3.6.2 semigroupoids-5.3.2 stm-2.5.0.0 tagged-0.8.6
+                      template-haskell-2.14.0.0 text-1.2.3.1 th-abstraction-0.2.10.0
+                      time-1.8.0.2 time-locale-compat-0.1.1.5 transformers-0.5.5.0
+                      transformers-base-0.4.5.2 transformers-compat-0.6.2 unix-2.7.2.2
+                      unordered-containers-0.2.9.0 uuid-types-1.0.3 vector-0.12.0.2
+orphans: attoparsec-0.13.2.2:Data.Attoparsec.Text.Internal
+         attoparsec-0.13.2.2:Data.Attoparsec.ByteString.Char8
+         vector-0.12.0.2:Data.Vector.Unboxed
+         time-1.8.0.2:Data.Time.Format.Parse
+         time-1.8.0.2:Data.Time.LocalTime.Internal.ZonedTime
+         time-1.8.0.2:Data.Time.LocalTime.Internal.LocalTime
+         time-1.8.0.2:Data.Time.Calendar.Gregorian
+         vector-0.12.0.2:Data.Vector.Fusion.Bundle
+         stm-2.5.0.0:Control.Monad.STM
+         transformers-0.5.5.0:Control.Monad.Trans.Error
+         hashable-1.2.7.0:Data.Hashable.Generic text-1.2.3.1:Data.Text.Lazy
+         text-1.2.3.1:Data.Text binary-0.8.6.0:Data.Binary.Generic
+         bytestring-0.10.8.2:Data.ByteString.Builder
+         text-1.2.3.1:Data.Text.Show base-4.12.0.0:GHC.Float
+         base-4.12.0.0:GHC.Base
+family instance modules: aeson-1.4.2.0:Data.Aeson.Types.Internal
+                         attoparsec-0.13.2.2:Data.Attoparsec.Internal.Types
+                         base-4.12.0.0:Control.Applicative base-4.12.0.0:Data.Complex
+                         base-4.12.0.0:Data.Functor.Compose base-4.12.0.0:Data.Functor.Const
+                         base-4.12.0.0:Data.Functor.Identity
+                         base-4.12.0.0:Data.Functor.Product base-4.12.0.0:Data.Functor.Sum
+                         base-4.12.0.0:Data.Monoid base-4.12.0.0:Data.Semigroup
+                         base-4.12.0.0:Data.Semigroup.Internal base-4.12.0.0:Data.Version
+                         base-4.12.0.0:Data.Void base-4.12.0.0:GHC.Exts
+                         base-4.12.0.0:GHC.Generics base-4.12.0.0:GHC.IO.Exception
+                         bifunctors-5.5.3:Data.Bifunctor.Biff
+                         bifunctors-5.5.3:Data.Bifunctor.Clown
+                         bifunctors-5.5.3:Data.Bifunctor.Flip
+                         bifunctors-5.5.3:Data.Bifunctor.Join
+                         bifunctors-5.5.3:Data.Bifunctor.Joker
+                         bifunctors-5.5.3:Data.Bifunctor.Product
+                         bifunctors-5.5.3:Data.Bifunctor.Sum
+                         bifunctors-5.5.3:Data.Bifunctor.Tannen
+                         bifunctors-5.5.3:Data.Bifunctor.Wrapped
+                         containers-0.6.0.1:Data.Graph
+                         containers-0.6.0.1:Data.IntMap.Internal
+                         containers-0.6.0.1:Data.IntSet.Internal
+                         containers-0.6.0.1:Data.Map.Internal
+                         containers-0.6.0.1:Data.Sequence.Internal
+                         containers-0.6.0.1:Data.Set.Internal containers-0.6.0.1:Data.Tree
+                         dlist-0.8.0.5:Data.DList free-5.1:Control.Comonad.Cofree
+                         free-5.1:Control.Comonad.Trans.Cofree free-5.1:Control.Monad.Free
+                         free-5.1:Control.Monad.Trans.Free
+                         ghc-boot-th-8.6.3:GHC.ForeignSrcLang.Type
+                         ghc-boot-th-8.6.3:GHC.LanguageExtensions.Type
+                         hgit-0.1.0.0:HGit.Core.Types
+                         merkle-schemes-0.1.0.0:Merkle.Types.IPFS
+                         pretty-1.1.3.6:Text.PrettyPrint.Annotated.HughesPJ
+                         pretty-1.1.3.6:Text.PrettyPrint.HughesPJ
+                         primitive-0.6.4.0:Control.Monad.Primitive
+                         primitive-0.6.4.0:Data.Primitive.Array
+                         primitive-0.6.4.0:Data.Primitive.ByteArray
+                         primitive-0.6.4.0:Data.Primitive.PrimArray
+                         primitive-0.6.4.0:Data.Primitive.SmallArray
+                         primitive-0.6.4.0:Data.Primitive.UnliftedArray
+                         recursion-schemes-5.1.1:Data.Functor.Base
+                         recursion-schemes-5.1.1:Data.Functor.Foldable
+                         tagged-0.8.6:Data.Tagged
+                         template-haskell-2.14.0.0:Language.Haskell.TH.Syntax
+                         text-1.2.3.1:Data.Text text-1.2.3.1:Data.Text.Lazy
+                         th-abstraction-0.2.10.0:Language.Haskell.TH.Datatype
+                         unordered-containers-0.2.9.0:Data.HashMap.Base
+                         unordered-containers-0.2.9.0:Data.HashSet
+                         uuid-types-1.0.3:Data.UUID.Types.Internal
+                         uuid-types-1.0.3:Data.UUID.Types.Internal.Builder
+                         vector-0.12.0.2:Data.Vector vector-0.12.0.2:Data.Vector.Primitive
+                         vector-0.12.0.2:Data.Vector.Storable
+                         vector-0.12.0.2:Data.Vector.Unboxed
+                         vector-0.12.0.2:Data.Vector.Unboxed.Base
+import  -/  base-4.12.0.0:Control.Monad.IO.Class e8f65a5571f64fe686cca3ac75a1aa0e
+import  -/  base-4.12.0.0:Data.Bitraversable 9ace4156c202207a0e5cc27f920e78e7
+import  -/  base-4.12.0.0:Data.Foldable 00188ddf89c975fee76bdfad479443c1
+import  -/  base-4.12.0.0:Data.Functor 22aac80fdb6c7b7f60b4aaab86afee64
+import  -/  base-4.12.0.0:Data.List ce2c69da408fdc014383cede9e1f9adf
+import  -/  base-4.12.0.0:Data.OldList c2cab40fed7d27b5e717779f9a3c09ea
+import  -/  base-4.12.0.0:Data.Traversable 257e9f3b6739f5bfbaaf0ac0abb0ddc5
+import  -/  base-4.12.0.0:GHC.Base cc906f98291a1b830546e99a96674547
+import  -/  base-4.12.0.0:GHC.IO edc9355d7dbab399fd5d385cd5bb457d
+import  -/  base-4.12.0.0:GHC.IO.Handle 071f27e98928f5320ad81b0c3b80d65a
+import  -/  base-4.12.0.0:GHC.IO.Handle.Text 4231fc7120c9f02ff57f2c2e4e04f397
+import  -/  base-4.12.0.0:GHC.IO.Handle.Types 1f9e7ee3bb6c7ad9b26c5d88d440b6ad
+import  -/  base-4.12.0.0:GHC.IO.IOMode ac85dac11286fe2469560580d8140ffe
+import  -/  base-4.12.0.0:GHC.List 734a72beb76d276fb4a0ba2689a5711f
+import  -/  base-4.12.0.0:Prelude 5c01365ec01f83bd405ac01cbb9a8d76
+import  -/  base-4.12.0.0:System.IO 88c2b1c4079c52d62ed362d4eb9a5302
+import  -/  directory-1.3.3.0:System.Directory 0f500eb353c86bec5fb4ae7b9d4e6507
+import  -/  ghc-prim-0.5.3:GHC.Classes e0d9c979f6368701f34fa421754d2cce
+import  -/  ghc-prim-0.5.3:GHC.Types 57064c9f957b09bc2e360061ad5cae0b
+import  -/  hgit-0.1.0.0:HGit.Core.Types 79e907bf15f7ab56c84aba27eb2d3ddb
+import  -/  merkle-schemes-0.1.0.0:Util.RecursionSchemes b224bcde365e2dc1dc7460c2c5e1f79a
+import  -/  mtl-2.2.2:Control.Monad.Except 50e515fe4eac4821a9bcec9a647f5aa7
+import  -/  recursion-schemes-5.1.1:Data.Functor.Foldable cfc5c666b47791f27e29eb7563647e3b
+import  -/  transformers-0.5.5.0:Control.Monad.Trans.State.Lazy e3240683c533154c999a29320b0a7472
+cacfedd5b3f61fe39fe13c342685ebef
+  $trModule :: GHC.Types.Module
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.Module
+                   Runtime.FileIO.$trModule3
+                   Runtime.FileIO.$trModule1) -}
+3535629cd66ce0050466867a4feb53ad
+  $trModule1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.FileIO.$trModule2) -}
+b0ca6e9fbec961c3cdd2d2d047a9c524
+  $trModule2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("Runtime.FileIO"#) -}
+640abf042a2b3094b5611089d4e084b4
+  $trModule3 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.FileIO.$trModule4) -}
+d51ba86b7d77d9a711150c8b079e01e7
+  $trModule4 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("main"#) -}
+c77682d6c3dcc868ad50c334e33585fd
+  justTheName :: GHC.IO.FilePath -> GHC.Base.String
+  {- Arity: 1, HasNoCafRefs, Strictness: <S,1*U>,
+     Unfolding: (\ (x :: [GHC.Types.Char]) ->
+                 GHC.List.reverse1
+                   @ GHC.Types.Char
+                   (GHC.List.takeWhile
+                      @ GHC.Types.Char
+                      Runtime.FileIO.justTheName1
+                      (GHC.List.reverse1
+                         @ GHC.Types.Char
+                         x
+                         (GHC.Types.[] @ GHC.Types.Char)))
+                   (GHC.Types.[] @ GHC.Types.Char)) -}
+d70dfb52000c76dbe80b3b0ecf8592a4
+  justTheName1 :: GHC.Types.Char -> GHC.Types.Bool
+  {- Arity: 1, HasNoCafRefs, Strictness: <S(S),1*U(1*U)>,
+     Unfolding: InlineRule (1, True, False)
+                (\ (ds :: GHC.Types.Char) ->
+                 case ds of wild { GHC.Types.C# x ->
+                 case x of wild1 {
+                   DEFAULT -> GHC.Types.True '/'# -> GHC.Types.False } }) -}
+9f0e564bfeda2bd9dfb1ac1cb97ff963
+  readBlob ::
+    GHC.IO.Handle.Types.Handle
+    -> GHC.Types.IO (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+  {- Unfolding: (Util.RecursionSchemes.anaM
+                   @ GHC.Types.IO
+                   @ HGit.Core.Types.Blob
+                   @ GHC.IO.Handle.Types.Handle
+                   GHC.Base.$fMonadIO
+                   HGit.Core.Types.$fTraversableBlob
+                   Runtime.FileIO.readBlob1
+                     `cast`
+                   (<GHC.IO.Handle.Types.Handle>_R
+                    ->_R Sym (GHC.Types.N:IO[0]
+                                  <HGit.Core.Types.Blob GHC.IO.Handle.Types.Handle>_R))) -}
+a8a0c6135c5439c09a6a0ac6a19b2472
+  readBlob1 ::
+    GHC.IO.Handle.Types.Handle
+    -> GHC.Prim.State# GHC.Prim.RealWorld
+    -> (# GHC.Prim.State# GHC.Prim.RealWorld,
+          HGit.Core.Types.Blob GHC.IO.Handle.Types.Handle #)
+  {- Arity: 2, Strictness: <S,U><S,U>,
+     Unfolding: (\ (h :: GHC.IO.Handle.Types.Handle)
+                   (s :: GHC.Prim.State# GHC.Prim.RealWorld) ->
+                 case GHC.IO.Handle.Internals.wantReadableHandle_1
+                        @ GHC.Types.Bool
+                        GHC.IO.Handle.hIsEOF3
+                        h
+                        GHC.IO.Handle.hIsEOF2
+                          `cast`
+                        (<GHC.IO.Handle.Types.Handle__>_R
+                         ->_R Sym (GHC.Types.N:IO[0] <GHC.Types.Bool>_R))
+                        s of ds1 { (#,#) ipv ipv1 ->
+                 case ipv1 of wild {
+                   GHC.Types.False
+                   -> case GHC.IO.Handle.Internals.wantReadableHandle_1
+                             @ GHC.Base.String
+                             GHC.IO.Handle.Text.hGetLine4
+                             h
+                             GHC.IO.Handle.Text.hGetLine2
+                               `cast`
+                             (<GHC.IO.Handle.Types.Handle__>_R
+                              ->_R Sym (GHC.Types.N:IO[0] <GHC.Base.String>_R))
+                             ipv of ds { (#,#) ipv2 ipv3 ->
+                      (# ipv2,
+                         HGit.Core.Types.Chunk @ GHC.IO.Handle.Types.Handle ipv3 h #) }
+                   GHC.Types.True
+                   -> (# ipv,
+                         HGit.Core.Types.Empty @ GHC.IO.Handle.Types.Handle #) } }) -}
+e4b796f592fed95b81b87396e94855ae
+  readTree ::
+    GHC.IO.FilePath
+    -> GHC.Types.IO
+         (Data.Functor.Foldable.Fix
+            (HGit.Core.Types.Dir
+               (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)))
+  {- Unfolding: (Util.RecursionSchemes.anaM
+                   @ GHC.Types.IO
+                   @ (HGit.Core.Types.Dir
+                        (Data.Functor.Foldable.Fix HGit.Core.Types.Blob))
+                   @ GHC.IO.FilePath
+                   GHC.Base.$fMonadIO
+                   (HGit.Core.Types.$fTraversableDir
+                      @ (Data.Functor.Foldable.Fix HGit.Core.Types.Blob))
+                   Runtime.FileIO.readTree1
+                     `cast`
+                   (<GHC.IO.FilePath>_R
+                    ->_R Sym (GHC.Types.N:IO[0]
+                                  <HGit.Core.Types.Dir
+                                     (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                     GHC.IO.FilePath>_R))) -}
+201d681ef1743ce0a448611a28c6f3fa
+  readTree1 ::
+    GHC.IO.FilePath
+    -> GHC.Prim.State# GHC.Prim.RealWorld
+    -> (# GHC.Prim.State# GHC.Prim.RealWorld,
+          HGit.Core.Types.Dir
+            (Data.Functor.Foldable.Fix HGit.Core.Types.Blob) GHC.IO.FilePath #)
+  {- Arity: 2, Strictness: <L,U><S,U>,
+     Unfolding: (\ (path :: GHC.IO.FilePath)
+                   (s :: GHC.Prim.State# GHC.Prim.RealWorld) ->
+                 case System.Directory.getDirectoryContents1
+                        path
+                        s of ds1 { (#,#) ipv ipv1 ->
+                 letrec {
+                   go :: [[GHC.Types.Char]]
+                         -> GHC.Prim.State# GHC.Prim.RealWorld
+                         -> (# GHC.Prim.State# GHC.Prim.RealWorld,
+                               [(GHC.Base.String,
+                                 HGit.Core.Types.FileTreeEntity
+                                   (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                   GHC.IO.FilePath)] #)
+                     {- Arity: 2, Strictness: <S,1*U><S,U> -}
+                   = \ (ds :: [[GHC.Types.Char]])
+                       (eta :: GHC.Prim.State# GHC.Prim.RealWorld) ->
+                     case ds of wild {
+                       []
+                       -> (# eta,
+                             GHC.Types.[]
+                               @ (GHC.Base.String,
+                                  HGit.Core.Types.FileTreeEntity
+                                    (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                    GHC.IO.FilePath) #)
+                       : y ys
+                       -> case GHC.Classes.$fEqModule_$s$c==
+                                 (GHC.List.$wunsafeTake @ GHC.Types.Char 1# y)
+                                 Runtime.FileIO.readTree5 of wild1 {
+                            GHC.Types.False
+                            -> let {
+                                 x :: GHC.IO.FilePath
+                                 = GHC.Base.++
+                                     @ GHC.Types.Char
+                                     path
+                                     (GHC.CString.unpackAppendCString# Runtime.FileIO.readTree4 y)
+                               } in
+                               case GHC.Prim.catch#
+                                      @ GHC.Types.Bool
+                                      @ GHC.Exception.Type.SomeException
+                                      (\ (s1 :: GHC.Prim.State# GHC.Prim.RealWorld)[OneShot] ->
+                                       case System.Directory.createDirectoryIfMissing6
+                                              x
+                                              s1 of ds6 { (#,#) ipv2 ipv3 ->
+                                       (# ipv2, GHC.Classes.not ipv3 #) })
+                                      System.Directory.doesDirectoryExist2
+                                      eta of ds2 { (#,#) ipv2 ipv3 ->
+                               case ipv3 of wild2 {
+                                 GHC.Types.False
+                                 -> case GHC.Prim.catch#
+                                           @ GHC.Types.Bool
+                                           @ GHC.Exception.Type.SomeException
+                                           (System.Directory.createDirectoryIfMissing6 x)
+                                           System.Directory.doesDirectoryExist2
+                                           ipv2 of ds3 { (#,#) ipv4 ipv5 ->
+                                    case ipv5 of wild3 {
+                                      GHC.Types.False
+                                      -> case (GHC.Magic.noinline
+                                                 @ (forall a. [GHC.Types.Char] -> GHC.Types.IO a)
+                                                 GHC.IO.failIO1
+                                                   `cast`
+                                                 (forall (a :: <Type>_N).
+                                                  <GHC.Base.String>_R
+                                                  ->_R Sym (GHC.Types.N:IO[0] <a>_R))
+                                                 @ (GHC.Base.String,
+                                                    HGit.Core.Types.FileTreeEntity
+                                                      (Data.Functor.Foldable.Fix
+                                                         HGit.Core.Types.Blob)
+                                                      GHC.IO.FilePath)
+                                                 (GHC.CString.unpackAppendCString#
+                                                    Runtime.FileIO.readTree3
+                                                    x))
+                                                `cast`
+                                              (GHC.Types.N:IO[0]
+                                                   <(GHC.Base.String,
+                                                     HGit.Core.Types.FileTreeEntity
+                                                       (Data.Functor.Foldable.Fix
+                                                          HGit.Core.Types.Blob)
+                                                       GHC.IO.FilePath)>_R)
+                                                ipv4 of ds4 { (#,#) ipv6 ipv7 ->
+                                         case go ys ipv6 of ds5 { (#,#) ipv8 ipv9 ->
+                                         (# ipv8,
+                                            GHC.Types.:
+                                              @ (GHC.Base.String,
+                                                 HGit.Core.Types.FileTreeEntity
+                                                   (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                                   GHC.IO.FilePath)
+                                              ipv7
+                                              ipv9 #) } }
+                                      GHC.Types.True
+                                      -> case go ys ipv4 of ds4 { (#,#) ipv6 ipv7 ->
+                                         (# ipv6,
+                                            GHC.Types.:
+                                              @ (GHC.Base.String,
+                                                 HGit.Core.Types.FileTreeEntity
+                                                   (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                                   GHC.IO.FilePath)
+                                              (Runtime.FileIO.justTheName x,
+                                               HGit.Core.Types.DirEntity
+                                                 @ (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                                 @ GHC.IO.FilePath
+                                                 x)
+                                              ipv7 #) } } }
+                                 GHC.Types.True
+                                 -> case System.IO.appendFile2
+                                           @ (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                           x
+                                           GHC.IO.IOMode.ReadMode
+                                           Runtime.FileIO.readBlob
+                                           ipv2 of ds3 { (#,#) ipv4 ipv5 ->
+                                    case go ys ipv4 of ds4 { (#,#) ipv6 ipv7 ->
+                                    (# ipv6,
+                                       GHC.Types.:
+                                         @ (GHC.Base.String,
+                                            HGit.Core.Types.FileTreeEntity
+                                              (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                              GHC.IO.FilePath)
+                                         (Runtime.FileIO.justTheName x,
+                                          HGit.Core.Types.FileEntity
+                                            @ (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                                            @ GHC.IO.FilePath
+                                            ipv5)
+                                         ipv7 #) } } } }
+                            GHC.Types.True -> go ys eta } }
+                 } in
+                 case go ipv1 ipv of ds2 { (#,#) ipv2 ipv3 ->
+                 (# ipv2,
+                    HGit.Core.Types.Dir
+                      @ (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                      @ GHC.IO.FilePath
+                      (GHC.Base.map
+                         @ (GHC.IO.FilePath,
+                            HGit.Core.Types.FileTreeEntity
+                              (Data.Functor.Foldable.Fix HGit.Core.Types.Blob) GHC.IO.FilePath)
+                         @ (GHC.Base.String,
+                            HGit.Core.Types.FileTreeEntity
+                              (Data.Functor.Foldable.Fix HGit.Core.Types.Blob) GHC.IO.FilePath)
+                         Runtime.FileIO.readTree2
+                         ipv3) #) } }) -}
+35d6705e2deedd78aaaf0594d9ea619d
+  readTree2 ::
+    (GHC.IO.FilePath,
+     HGit.Core.Types.FileTreeEntity
+       (Data.Functor.Foldable.Fix HGit.Core.Types.Blob) GHC.IO.FilePath)
+    -> (GHC.Base.String,
+        HGit.Core.Types.FileTreeEntity
+          (Data.Functor.Foldable.Fix HGit.Core.Types.Blob) GHC.IO.FilePath)
+  {- Arity: 1, HasNoCafRefs, Strictness: <S,1*U(1*U,U)>m,
+     Unfolding: InlineRule (1, True, False)
+                (\ (ds :: (GHC.IO.FilePath,
+                           HGit.Core.Types.FileTreeEntity
+                             (Data.Functor.Foldable.Fix HGit.Core.Types.Blob)
+                             GHC.IO.FilePath)) ->
+                 case ds of wild { (,) p e ->
+                 (Runtime.FileIO.justTheName p, e) }) -}
+88390c94c676ce305af858550ea00aa3
+  readTree3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs,
+     Unfolding: ("file read error: unexpected type at "#) -}
+280aaf4db11dc356894a75baa0df4873
+  readTree4 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("/"#) -}
+7cfc4385eef5762b33c56928f565a455
+  readTree5 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.FileIO.readTree6) -}
+be3910e0086a91e6f8d9e55651ce9ac4
+  readTree6 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("."#) -}
+fd43698b89feaf39e8f98e8e6980dae6
+  writeTree ::
+    Control.Monad.IO.Class.MonadIO m =>
+    GHC.IO.FilePath
+    -> Data.Functor.Foldable.Fix
+         (HGit.Core.Types.Dir
+            (Data.Functor.Foldable.Fix HGit.Core.Types.Blob))
+    -> m ()
+  {- Arity: 1,
+     Strictness: <L,U(1*U(U(U(C(C1(U)),A),A,A,A,A,A),C(C1(U)),A,C(U),C(U)),C(U))> -}
+trusted: none
+require own pkg trusted: False
+module header:
+  Nothing
+declaration docs:
+arg docs:
+

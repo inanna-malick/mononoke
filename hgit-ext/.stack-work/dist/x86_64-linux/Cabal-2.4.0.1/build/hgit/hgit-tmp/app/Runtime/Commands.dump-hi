@@ -1,0 +1,1820 @@
+
+==================== FINAL INTERFACE ====================
+2019-05-20 21:43:56.588264326 UTC
+
+interface main:Runtime.Commands 8063
+  interface hash: c5b18770a67350cfcb155f0c49e8936d
+  ABI hash: b6c5de75f4557f872e827c2d9ff81a00
+  export-list hash: ddf5af81328c4defe5ed0e9877790537
+  orphan hash: 2b1148f10542bc809358a51f7f1f030e
+  flag hash: 0d573f0378d62f8692315b5e560c8adb
+  opt_hash: 6faf2de08de32d19db9870899d88e59a
+  hpc_hash: 93b885adfe0da089cdf634904fd59f71
+  plugin_hash: ad164012d6b1e14942349d58b1132007
+  sig of: Nothing
+  used TH splices: False
+  where
+exports:
+  Runtime.Commands.parse
+  Runtime.Commands.MetaCommand{Runtime.Commands.InitRepo}
+  Runtime.Commands.RepoCommand{Runtime.Commands.CheckoutBranch Runtime.Commands.GetDiff Runtime.Commands.GetStatus Runtime.Commands.MkBranch Runtime.Commands.MkCommit Runtime.Commands.MkMergeCommit}
+module dependencies:
+package dependencies: RSA-2.3.1 SHA-1.6.4.4 StateVar-1.1.1.1
+                      adjunctions-4.4 aeson-1.4.2.0 ansi-terminal-0.8.2
+                      ansi-wl-pprint-0.6.8.2 array-0.5.3.0 asn1-encoding-0.9.5
+                      asn1-parse-0.9.4 asn1-types-0.3.2 async-2.2.1 attoparsec-0.13.2.2
+                      authenticate-oauth-1.6 base-4.12.0.0 base-compat-0.10.5
+                      base-orphans-0.8 base16-bytestring-0.1.1.6
+                      base64-bytestring-1.0.0.2 basement-0.0.10 bifunctors-5.5.3
+                      binary-0.8.6.0 blaze-builder-0.4.1.0 bytestring-0.10.8.2
+                      call-stack-0.1.0 case-insensitive-1.2.0.11 cereal-0.5.8.0
+                      colour-2.3.4 comonad-5.0.4 connection-0.2.8 containers-0.6.0.1
+                      contravariant-1.5 cookie-0.4.4 crypto-api-0.13.3
+                      crypto-pubkey-types-0.4.3 cryptonite-0.25 data-default-0.7.1.1
+                      data-default-class-0.1.2.0 data-default-instances-containers-0.0.1
+                      data-default-instances-dlist-0.0.1
+                      data-default-instances-old-locale-0.0.1 deepseq-1.4.4.0
+                      deriving-compat-0.5.4 directory-1.3.3.0 distributive-0.6
+                      dlist-0.8.0.5 entropy-0.4.1.4 exceptions-0.10.0 filepath-1.4.2.1
+                      free-5.1 ghc-boot-th-8.6.3 ghc-prim-0.5.3 hashable-1.2.7.0
+                      hgit-0.1.0.0 hourglass-0.2.12 http-client-0.5.14
+                      http-client-tls-0.3.5.3 http-types-0.12.2 integer-gmp-1.0.2.0
+                      integer-logarithms-1.0.2.2 kan-extensions-5.2 lens-4.17
+                      lens-aeson-1.0.2 memory-0.14.18 merkle-schemes-0.1.0.0
+                      merkle-schemes-ext-0.1.0.0 mime-types-0.1.0.9 mtl-2.2.2
+                      network-2.8.0.0 network-uri-2.6.1.0 old-locale-1.0.0.7
+                      optparse-applicative-0.14.3.0 parsec-3.1.13.0 pem-0.2.4
+                      pretty-1.1.3.6 primitive-0.6.4.0 process-1.6.3.0 profunctors-5.3
+                      random-1.1 recursion-schemes-5.1.1 reflection-2.1.4
+                      safe-exceptions-0.1.7.0 scientific-0.3.6.2 semigroupoids-5.3.2
+                      socks-0.5.6 stm-2.5.0.0 streaming-commons-0.2.1.0 tagged-0.8.6
+                      template-haskell-2.14.0.0 text-1.2.3.1 th-abstraction-0.2.10.0
+                      time-1.8.0.2 time-locale-compat-0.1.1.5 tls-1.4.1
+                      transformers-0.5.5.0 transformers-base-0.4.5.2
+                      transformers-compat-0.6.2 unix-2.7.2.2 unordered-containers-0.2.9.0
+                      uuid-types-1.0.3 vector-0.12.0.2 wreq-0.5.3.1 x509-1.7.5
+                      x509-store-1.6.7 x509-system-1.6.6 x509-validation-1.6.11
+                      zlib-0.6.2
+orphans: colour-2.3.4:Data.Colour lens-aeson-1.0.2:Data.Aeson.Lens
+         data-default-instances-containers-0.0.1:Data.Default.Instances.Containers
+         data-default-instances-dlist-0.0.1:Data.Default.Instances.DList
+         data-default-instances-old-locale-0.0.1:Data.Default.Instances.OldLocale
+         RSA-2.3.1:Codec.Crypto.RSA.Pure wreq-0.5.3.1:Network.Wreq.Types
+         reflection-2.1.4:Data.Reflection
+         http-client-0.5.14:Network.HTTP.Client.Request
+         basement-0.0.10:Basement.UArray.Base basement-0.0.10:Basement.Block
+         network-2.8.0.0:Network.Socket
+         attoparsec-0.13.2.2:Data.Attoparsec.Text.Internal
+         attoparsec-0.13.2.2:Data.Attoparsec.ByteString.Char8
+         vector-0.12.0.2:Data.Vector.Unboxed
+         time-1.8.0.2:Data.Time.Format.Parse
+         time-1.8.0.2:Data.Time.LocalTime.Internal.ZonedTime
+         time-1.8.0.2:Data.Time.LocalTime.Internal.LocalTime
+         time-1.8.0.2:Data.Time.Calendar.Gregorian
+         vector-0.12.0.2:Data.Vector.Fusion.Bundle
+         stm-2.5.0.0:Control.Monad.STM
+         transformers-0.5.5.0:Control.Monad.Trans.Error
+         hashable-1.2.7.0:Data.Hashable.Generic text-1.2.3.1:Data.Text.Lazy
+         text-1.2.3.1:Data.Text binary-0.8.6.0:Data.Binary.Generic
+         bytestring-0.10.8.2:Data.ByteString.Builder
+         text-1.2.3.1:Data.Text.Show base-4.12.0.0:GHC.Float
+         base-4.12.0.0:GHC.Base
+family instance modules: adjunctions-4.4:Data.Functor.Rep
+                         aeson-1.4.2.0:Data.Aeson.Types.Internal
+                         attoparsec-0.13.2.2:Data.Attoparsec.Internal.Types
+                         base-4.12.0.0:Control.Applicative base-4.12.0.0:Data.Complex
+                         base-4.12.0.0:Data.Functor.Compose base-4.12.0.0:Data.Functor.Const
+                         base-4.12.0.0:Data.Functor.Identity
+                         base-4.12.0.0:Data.Functor.Product base-4.12.0.0:Data.Functor.Sum
+                         base-4.12.0.0:Data.Monoid base-4.12.0.0:Data.Semigroup
+                         base-4.12.0.0:Data.Semigroup.Internal base-4.12.0.0:Data.Version
+                         base-4.12.0.0:Data.Void base-4.12.0.0:GHC.Exts
+                         base-4.12.0.0:GHC.Generics base-4.12.0.0:GHC.IO.Exception
+                         basement-0.0.10:Basement.Block.Base
+                         basement-0.0.10:Basement.Bounded basement-0.0.10:Basement.Monad
+                         basement-0.0.10:Basement.MutableBuilder
+                         basement-0.0.10:Basement.Nat basement-0.0.10:Basement.NonEmpty
+                         basement-0.0.10:Basement.Numerical.Subtractive
+                         basement-0.0.10:Basement.PrimType basement-0.0.10:Basement.String
+                         basement-0.0.10:Basement.String.Encoding.ASCII7
+                         basement-0.0.10:Basement.String.Encoding.ISO_8859_1
+                         basement-0.0.10:Basement.String.Encoding.UTF16
+                         basement-0.0.10:Basement.String.Encoding.UTF32
+                         basement-0.0.10:Basement.Types.OffsetSize
+                         basement-0.0.10:Basement.UArray.Base
+                         basement-0.0.10:Basement.UTF8.Base
+                         bifunctors-5.5.3:Data.Bifunctor.Biff
+                         bifunctors-5.5.3:Data.Bifunctor.Clown
+                         bifunctors-5.5.3:Data.Bifunctor.Fix
+                         bifunctors-5.5.3:Data.Bifunctor.Flip
+                         bifunctors-5.5.3:Data.Bifunctor.Join
+                         bifunctors-5.5.3:Data.Bifunctor.Joker
+                         bifunctors-5.5.3:Data.Bifunctor.Product
+                         bifunctors-5.5.3:Data.Bifunctor.Sum
+                         bifunctors-5.5.3:Data.Bifunctor.Tannen
+                         bifunctors-5.5.3:Data.Bifunctor.Wrapped
+                         containers-0.6.0.1:Data.Graph
+                         containers-0.6.0.1:Data.IntMap.Internal
+                         containers-0.6.0.1:Data.IntSet.Internal
+                         containers-0.6.0.1:Data.Map.Internal
+                         containers-0.6.0.1:Data.Sequence.Internal
+                         containers-0.6.0.1:Data.Set.Internal containers-0.6.0.1:Data.Tree
+                         cryptonite-0.25:Crypto.ECC cryptonite-0.25:Crypto.Error.Types
+                         cryptonite-0.25:Crypto.Hash.Blake2
+                         cryptonite-0.25:Crypto.Hash.Blake2b
+                         cryptonite-0.25:Crypto.Hash.Blake2bp
+                         cryptonite-0.25:Crypto.Hash.Blake2s
+                         cryptonite-0.25:Crypto.Hash.Blake2sp
+                         cryptonite-0.25:Crypto.Hash.Keccak cryptonite-0.25:Crypto.Hash.MD2
+                         cryptonite-0.25:Crypto.Hash.MD4 cryptonite-0.25:Crypto.Hash.MD5
+                         cryptonite-0.25:Crypto.Hash.RIPEMD160
+                         cryptonite-0.25:Crypto.Hash.SHA1 cryptonite-0.25:Crypto.Hash.SHA224
+                         cryptonite-0.25:Crypto.Hash.SHA256 cryptonite-0.25:Crypto.Hash.SHA3
+                         cryptonite-0.25:Crypto.Hash.SHA384
+                         cryptonite-0.25:Crypto.Hash.SHA512
+                         cryptonite-0.25:Crypto.Hash.SHA512t
+                         cryptonite-0.25:Crypto.Hash.SHAKE
+                         cryptonite-0.25:Crypto.Hash.Skein256
+                         cryptonite-0.25:Crypto.Hash.Skein512
+                         cryptonite-0.25:Crypto.Hash.Tiger
+                         cryptonite-0.25:Crypto.Hash.Whirlpool dlist-0.8.0.5:Data.DList
+                         free-5.1:Control.Comonad.Cofree
+                         free-5.1:Control.Comonad.Trans.Cofree free-5.1:Control.Monad.Free
+                         free-5.1:Control.Monad.Trans.Free
+                         ghc-boot-th-8.6.3:GHC.ForeignSrcLang.Type
+                         ghc-boot-th-8.6.3:GHC.LanguageExtensions.Type
+                         hgit-0.1.0.0:HGit.Core.Types http-client-0.5.14:Network.HTTP.Client
+                         kan-extensions-5.2:Data.Functor.Day
+                         kan-extensions-5.2:Data.Functor.Yoneda lens-4.17:Control.Lens.At
+                         lens-4.17:Control.Lens.Internal.Indexed
+                         lens-4.17:Control.Lens.Reified lens-4.17:Control.Lens.Tuple
+                         lens-4.17:Control.Lens.Wrapped lens-4.17:Control.Lens.Zoom
+                         lens-aeson-1.0.2:Data.Aeson.Lens
+                         merkle-schemes-0.1.0.0:Merkle.Types.IPFS
+                         network-uri-2.6.1.0:Network.URI
+                         pretty-1.1.3.6:Text.PrettyPrint.Annotated.HughesPJ
+                         pretty-1.1.3.6:Text.PrettyPrint.HughesPJ
+                         primitive-0.6.4.0:Control.Monad.Primitive
+                         primitive-0.6.4.0:Data.Primitive.Array
+                         primitive-0.6.4.0:Data.Primitive.ByteArray
+                         primitive-0.6.4.0:Data.Primitive.PrimArray
+                         primitive-0.6.4.0:Data.Primitive.SmallArray
+                         primitive-0.6.4.0:Data.Primitive.UnliftedArray
+                         profunctors-5.3:Data.Profunctor.Composition
+                         profunctors-5.3:Data.Profunctor.Rep
+                         recursion-schemes-5.1.1:Data.Functor.Base
+                         recursion-schemes-5.1.1:Data.Functor.Foldable
+                         tagged-0.8.6:Data.Tagged
+                         template-haskell-2.14.0.0:Language.Haskell.TH.Syntax
+                         text-1.2.3.1:Data.Text text-1.2.3.1:Data.Text.Lazy
+                         th-abstraction-0.2.10.0:Language.Haskell.TH.Datatype
+                         unordered-containers-0.2.9.0:Data.HashMap.Base
+                         unordered-containers-0.2.9.0:Data.HashSet
+                         uuid-types-1.0.3:Data.UUID.Types.Internal
+                         uuid-types-1.0.3:Data.UUID.Types.Internal.Builder
+                         vector-0.12.0.2:Data.Vector vector-0.12.0.2:Data.Vector.Primitive
+                         vector-0.12.0.2:Data.Vector.Storable
+                         vector-0.12.0.2:Data.Vector.Unboxed
+                         vector-0.12.0.2:Data.Vector.Unboxed.Base
+                         zlib-0.6.2:Codec.Compression.Zlib.Stream
+import  -/  base-4.12.0.0:Data.Either 946a3435d06773e1dbcad1ba5dc18a2c
+import  -/  base-4.12.0.0:Data.Functor 22aac80fdb6c7b7f60b4aaab86afee64
+import  -/  base-4.12.0.0:Data.Semigroup 90ce13d7af7daa62b907d95c08ea7fb7
+import  -/  base-4.12.0.0:GHC.Base cc906f98291a1b830546e99a96674547
+import  -/  base-4.12.0.0:Prelude 5c01365ec01f83bd405ac01cbb9a8d76
+import  -/  ghc-prim-0.5.3:GHC.Types 57064c9f957b09bc2e360061ad5cae0b
+import  -/  hgit-0.1.0.0:HGit.Core.Types 79e907bf15f7ab56c84aba27eb2d3ddb
+import  -/  merkle-schemes-ext-0.1.0.0:Merkle.Store.IPFS f31cc191599763028ee09446484660d4
+import  -/  optparse-applicative-0.14.3.0:Options.Applicative 9169a619c78262ebabc4400dd76ee262
+import  -/  optparse-applicative-0.14.3.0:Options.Applicative.Builder 129189d45d9bbe58c1b9144e813bf34e
+import  -/  optparse-applicative-0.14.3.0:Options.Applicative.Extra 51b8b234922f4094151de995ac0912f8
+import  -/  optparse-applicative-0.14.3.0:Options.Applicative.Types 2e9c7b037f793041631047a39a57cee7
+75969e7c62a3a7d63a43e5c4d1e56d54
+  $sauto1 ::
+    GHC.Base.String
+    -> Control.Monad.Trans.Except.Except
+         Options.Applicative.Types.ParseError GHC.Types.Int
+  {- Arity: 1, Strictness: <L,U>, Inline: [2],
+     Unfolding: InlineRule (1, True, False)
+                (\ (w1 :: GHC.Base.String) ->
+                 Options.Applicative.Builder.$wauto
+                   @ GHC.Types.Int
+                   GHC.Read.$fReadInt_$creadsPrec
+                   w1) -}
+fcb5f13dec677df56e04dd8b02ae4a72
+  $tc'CheckoutBranch :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   14012208150432659883##
+                   3446504691639990190##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tc'CheckoutBranch2
+                   0#
+                   Runtime.Commands.$tc'CheckoutBranch1) -}
+5dd890de2d75e79a976a72863b45d088
+  $tc'CheckoutBranch1 :: GHC.Types.KindRep
+  {- HasNoCafRefs, Strictness: m4, Inline: [~] -}
+bf69d506e75ed0f4053f739a02591506
+  $tc'CheckoutBranch2 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS
+                   Runtime.Commands.$tc'CheckoutBranch3) -}
+88a0cd483687c91b1135e5626f31ff68
+  $tc'CheckoutBranch3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'CheckoutBranch"#) -}
+5d24b9e40560b8d56b35072e1d7d900a
+  $tc'GetDiff :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   11808157058715536973##
+                   1865758664970492125##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tc'GetDiff2
+                   0#
+                   Runtime.Commands.$tc'GetDiff1) -}
+38935817a19ecffd3704e6a7a000155a
+  $tc'GetDiff1 :: GHC.Types.KindRep
+  {- HasNoCafRefs, Strictness: m4, Inline: [~] -}
+0fc50d57221b1e4ba62031e5e6f77bcc
+  $tc'GetDiff2 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$tc'GetDiff3) -}
+dd073a346dbe8025d8462b60adff9fe2
+  $tc'GetDiff3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'GetDiff"#) -}
+f914bdddaacdc151fcc34ce2d46b4440
+  $tc'GetStatus :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   12691870989090078493##
+                   4499062908176775330##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tc'GetStatus2
+                   0#
+                   Runtime.Commands.$tc'GetStatus1) -}
+906f4cf83d884e0e23ac438616ccafd4
+  $tc'GetStatus1 :: GHC.Types.KindRep
+  {- HasNoCafRefs, Strictness: m1, Inline: [~] -}
+d89fe9df0f9b9516d587338bb0a97c57
+  $tc'GetStatus2 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$tc'GetStatus3) -}
+d6fbdec6b3e324a37cac6fcc42de65ea
+  $tc'GetStatus3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'GetStatus"#) -}
+7f53fe7bb2a1610613a2ba5fc6dcfdf8
+  $tc'InitRepo :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   438768271255072137##
+                   10854451332474566687##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tc'InitRepo2
+                   0#
+                   Runtime.Commands.$tc'InitRepo1) -}
+055ccb3e5a269635e1dcb223d9e0ece1
+  $tc'InitRepo1 :: GHC.Types.KindRep
+  {- HasNoCafRefs, Strictness: m1, Inline: [~] -}
+7c0cc76b358407ca165fb44012e174c6
+  $tc'InitRepo2 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$tc'InitRepo3) -}
+984013afd643e54459300d7aa10572ec
+  $tc'InitRepo3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'InitRepo"#) -}
+c136501dd092b1ed56c81efb618fcedf
+  $tc'MkBranch :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   15203933842251117580##
+                   7846104542583286779##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tc'MkBranch1
+                   0#
+                   Runtime.Commands.$tc'CheckoutBranch1) -}
+a2d629eaa226e2f7083abdb662611505
+  $tc'MkBranch1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$tc'MkBranch2) -}
+f735a433b254aa7e4d73b564730cc628
+  $tc'MkBranch2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'MkBranch"#) -}
+a94bafbaa4e805ee2495b1dcedb7430f
+  $tc'MkCommit :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   991583834212629335##
+                   15660435626987627982##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tc'MkCommit1
+                   0#
+                   Runtime.Commands.$tc'CheckoutBranch1) -}
+967be2f042cbca86a8a7b4ed45cdb6fb
+  $tc'MkCommit1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$tc'MkCommit2) -}
+d0db41699ed2e15ace58967f70868b4e
+  $tc'MkCommit2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'MkCommit"#) -}
+2450c317fefa648c43a73e1719f6cda7
+  $tc'MkMergeCommit :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   8079003127976966030##
+                   14707282678519168472##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tc'MkMergeCommit1
+                   0#
+                   Runtime.Commands.$tc'GetDiff1) -}
+982f442c46b8ff98ef67cc0ac31e0f61
+  $tc'MkMergeCommit1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS
+                   Runtime.Commands.$tc'MkMergeCommit2) -}
+bc6dac97d12f64470b09d1b3555e69c6
+  $tc'MkMergeCommit2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'MkMergeCommit"#) -}
+8101d3ab94617f71eea9d91f56106bc9
+  $tcMetaCommand :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   5526135251806384218##
+                   17692852948376470529##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tcMetaCommand1
+                   0#
+                   GHC.Types.krep$*) -}
+ae6eb7f5615021542a551e43d4842d33
+  $tcMetaCommand1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$tcMetaCommand2) -}
+835569455a07e0e333bee42ac23b9431
+  $tcMetaCommand2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("MetaCommand"#) -}
+cb2cf41ed62f57108df0407da271ccc0
+  $tcRepoCommand :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   14582659163701091886##
+                   10032801506900361706##
+                   Runtime.Commands.$trModule
+                   Runtime.Commands.$tcRepoCommand1
+                   0#
+                   GHC.Types.krep$*) -}
+6dfc03facad0e90c20e60ce89af883d8
+  $tcRepoCommand1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$tcRepoCommand2) -}
+514b8b774f9151e1a5373648a83f1072
+  $tcRepoCommand2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("RepoCommand"#) -}
+551bc3f31e4c6ee420df9a3b41ea1bf1
+  $trModule :: GHC.Types.Module
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.Module
+                   Runtime.Commands.$trModule3
+                   Runtime.Commands.$trModule1) -}
+c6a9956a2270f1f325350e88f3ba1aae
+  $trModule1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$trModule2) -}
+6cc89a8dc17f84af6185ef86a9d4cd0d
+  $trModule2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("Runtime.Commands"#) -}
+763475036f3fd9da76d77ede7ccc93ef
+  $trModule3 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Commands.$trModule4) -}
+746275fe06f84e664a4d9fe2aff75a8f
+  $trModule4 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("main"#) -}
+ff861fec5da5edd2c96a90ae55f9e71d
+  data MetaCommand = InitRepo
+2dc75d94311310c7146e504a037632e1
+  data RepoCommand
+    = CheckoutBranch HGit.Core.Types.BranchName
+    | MkBranch HGit.Core.Types.BranchName
+    | MkMergeCommit HGit.Core.Types.BranchName
+                    HGit.Core.Types.CommitMessage
+    | MkCommit HGit.Core.Types.CommitMessage
+    | GetStatus
+    | GetDiff HGit.Core.Types.BranchName HGit.Core.Types.BranchName
+0ae4a0eec4a727049f4c7aef513971b7
+  parse ::
+    GHC.Types.IO
+      (Merkle.Store.IPFS.IPFSNode,
+       Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Arity: 1,
+     Unfolding: InlineRule (0, True, True)
+                Runtime.Commands.parse1
+                  `cast`
+                (Sym (GHC.Types.N:IO[0]
+                          <(Merkle.Store.IPFS.IPFSNode,
+                            Data.Either.Either
+                              Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)>_R)) -}
+161ca56f947ea9390b33b1e42d9649dc
+  parse1 ::
+    GHC.Prim.State# GHC.Prim.RealWorld
+    -> (# GHC.Prim.State# GHC.Prim.RealWorld,
+          (Merkle.Store.IPFS.IPFSNode,
+           Data.Either.Either
+             Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand) #)
+  {- Arity: 1,
+     Unfolding: (Options.Applicative.Extra.customExecParser1
+                   @ (Merkle.Store.IPFS.IPFSNode,
+                      Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Options.Applicative.Builder.defaultPrefs
+                   Runtime.Commands.parse_opts) -}
+89195f7b9dc5f6e059c6870261b3bd44
+  parse10 ::
+    Options.Applicative.Types.Option
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse12
+                   Runtime.Commands.parse11) -}
+35cee289e51d120e24e5f441b8a23c98
+  parse100 :: GHC.Prim.Addr#
+  {- HasNoCafRefs,
+     Unfolding: ("branch to merge into the current one"#) -}
+0787a02a936793758023498fea625cf3
+  parse101 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("merge"#) -}
+cae998bcd626d4e6b5c240d164b6c4d0
+  parse102 :: [[GHC.Types.Char]]
+  {- Unfolding: (GHC.Base.map
+                   @ (GHC.Base.String,
+                      Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   @ [GHC.Types.Char]
+                   (Data.Tuple.fst
+                      @ GHC.Base.String
+                      @ (Options.Applicative.Types.ParserInfo
+                           (Data.Either.Either
+                              Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)))
+                   Runtime.Commands.parse14) -}
+1c33672db5c1b0147cd5a46b346821ac
+  parse103 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand
+       -> (Merkle.Store.IPFS.IPFSNode,
+           Data.Either.Either
+             Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ Merkle.Store.IPFS.IPFSNode
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand
+                      -> (Merkle.Store.IPFS.IPFSNode,
+                          Data.Either.Either
+                            Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   (GHC.Tuple.(,)
+                      @ Merkle.Store.IPFS.IPFSNode
+                      @ (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse104) -}
+9066941eb17c30bd30479705b718a42a
+  parse104 ::
+    Options.Applicative.Types.Parser Merkle.Store.IPFS.IPFSNode
+  {- Unfolding: (Options.Applicative.Types.MultP
+                   @ Merkle.Store.IPFS.IPFSNode
+                   @ GHC.Types.Int
+                   Runtime.Commands.parse125
+                   Runtime.Commands.parse105) -}
+3e0af9fba8ba70f243aaf32f1f28a180
+  parse105 :: Options.Applicative.Types.Parser GHC.Types.Int
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ GHC.Types.Int
+                   Runtime.Commands.parse108
+                   Runtime.Commands.parse106) -}
+e2c2db64ab8eaa2ae07a0d8a849307ac
+  parse106 :: Options.Applicative.Types.Parser GHC.Types.Int
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (Options.Applicative.Types.NilP
+                   @ GHC.Types.Int
+                   Runtime.Commands.parse107) -}
+7cd3fcf7591e50398ed4aba5a894837e
+  parse107 :: GHC.Maybe.Maybe GHC.Types.Int
+  {- HasNoCafRefs, Strictness: m2,
+     Unfolding: (GHC.Maybe.Just
+                   @ GHC.Types.Int
+                   Merkle.Store.IPFS.localHost1) -}
+7432c351ccc5638559b0b12136bae9af
+  parse108 :: Options.Applicative.Types.Parser GHC.Types.Int
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ GHC.Types.Int
+                   Runtime.Commands.parse109) -}
+c2db2ae0a96cce6f0ece90970c8e7387
+  parse109 :: Options.Applicative.Types.Option GHC.Types.Int
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ GHC.Types.Int
+                   Runtime.Commands.parse117
+                   Runtime.Commands.parse110) -}
+7c4a8acd3b5762218beab971f6aab0ba
+  parse11 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.subparser_var
+                   (GHC.Maybe.Nothing @ GHC.Base.String)
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+01e7184eaba7de964d1386ff5cbf8da1
+  parse110 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   Runtime.Commands.parse115
+                   Runtime.Commands.parse113
+                   Runtime.Commands.parse111
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+f1b8fcb5daa0dc2c871cc3f8eaa4fb3a
+  parse111 :: GHC.Maybe.Maybe GHC.Base.String
+  {- Strictness: m2,
+     Unfolding: (GHC.Maybe.Just
+                   @ GHC.Base.String
+                   Runtime.Commands.parse112) -}
+831d00ac03d943546371e015d5799800
+  parse112 :: GHC.Base.String
+  {- Unfolding: (case GHC.Show.$wshowSignedInt
+                        0#
+                        5001#
+                        (GHC.Types.[] @ GHC.Types.Char) of ww4 { (#,#) ww5 ww6 ->
+                 GHC.Types.: @ GHC.Types.Char ww5 ww6 }) -}
+6cfa545ee0455c153fe2620b7aa1e752
+  parse113 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse114) -}
+5a15ba5bfb1bd03e5f301aa1dfbf7dd2
+  parse114 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("IPFS-DAEMON-HOST"#) -}
+bc1ef8344b0a45b01616733e5fa95d8e
+  parse115 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse116)) -}
+4af971629b2022d85a1197bea636984b
+  parse116 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("ipfs daemon port"#) -}
+74c540a4f29e2255f63f5b47e220f65c
+  parse117 :: Options.Applicative.Types.OptReader GHC.Types.Int
+  {- Strictness: m1,
+     Unfolding: (Options.Applicative.Types.OptReader
+                   @ GHC.Types.Int
+                   Runtime.Commands.parse119
+                   Runtime.Commands.parse118
+                   Options.Applicative.Types.ExpectsArgError) -}
+556f58880d366c98cdd7214e2fda5155
+  parse118 :: Options.Applicative.Types.CReader GHC.Types.Int
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.CReader
+                   @ GHC.Types.Int
+                   Options.Applicative.Types.$fMonoidCompleter3
+                     `cast`
+                   ((<GHC.Base.String>_R
+                     ->_R Sym (GHC.Types.N:IO[0]
+                                   <[GHC.Base.String]>_R)) ; Sym (Options.Applicative.Types.N:Completer[0]))
+                   Runtime.Commands.$sauto1
+                     `cast`
+                   (Sym (Control.Monad.Trans.Reader.N:ReaderT[0]
+                             <Type>_N
+                             <GHC.Base.String>_R
+                             <Control.Monad.Trans.Except.Except
+                                Options.Applicative.Types.ParseError>_R
+                             <GHC.Types.Int>_N) ; Sym (Options.Applicative.Types.N:ReadM[0]) <GHC.Types.Int>_N)) -}
+bccb56b28317c10f8953d04a196a3c67
+  parse119 :: [Options.Applicative.Types.OptName]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ Options.Applicative.Types.OptName
+                   Runtime.Commands.parse124
+                   Runtime.Commands.parse120) -}
+e23112a2b14c266c6a8006a6ae814a01
+  parse12 ::
+    Options.Applicative.Types.OptReader
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.CmdReader
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   (GHC.Maybe.Nothing @ GHC.Base.String)
+                   Runtime.Commands.parse102
+                   Runtime.Commands.parse13) -}
+83ce63107a8fcf5f72c70f410c89f965
+  parse120 :: [Options.Applicative.Types.OptName]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ Options.Applicative.Types.OptName
+                   Runtime.Commands.parse121
+                   (GHC.Types.[] @ Options.Applicative.Types.OptName)) -}
+6c6d670e74727fe8b862d1b6b58a36d4
+  parse121 :: Options.Applicative.Types.OptName
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptLong
+                   Runtime.Commands.parse122) -}
+04aab9eeb6cf96498b78ba189f8a1f26
+  parse122 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse123) -}
+d026c4549e8416e80beebd11e6ea02a6
+  parse123 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("port"#) -}
+014bca243ec52cfb3e243ca9700cabdc
+  parse124 :: Options.Applicative.Types.OptName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (Options.Applicative.Types.OptShort 'p'#) -}
+b8e8e31c497526aa27ba9ee68af46a5d
+  parse125 ::
+    Options.Applicative.Types.Parser
+      (GHC.Types.Int -> Merkle.Store.IPFS.IPFSNode)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ GHC.Base.String
+                   @ (GHC.Types.Int -> Merkle.Store.IPFS.IPFSNode)
+                   Merkle.Store.IPFS.IPFSNode
+                   Runtime.Commands.parse126) -}
+9cd355123765d132e7d692764a8202bf
+  parse126 :: Options.Applicative.Types.Parser GHC.Base.String
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ GHC.Base.String
+                   Runtime.Commands.parse129
+                   Runtime.Commands.parse127) -}
+1a34680b74d40efb3ffe30a8e772e47a
+  parse127 :: Options.Applicative.Types.Parser GHC.Base.String
+  {- Strictness: m1,
+     Unfolding: (Options.Applicative.Types.NilP
+                   @ GHC.Base.String
+                   Runtime.Commands.parse128) -}
+e722e628b1bc0855d921be726869fe25
+  parse128 :: GHC.Maybe.Maybe GHC.Base.String
+  {- Strictness: m2,
+     Unfolding: (GHC.Maybe.Just
+                   @ GHC.Base.String
+                   Merkle.Store.IPFS.localHost2) -}
+26b34f637a7bb7bd3b83274dbf70e0fc
+  parse129 :: Options.Applicative.Types.Parser GHC.Base.String
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ GHC.Base.String
+                   Runtime.Commands.parse130) -}
+ef052a6ad6866a43b3737aba5d06ed28
+  parse13 ::
+    GHC.Base.String
+    -> GHC.Maybe.Maybe
+         (Options.Applicative.Types.ParserInfo
+            (Data.Either.Either
+               Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Arity: 1, Strictness: <L,U>,
+     Unfolding: (\ (ds1 :: GHC.Base.String) ->
+                 GHC.List.lookup
+                   @ GHC.Base.String
+                   @ (Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   GHC.Classes.$fEq[]_$s$fEq[]1
+                   ds1
+                   Runtime.Commands.parse14) -}
+00d72cab039721b359674fcdbe0109cd
+  parse130 :: Options.Applicative.Types.Option GHC.Base.String
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ GHC.Base.String
+                   Runtime.Commands.parse137
+                   Runtime.Commands.parse131) -}
+7b61e4564547d1ea190cc73193c1e0ec
+  parse131 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   Runtime.Commands.parse135
+                   Runtime.Commands.parse113
+                   Runtime.Commands.parse132
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+2380737f9059aeabb7047a927c853f28
+  parse132 :: GHC.Maybe.Maybe GHC.Base.String
+  {- Strictness: m2,
+     Unfolding: (GHC.Maybe.Just
+                   @ GHC.Base.String
+                   Runtime.Commands.parse133) -}
+ce4038ac209220bb110c2a743a094a53
+  parse133 :: [GHC.Types.Char]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ GHC.Types.Char
+                   GHC.Show.$fShow(,)3
+                   Runtime.Commands.parse134) -}
+56eef6502bd0a378bd3517129cfa2099
+  parse134 :: GHC.Base.String
+  {- Unfolding: (GHC.Show.showLitString
+                   Merkle.Store.IPFS.localHost2
+                   GHC.Show.$fShow[]1) -}
+281960526a4e937549bd9c5ba33d385d
+  parse135 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse136)) -}
+2824254f7596a34223da49ec0d46a94f
+  parse136 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("ipfs daemon host"#) -}
+c9fba211fee797fb7fc7601ac49a4a19
+  parse137 :: Options.Applicative.Types.OptReader GHC.Base.String
+  {- Strictness: m1,
+     Unfolding: (Options.Applicative.Types.OptReader
+                   @ GHC.Base.String
+                   Runtime.Commands.parse138
+                   Runtime.Commands.parse35
+                   Options.Applicative.Types.ExpectsArgError) -}
+7ac13693acbadbeda56bc009bc9edbe9
+  parse138 :: [Options.Applicative.Types.OptName]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ Options.Applicative.Types.OptName
+                   Runtime.Commands.parse143
+                   Runtime.Commands.parse139) -}
+77c78b7e4be155eb4787059c81ceedc3
+  parse139 :: [Options.Applicative.Types.OptName]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ Options.Applicative.Types.OptName
+                   Runtime.Commands.parse140
+                   (GHC.Types.[] @ Options.Applicative.Types.OptName)) -}
+ebea1607f3d93bafea4b3e76e7f4e29a
+  parse14 ::
+    [(GHC.Base.String,
+      Options.Applicative.Types.ParserInfo
+        (Data.Either.Either
+           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ (GHC.Base.String,
+                      Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse_lvl5
+                   Runtime.Commands.parse15) -}
+528f50dec88f5568fafc962986fea6d4
+  parse140 :: Options.Applicative.Types.OptName
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptLong
+                   Runtime.Commands.parse141) -}
+0a325a275dd845a46ead24084cb8d2f4
+  parse141 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse142) -}
+1275fb50839c670512034ff359e88255
+  parse142 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("host"#) -}
+ae1d458d32131d455e5495c741095a50
+  parse143 :: Options.Applicative.Types.OptName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (Options.Applicative.Types.OptShort 'h'#) -}
+20b6ce38d96372e504af1a1796d8e8f9
+  parse15 ::
+    [(GHC.Base.String,
+      Options.Applicative.Types.ParserInfo
+        (Data.Either.Either
+           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ (GHC.Base.String,
+                      Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse_lvl4
+                   Runtime.Commands.parse16) -}
+4663bd3358f8691cf5d029a13f99ac4f
+  parse16 ::
+    [(GHC.Base.String,
+      Options.Applicative.Types.ParserInfo
+        (Data.Either.Either
+           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ (GHC.Base.String,
+                      Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse_lvl3
+                   Runtime.Commands.parse17) -}
+0c99774673e7c3149811dc919571190e
+  parse17 ::
+    [(GHC.Base.String,
+      Options.Applicative.Types.ParserInfo
+        (Data.Either.Either
+           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ (GHC.Base.String,
+                      Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse_lvl2
+                   Runtime.Commands.parse18) -}
+65b760df7b3a4b8246294a69c8396e18
+  parse18 ::
+    [(GHC.Base.String,
+      Options.Applicative.Types.ParserInfo
+        (Data.Either.Either
+           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ (GHC.Base.String,
+                      Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse_lvl1
+                   Runtime.Commands.parse19) -}
+ae4116b21e9c5b9467e7eddfd5b072d6
+  parse19 ::
+    [(GHC.Base.String,
+      Options.Applicative.Types.ParserInfo
+        (Data.Either.Either
+           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ (GHC.Base.String,
+                      Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse_lvl
+                   Runtime.Commands.parse20) -}
+243851eae240515f9783828da0fa0c29
+  parse2 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse3)) -}
+6b5321e13b8a541185bf371704e47726
+  parse20 ::
+    [(GHC.Base.String,
+      Options.Applicative.Types.ParserInfo
+        (Data.Either.Either
+           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))]
+  {- Strictness: m2,
+     Unfolding: (GHC.Types.:
+                   @ (GHC.Base.String,
+                      Options.Applicative.Types.ParserInfo
+                        (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse21
+                   (GHC.Types.[]
+                      @ (GHC.Base.String,
+                         Options.Applicative.Types.ParserInfo
+                           (Data.Either.Either
+                              Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)))) -}
+ed5b31dbe99df941d01bf9badd12a29c
+  parse21 ::
+    (GHC.Base.String,
+     Options.Applicative.Types.ParserInfo
+       (Data.Either.Either
+          Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Strictness: m,
+     Unfolding: ((Runtime.Commands.parse36,
+                  Runtime.Commands.parse22)) -}
+b69d4f03816b51d4de5bc668fb2d476d
+  parse22 ::
+    Options.Applicative.Types.ParserInfo
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.ParserInfo
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse25
+                   GHC.Types.True
+                   Runtime.Commands.parse23
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.info1
+                   Options.Applicative.Types.Intersperse) -}
+722519662a134fc336de2bdf07c5dbc8
+  parse23 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse24)) -}
+5288dda4e978be25a5fb837d5c8e21e3
+  parse24 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("checkout a branch"#) -}
+4ee3230b121fca5ade300bf34b622d54
+  parse25 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ Runtime.Commands.RepoCommand
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   (Data.Either.Right
+                      @ Runtime.Commands.MetaCommand
+                      @ Runtime.Commands.RepoCommand)
+                   (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                      @ HGit.Core.Types.BranchName
+                      @ Runtime.Commands.RepoCommand
+                      Runtime.Commands.CheckoutBranch
+                      Runtime.Commands.parse26)) -}
+2e03b37f845bb012a690d9a09fd5f52f
+  parse26 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse27
+                   (Options.Applicative.Types.$fAlternativeParser_$cempty
+                      @ HGit.Core.Types.BranchName)) -}
+a706e1c66980f10a70b65cb2ab0005d1
+  parse27 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse28) -}
+0e3c264e6b34708f40ed2993b316cc1c
+  parse28 ::
+    Options.Applicative.Types.Option HGit.Core.Types.BranchName
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse34
+                   Runtime.Commands.parse29) -}
+0a680c769c19c03ae6a63b7467085e93
+  parse29 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   Runtime.Commands.parse32
+                   Runtime.Commands.parse30
+                   (GHC.Maybe.Nothing @ GHC.Base.String)
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+4938453bfe758704e45e491e8592965c
+  parse3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs,
+     Unfolding: ("hgit - an implementation of core git/mercurial features using recursion schemes"#) -}
+2289f3ebe540be64bbb4c942924d32d7
+  parse30 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse31) -}
+820d8c8bb7baada90948f12728c44432
+  parse31 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("BRANCHNAME"#) -}
+e105be34c6141232f57ffbb42c4db9a9
+  parse32 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse33)) -}
+3c378ec8105ca4e588bc93e91dd7c612
+  parse33 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("branch to checkout"#) -}
+d7e89c39f4240f0ec566a66e93cedc8c
+  parse34 ::
+    Options.Applicative.Types.OptReader HGit.Core.Types.BranchName
+  {- HasNoCafRefs, Strictness: m3,
+     Unfolding: (Options.Applicative.Types.ArgReader
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse35) -}
+f1a60a6c84451509b68136d92205a26d
+  parse35 ::
+    Options.Applicative.Types.CReader HGit.Core.Types.BranchName
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (Options.Applicative.Types.CReader
+                   @ HGit.Core.Types.BranchName
+                   Options.Applicative.Types.$fMonoidCompleter3
+                     `cast`
+                   ((<GHC.Base.String>_R
+                     ->_R Sym (GHC.Types.N:IO[0]
+                                   <[GHC.Base.String]>_R)) ; Sym (Options.Applicative.Types.N:Completer[0]))
+                   (Data.Either.Right
+                      @ Options.Applicative.Types.ParseError
+                      @ HGit.Core.Types.BranchName)
+                     `cast`
+                   ((<GHC.Base.String>_R
+                     ->_R Sym (Data.Functor.Identity.N:Identity[0]
+                                   <Data.Either.Either
+                                      Options.Applicative.Types.ParseError
+                                      HGit.Core.Types.BranchName>_R) ; Sym (Control.Monad.Trans.Except.N:ExceptT[0]
+                                                                                <Options.Applicative.Types.ParseError>_N
+                                                                                <Data.Functor.Identity.Identity>_R
+                                                                                <HGit.Core.Types.BranchName>_N)) ; (Sym (Control.Monad.Trans.Reader.N:ReaderT[0]
+                                                                                                                             <Type>_N
+                                                                                                                             <GHC.Base.String>_R
+                                                                                                                             <Control.Monad.Trans.Except.Except
+                                                                                                                                Options.Applicative.Types.ParseError>_R
+                                                                                                                             <HGit.Core.Types.BranchName>_N) ; Sym (Options.Applicative.Types.N:ReadM[0]) <HGit.Core.Types.BranchName>_N))) -}
+eba9893a53a296ab5e7fd49c8f9fa6cd
+  parse36 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse37) -}
+50ae205da961f0d6e73fdea1be7dd474
+  parse37 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("checkout"#) -}
+7a92fcd70e06f2b3568d8fb43d4810df
+  parse38 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse39)) -}
+a29f9e2d1f59d6e0743f0a544f173584
+  parse39 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("create a new branch"#) -}
+c1f68751468aff39f8e99dce522e85cf
+  parse4 :: GHC.Prim.Addr#
+  {- HasNoCafRefs,
+     Unfolding: ("do some git/mercurial type stuff, backed by local IPFS daemon"#) -}
+4ec752b7e437ce73c546b4ae089cd7de
+  parse40 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse41
+                   (Options.Applicative.Types.$fAlternativeParser_$cempty
+                      @ HGit.Core.Types.BranchName)) -}
+cb8ac0955cdb9b5f4689960a8f2f66d7
+  parse41 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse42) -}
+4778a5fa9f3ed364bdb53b560e6cc507
+  parse42 ::
+    Options.Applicative.Types.Option HGit.Core.Types.BranchName
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse34
+                   Runtime.Commands.parse43) -}
+e24313ae2638b4284cc4e2058bb8035b
+  parse43 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   Runtime.Commands.parse44
+                   Runtime.Commands.parse30
+                   (GHC.Maybe.Nothing @ GHC.Base.String)
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+aa502d2c32b6da2047d4b1c79fa8becb
+  parse44 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse45)) -}
+a900f672f9fb37c8e829907348a52f72
+  parse45 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("branch to create"#) -}
+da66e67ba53d1ccd5a0b381da6eaab22
+  parse46 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("branch"#) -}
+e462fcf24fcf16af29f5765394bca275
+  parse47 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse48)) -}
+aae15697d9d50e3df05386d0115c9c96
+  parse48 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("create a new repo"#) -}
+2400978d8a687fee98b63ecfff36f4a2
+  parse49 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ Runtime.Commands.MetaCommand
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   (Data.Either.Left
+                      @ Runtime.Commands.MetaCommand
+                      @ Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse50) -}
+be89f74fc1c817272af400b06e1074dd
+  parse5 ::
+    Options.Applicative.Types.Parser
+      (Merkle.Store.IPFS.IPFSNode,
+       Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.MultP
+                   @ (Merkle.Store.IPFS.IPFSNode,
+                      Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   @ ((Merkle.Store.IPFS.IPFSNode,
+                       Data.Either.Either
+                         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                      -> (Merkle.Store.IPFS.IPFSNode,
+                          Data.Either.Either
+                            Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse6
+                   (Options.Applicative.Extra.helper
+                      @ (Merkle.Store.IPFS.IPFSNode,
+                         Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))) -}
+093e7a02fb482d9aebc50fa832400d25
+  parse50 ::
+    Options.Applicative.Types.Parser Runtime.Commands.MetaCommand
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (Options.Applicative.Types.NilP
+                   @ Runtime.Commands.MetaCommand
+                   Runtime.Commands.parse51) -}
+c733a929c5d81924a1cc1f52076cfba7
+  parse51 :: GHC.Maybe.Maybe Runtime.Commands.MetaCommand
+  {- HasNoCafRefs, Strictness: m2,
+     Unfolding: (GHC.Maybe.Just
+                   @ Runtime.Commands.MetaCommand
+                   Runtime.Commands.InitRepo) -}
+857031bdd46e832a9c6fb35aaf26d2ca
+  parse52 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("init"#) -}
+f4731b8017334df3e1e8b5b44f49b5f7
+  parse53 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse54)) -}
+d08bf31fed8c80a0762ad66d5430740f
+  parse54 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("create a new commit"#) -}
+13880c4614be7e3d6fd6f362ba0462bc
+  parse55 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.CommitMessage
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ HGit.Core.Types.CommitMessage
+                   Runtime.Commands.parse56
+                   (Options.Applicative.Types.$fAlternativeParser_$cempty
+                      @ HGit.Core.Types.CommitMessage)) -}
+7222b65db90d7baf69f0f5abce53a53b
+  parse56 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.CommitMessage
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ HGit.Core.Types.CommitMessage
+                   Runtime.Commands.parse57) -}
+cca1af3f7075aed391ae13f916c42859
+  parse57 ::
+    Options.Applicative.Types.Option HGit.Core.Types.CommitMessage
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ HGit.Core.Types.CommitMessage
+                   Runtime.Commands.parse34
+                   Runtime.Commands.parse58) -}
+733b451be9db0a6632b57c6047a2ef3a
+  parse58 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   Runtime.Commands.parse61
+                   Runtime.Commands.parse59
+                   (GHC.Maybe.Nothing @ GHC.Base.String)
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+2964202dcc3ce414baaf65729569d10a
+  parse59 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse60) -}
+3a2f00ef1f3f700d45aaa2611102c4ee
+  parse6 ::
+    Options.Applicative.Types.Parser
+      (((Merkle.Store.IPFS.IPFSNode,
+         Data.Either.Either
+           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+        -> (Merkle.Store.IPFS.IPFSNode,
+            Data.Either.Either
+              Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+       -> (Merkle.Store.IPFS.IPFSNode,
+           Data.Either.Either
+             Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ (Merkle.Store.IPFS.IPFSNode,
+                      Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   @ (((Merkle.Store.IPFS.IPFSNode,
+                        Data.Either.Either
+                          Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                       -> (Merkle.Store.IPFS.IPFSNode,
+                           Data.Either.Either
+                             Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                      -> (Merkle.Store.IPFS.IPFSNode,
+                          Data.Either.Either
+                            Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   (GHC.Base.<**>1
+                      @ (Merkle.Store.IPFS.IPFSNode,
+                         Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                      @ (Merkle.Store.IPFS.IPFSNode,
+                         Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+                   Runtime.Commands.parse7) -}
+01ea92ab300f57f94acc34585a11b40d
+  parse60 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("MESSAGE"#) -}
+6703c4ce0148ab2df13814d12b5032fe
+  parse61 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse62)) -}
+a0f5bf7b96a55d5dffcc56bf3756499d
+  parse62 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("commit msg"#) -}
+b326f2c08d33aabed8548a38ca79ae71
+  parse63 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("commit"#) -}
+2249be71fba752db183aa361aef36d4b
+  parse64 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse65)) -}
+f57f09f4b17511c48233bfe66290ccbf
+  parse65 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("show repo status"#) -}
+565c59c8b063551c983ecc2f79ed5ba2
+  parse66 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ Runtime.Commands.RepoCommand
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   (Data.Either.Right
+                      @ Runtime.Commands.MetaCommand
+                      @ Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse67) -}
+084beb098b0d46c7dbfa782430c44efd
+  parse67 ::
+    Options.Applicative.Types.Parser Runtime.Commands.RepoCommand
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (Options.Applicative.Types.NilP
+                   @ Runtime.Commands.RepoCommand
+                   Runtime.Commands.parse68) -}
+0eaeb4b24fb68f64f8794d034721b620
+  parse68 :: GHC.Maybe.Maybe Runtime.Commands.RepoCommand
+  {- HasNoCafRefs, Strictness: m2,
+     Unfolding: (GHC.Maybe.Just
+                   @ Runtime.Commands.RepoCommand
+                   Runtime.Commands.GetStatus) -}
+a55acdb54d33aa7fb644613b71de9379
+  parse69 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("status"#) -}
+ccb9f4b4a4906ed0fa70fbc2db05418a
+  parse7 ::
+    Options.Applicative.Types.Parser
+      (Merkle.Store.IPFS.IPFSNode,
+       Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.MultP
+                   @ (Merkle.Store.IPFS.IPFSNode,
+                      Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse103
+                   Runtime.Commands.parse8) -}
+02f257907b8e9db846c8f4b066847d9c
+  parse70 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse71)) -}
+a0be6f6dfb0985d838e2d8cca27e4137
+  parse71 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("show diff of branches"#) -}
+635909621d17f1c5bdd9fdcc9ddf8990
+  parse72 ::
+    Options.Applicative.Types.Parser Runtime.Commands.RepoCommand
+  {- Unfolding: (Options.Applicative.Types.MultP
+                   @ Runtime.Commands.RepoCommand
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse81
+                   Runtime.Commands.parse73) -}
+445032c2f3d9185bacd38ac502a96cec
+  parse73 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse74
+                   (Options.Applicative.Types.$fAlternativeParser_$cempty
+                      @ HGit.Core.Types.BranchName)) -}
+444a2ffee9cdd3b5691b33c79969c562
+  parse74 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse75) -}
+6633c78e5fc7b5f68fb0d73146a3be6a
+  parse75 ::
+    Options.Applicative.Types.Option HGit.Core.Types.BranchName
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse34
+                   Runtime.Commands.parse76) -}
+fc08a4a67491b9d68e5eeac8b952219f
+  parse76 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   Runtime.Commands.parse79
+                   Runtime.Commands.parse77
+                   (GHC.Maybe.Nothing @ GHC.Base.String)
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+dd54b71e545087c304a48bfd89f7d1d5
+  parse77 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse78) -}
+fb69b73c0dd7c2a739d05ad80e847797
+  parse78 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("AFTER"#) -}
+38dc86e044738732a38a9a88c2150da9
+  parse79 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse80)) -}
+a20f670f3eb43f3a216b4174d32aab83
+  parse8 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse9
+                   (Options.Applicative.Types.$fAlternativeParser_$cempty
+                      @ (Data.Either.Either
+                           Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))) -}
+ba9c2da943aa7bf9284efe59a6532c0d
+  parse80 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'after' branch name"#) -}
+16f885f7b4e2202cd008a6113efa0648
+  parse81 ::
+    Options.Applicative.Types.Parser
+      (HGit.Core.Types.BranchName -> Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ HGit.Core.Types.BranchName
+                   @ (HGit.Core.Types.BranchName -> Runtime.Commands.RepoCommand)
+                   Runtime.Commands.GetDiff
+                   Runtime.Commands.parse82) -}
+7baefb6bd2eedca21d0cfcca564f7a1e
+  parse82 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse83
+                   (Options.Applicative.Types.$fAlternativeParser_$cempty
+                      @ HGit.Core.Types.BranchName)) -}
+c02e99befbc37d3bfd577c918f795ea9
+  parse83 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse84) -}
+abbba62f7f2246631a22f24139a6ddfa
+  parse84 ::
+    Options.Applicative.Types.Option HGit.Core.Types.BranchName
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse34
+                   Runtime.Commands.parse85) -}
+825871bd6f1b0f97ed3934b8a03701f7
+  parse85 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   Runtime.Commands.parse88
+                   Runtime.Commands.parse86
+                   (GHC.Maybe.Nothing @ GHC.Base.String)
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+d3527ded2fcb2791aae424cb1f50a9c1
+  parse86 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse87) -}
+0de35ee22b32b4288d3c3947732cd12e
+  parse87 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("BEFORE"#) -}
+0605d65def7c813ce29a7a6182edbd53
+  parse88 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse89)) -}
+7931e65387a6e3173c7284c35f67c9c1
+  parse89 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'before' branch name"#) -}
+189a01d3bdcc2ca349fe2c9f67c00496
+  parse9 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse10) -}
+7fc4b10f34a6712143e7d64d24bff0f4
+  parse90 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("diff"#) -}
+a24a39a613e61266926e886e79b1aea4
+  parse91 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse92)) -}
+67b22f43472784a9cdd740badf23683a
+  parse92 :: GHC.Prim.Addr#
+  {- HasNoCafRefs,
+     Unfolding: ("merge a branch into the current one"#) -}
+65a04bcb26a16c9af82f8c7f3b93ec0f
+  parse93 ::
+    Options.Applicative.Types.Parser Runtime.Commands.RepoCommand
+  {- Unfolding: (Options.Applicative.Types.MultP
+                   @ Runtime.Commands.RepoCommand
+                   @ HGit.Core.Types.CommitMessage
+                   Runtime.Commands.parse94
+                   Runtime.Commands.parse55) -}
+565aae71861262783ff7c5ceac958b48
+  parse94 ::
+    Options.Applicative.Types.Parser
+      (HGit.Core.Types.CommitMessage -> Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ HGit.Core.Types.BranchName
+                   @ (HGit.Core.Types.CommitMessage -> Runtime.Commands.RepoCommand)
+                   Runtime.Commands.MkMergeCommit
+                   Runtime.Commands.parse95) -}
+3708a5f373ac73c421a90a2764fca5bf
+  parse95 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m4,
+     Unfolding: (Options.Applicative.Types.AltP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse96
+                   (Options.Applicative.Types.$fAlternativeParser_$cempty
+                      @ HGit.Core.Types.BranchName)) -}
+515884e25eba97f853cdd4e97ac26c95
+  parse96 ::
+    Options.Applicative.Types.Parser HGit.Core.Types.BranchName
+  {- Strictness: m2,
+     Unfolding: (Options.Applicative.Types.OptP
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse97) -}
+1473ca93f8996c1c0b7ac2a631765b8a
+  parse97 ::
+    Options.Applicative.Types.Option HGit.Core.Types.BranchName
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.Option
+                   @ HGit.Core.Types.BranchName
+                   Runtime.Commands.parse34
+                   Runtime.Commands.parse98) -}
+96fef62b9022cbe7effa3e81cfc0570f
+  parse98 :: Options.Applicative.Types.OptProperties
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.OptProperties
+                   Options.Applicative.Types.Visible
+                   Runtime.Commands.parse99
+                   Runtime.Commands.parse30
+                   (GHC.Maybe.Nothing @ GHC.Base.String)
+                   (GHC.Maybe.Nothing
+                      @ (Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+                         -> Text.PrettyPrint.ANSI.Leijen.Internal.Doc))) -}
+57b7c43883eae3299374df34262ac590
+  parse99 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse100)) -}
+58793bd603540b54d5a3e8514b28b3e0
+  parse_cmd :: GHC.Base.String
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse46) -}
+02cf1b6e1374d60ec638c373160ae0d6
+  parse_cmd1 :: GHC.Base.String
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse52) -}
+03666e1fe5ccabf3d5f76c320745043c
+  parse_cmd2 :: GHC.Base.String
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse63) -}
+b91ec0da20ac365342a0fbe299d91197
+  parse_cmd3 :: GHC.Base.String
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse69) -}
+64fa892a462720fc55240a2f8bba60d7
+  parse_cmd4 :: GHC.Base.String
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse90) -}
+35da0f9cc04474637aba1e638594fb9d
+  parse_cmd5 :: GHC.Base.String
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Commands.parse101) -}
+faa2dc5944d17f04c58ab7c720335e47
+  parse_ds ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ Runtime.Commands.RepoCommand
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   (Data.Either.Right
+                      @ Runtime.Commands.MetaCommand
+                      @ Runtime.Commands.RepoCommand)
+                   (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                      @ HGit.Core.Types.BranchName
+                      @ Runtime.Commands.RepoCommand
+                      Runtime.Commands.MkBranch
+                      Runtime.Commands.parse40)) -}
+ca1e9b0f5aaaf258e5025ee0efab83e4
+  parse_ds1 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ Runtime.Commands.RepoCommand
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   (Data.Either.Right
+                      @ Runtime.Commands.MetaCommand
+                      @ Runtime.Commands.RepoCommand)
+                   (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                      @ HGit.Core.Types.CommitMessage
+                      @ Runtime.Commands.RepoCommand
+                      Runtime.Commands.MkCommit
+                      Runtime.Commands.parse55)) -}
+dbe6cd04aaa5bf1ec65d1c6522112c61
+  parse_ds2 ::
+    Options.Applicative.Help.Chunk.Chunk
+      Text.PrettyPrint.ANSI.Leijen.Internal.Doc
+  {- Unfolding: (Options.Applicative.Help.Chunk.paragraph_go
+                   (GHC.CString.unpackCString# Runtime.Commands.parse4)) -}
+a2010301a9305074f47bc11f995c5739
+  parse_ds3 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ Runtime.Commands.RepoCommand
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   (Data.Either.Right
+                      @ Runtime.Commands.MetaCommand
+                      @ Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse72) -}
+6c8e75e57c7119537dd85e1612d82994
+  parse_ds4 ::
+    Options.Applicative.Types.Parser
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Unfolding: (Options.Applicative.Types.$fApplicativeParser_$cfmap
+                   @ Runtime.Commands.RepoCommand
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   (Data.Either.Right
+                      @ Runtime.Commands.MetaCommand
+                      @ Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse93) -}
+78cb03f610e16e20fb710693395682c5
+  parse_lvl ::
+    (GHC.Base.String,
+     Options.Applicative.Types.ParserInfo
+       (Data.Either.Either
+          Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Strictness: m,
+     Unfolding: ((Runtime.Commands.parse_cmd,
+                  Runtime.Commands.parse_pinfo)) -}
+819698b6df3fe3c20d3b8371abf5cfd0
+  parse_lvl1 ::
+    (GHC.Base.String,
+     Options.Applicative.Types.ParserInfo
+       (Data.Either.Either
+          Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Strictness: m,
+     Unfolding: ((Runtime.Commands.parse_cmd1,
+                  Runtime.Commands.parse_pinfo1)) -}
+e3966da09171869d73920cee8feeabcb
+  parse_lvl2 ::
+    (GHC.Base.String,
+     Options.Applicative.Types.ParserInfo
+       (Data.Either.Either
+          Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Strictness: m,
+     Unfolding: ((Runtime.Commands.parse_cmd2,
+                  Runtime.Commands.parse_pinfo2)) -}
+aab5f0771224446c52bfe49a94e3b8f0
+  parse_lvl3 ::
+    (GHC.Base.String,
+     Options.Applicative.Types.ParserInfo
+       (Data.Either.Either
+          Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Strictness: m,
+     Unfolding: ((Runtime.Commands.parse_cmd3,
+                  Runtime.Commands.parse_pinfo3)) -}
+fbf32fd970408946304f24a94e8e067a
+  parse_lvl4 ::
+    (GHC.Base.String,
+     Options.Applicative.Types.ParserInfo
+       (Data.Either.Either
+          Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Strictness: m,
+     Unfolding: ((Runtime.Commands.parse_cmd4,
+                  Runtime.Commands.parse_pinfo4)) -}
+9014d43c1d31fe9c3fdd117e17848590
+  parse_lvl5 ::
+    (GHC.Base.String,
+     Options.Applicative.Types.ParserInfo
+       (Data.Either.Either
+          Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand))
+  {- Strictness: m,
+     Unfolding: ((Runtime.Commands.parse_cmd5,
+                  Runtime.Commands.parse_pinfo5)) -}
+c2fec1f5a38e8d966a06ea29419eacee
+  parse_opts ::
+    Options.Applicative.Types.ParserInfo
+      (Merkle.Store.IPFS.IPFSNode,
+       Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.ParserInfo
+                   @ (Merkle.Store.IPFS.IPFSNode,
+                      Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse5
+                   GHC.Types.True
+                   Runtime.Commands.parse_ds2
+                   Runtime.Commands.parse2
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.info1
+                   Options.Applicative.Types.Intersperse) -}
+a50616b3bd380f188accb7d7209ca5fc
+  parse_pinfo ::
+    Options.Applicative.Types.ParserInfo
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.ParserInfo
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse_ds
+                   GHC.Types.True
+                   Runtime.Commands.parse38
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.info1
+                   Options.Applicative.Types.Intersperse) -}
+602e5896388f9841cbafae5a0c96e258
+  parse_pinfo1 ::
+    Options.Applicative.Types.ParserInfo
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.ParserInfo
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse49
+                   GHC.Types.True
+                   Runtime.Commands.parse47
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.info1
+                   Options.Applicative.Types.Intersperse) -}
+ee1034f7a1858a5cac36bdb4339e44cc
+  parse_pinfo2 ::
+    Options.Applicative.Types.ParserInfo
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.ParserInfo
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse_ds1
+                   GHC.Types.True
+                   Runtime.Commands.parse53
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.info1
+                   Options.Applicative.Types.Intersperse) -}
+35ef85cc791dc32a11647cb6efd6c834
+  parse_pinfo3 ::
+    Options.Applicative.Types.ParserInfo
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.ParserInfo
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse66
+                   GHC.Types.True
+                   Runtime.Commands.parse64
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.info1
+                   Options.Applicative.Types.Intersperse) -}
+5883177d756de08a88a459faea9a8294
+  parse_pinfo4 ::
+    Options.Applicative.Types.ParserInfo
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.ParserInfo
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse_ds3
+                   GHC.Types.True
+                   Runtime.Commands.parse70
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.info1
+                   Options.Applicative.Types.Intersperse) -}
+5ba727f9e4677f4a17f07ac12515811b
+  parse_pinfo5 ::
+    Options.Applicative.Types.ParserInfo
+      (Data.Either.Either
+         Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+  {- Strictness: m,
+     Unfolding: (Options.Applicative.Types.ParserInfo
+                   @ (Data.Either.Either
+                        Runtime.Commands.MetaCommand Runtime.Commands.RepoCommand)
+                   Runtime.Commands.parse_ds4
+                   GHC.Types.True
+                   Runtime.Commands.parse91
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   (GHC.Maybe.Nothing @ Text.PrettyPrint.ANSI.Leijen.Internal.Doc)
+                     `cast`
+                   (Sym (Options.Applicative.Help.Chunk.N:Chunk[0]) <Text.PrettyPrint.ANSI.Leijen.Internal.Doc>_N)
+                   Options.Applicative.Builder.info1
+                   Options.Applicative.Types.Intersperse) -}
+"SPEC/Runtime.Commands auto1 @ Int" [orphan] [2] forall (w :: GHC.Read.Read
+                                                                GHC.Types.Int)
+  Options.Applicative.Builder.auto1 @ GHC.Types.Int w
+  = Runtime.Commands.$sauto1
+trusted: none
+require own pkg trusted: False
+module header:
+  Nothing
+declaration docs:
+arg docs:
+

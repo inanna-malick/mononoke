@@ -1,6 +1,7 @@
 resolver: lts-13.8
 packages:
-- .
+- hgit
+- hgit-ext
 
 extra-deps:
 - github: pkinsky/merkle-schemes

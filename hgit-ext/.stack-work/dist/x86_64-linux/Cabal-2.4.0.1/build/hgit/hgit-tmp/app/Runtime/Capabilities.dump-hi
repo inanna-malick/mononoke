@@ -1,0 +1,817 @@
+
+==================== FINAL INTERFACE ====================
+2019-05-20 21:43:58.752191245 UTC
+
+interface main:Runtime.Capabilities 8063
+  interface hash: baf56b0918887e4f055162fdc0461b82
+  ABI hash: 27549094e78df9f7af431ec023777ab6
+  export-list hash: 40f7120a5ece4cdaee8d81f0d3967551
+  orphan hash: 693e9af84d3dfcc71e640e005bdc5e2e
+  flag hash: 0d573f0378d62f8692315b5e560c8adb
+  opt_hash: 6faf2de08de32d19db9870899d88e59a
+  hpc_hash: 93b885adfe0da089cdf634904fd59f71
+  plugin_hash: ad164012d6b1e14942349d58b1132007
+  sig of: Nothing
+  used TH splices: False
+  where
+exports:
+  Runtime.Capabilities.getBranch
+  Runtime.Capabilities.getBranch'
+  Runtime.Capabilities.hgitBaseDir
+  Runtime.Capabilities.hgitState'
+  Runtime.Capabilities.hgitStateFile
+  Runtime.Capabilities.readState
+  Runtime.Capabilities.writeState
+  Runtime.Capabilities.HgitStore{Runtime.Capabilities.HgitStore _blobStore _commitStore _dirStore}
+  Runtime.Capabilities.RepoCaps{Runtime.Capabilities.RepoCaps rcBaseDir rcState rcStore}
+module dependencies: Runtime.Types
+package dependencies: aeson-1.4.2.0 array-0.5.3.0
+                      attoparsec-0.13.2.2 base-4.12.0.0 base-compat-0.10.5
+                      base-orphans-0.8 base64-bytestring-1.0.0.2 bifunctors-5.5.3
+                      binary-0.8.6.0 bytestring-0.10.8.2 comonad-5.0.4 containers-0.6.0.1
+                      deepseq-1.4.4.0 deriving-compat-0.5.4 directory-1.3.3.0
+                      distributive-0.6 dlist-0.8.0.5 exceptions-0.10.0 filepath-1.4.2.1
+                      free-5.1 ghc-boot-th-8.6.3 ghc-prim-0.5.3 hashable-1.2.7.0
+                      hgit-0.1.0.0 integer-gmp-1.0.2.0 integer-logarithms-1.0.2.2
+                      merkle-schemes-0.1.0.0 mtl-2.2.2 pretty-1.1.3.6 primitive-0.6.4.0
+                      profunctors-5.3 random-1.1 recursion-schemes-5.1.1
+                      safe-exceptions-0.1.7.0 scientific-0.3.6.2 semigroupoids-5.3.2
+                      stm-2.5.0.0 tagged-0.8.6 template-haskell-2.14.0.0 text-1.2.3.1
+                      th-abstraction-0.2.10.0 time-1.8.0.2 time-locale-compat-0.1.1.5
+                      transformers-0.5.5.0 transformers-base-0.4.5.2
+                      transformers-compat-0.6.2 unix-2.7.2.2 unordered-containers-0.2.9.0
+                      uuid-types-1.0.3 vector-0.12.0.2
+orphans: attoparsec-0.13.2.2:Data.Attoparsec.Text.Internal
+         attoparsec-0.13.2.2:Data.Attoparsec.ByteString.Char8
+         vector-0.12.0.2:Data.Vector.Unboxed
+         time-1.8.0.2:Data.Time.Format.Parse
+         time-1.8.0.2:Data.Time.LocalTime.Internal.ZonedTime
+         time-1.8.0.2:Data.Time.LocalTime.Internal.LocalTime
+         time-1.8.0.2:Data.Time.Calendar.Gregorian
+         vector-0.12.0.2:Data.Vector.Fusion.Bundle
+         stm-2.5.0.0:Control.Monad.STM
+         transformers-0.5.5.0:Control.Monad.Trans.Error
+         hashable-1.2.7.0:Data.Hashable.Generic text-1.2.3.1:Data.Text.Lazy
+         text-1.2.3.1:Data.Text binary-0.8.6.0:Data.Binary.Generic
+         bytestring-0.10.8.2:Data.ByteString.Builder
+         text-1.2.3.1:Data.Text.Show base-4.12.0.0:GHC.Float
+         base-4.12.0.0:GHC.Base
+family instance modules: aeson-1.4.2.0:Data.Aeson.Types.Internal
+                         attoparsec-0.13.2.2:Data.Attoparsec.Internal.Types
+                         base-4.12.0.0:Control.Applicative base-4.12.0.0:Data.Complex
+                         base-4.12.0.0:Data.Functor.Compose base-4.12.0.0:Data.Functor.Const
+                         base-4.12.0.0:Data.Functor.Identity
+                         base-4.12.0.0:Data.Functor.Product base-4.12.0.0:Data.Functor.Sum
+                         base-4.12.0.0:Data.Monoid base-4.12.0.0:Data.Semigroup
+                         base-4.12.0.0:Data.Semigroup.Internal base-4.12.0.0:Data.Version
+                         base-4.12.0.0:Data.Void base-4.12.0.0:GHC.Exts
+                         base-4.12.0.0:GHC.Generics base-4.12.0.0:GHC.IO.Exception
+                         bifunctors-5.5.3:Data.Bifunctor.Biff
+                         bifunctors-5.5.3:Data.Bifunctor.Clown
+                         bifunctors-5.5.3:Data.Bifunctor.Flip
+                         bifunctors-5.5.3:Data.Bifunctor.Join
+                         bifunctors-5.5.3:Data.Bifunctor.Joker
+                         bifunctors-5.5.3:Data.Bifunctor.Product
+                         bifunctors-5.5.3:Data.Bifunctor.Sum
+                         bifunctors-5.5.3:Data.Bifunctor.Tannen
+                         bifunctors-5.5.3:Data.Bifunctor.Wrapped
+                         containers-0.6.0.1:Data.Graph
+                         containers-0.6.0.1:Data.IntMap.Internal
+                         containers-0.6.0.1:Data.IntSet.Internal
+                         containers-0.6.0.1:Data.Map.Internal
+                         containers-0.6.0.1:Data.Sequence.Internal
+                         containers-0.6.0.1:Data.Set.Internal containers-0.6.0.1:Data.Tree
+                         dlist-0.8.0.5:Data.DList free-5.1:Control.Comonad.Cofree
+                         free-5.1:Control.Comonad.Trans.Cofree free-5.1:Control.Monad.Free
+                         free-5.1:Control.Monad.Trans.Free
+                         ghc-boot-th-8.6.3:GHC.ForeignSrcLang.Type
+                         ghc-boot-th-8.6.3:GHC.LanguageExtensions.Type
+                         hgit-0.1.0.0:HGit.Core.Types main:Runtime.Types
+                         merkle-schemes-0.1.0.0:Merkle.Types.IPFS
+                         pretty-1.1.3.6:Text.PrettyPrint.Annotated.HughesPJ
+                         pretty-1.1.3.6:Text.PrettyPrint.HughesPJ
+                         primitive-0.6.4.0:Control.Monad.Primitive
+                         primitive-0.6.4.0:Data.Primitive.Array
+                         primitive-0.6.4.0:Data.Primitive.ByteArray
+                         primitive-0.6.4.0:Data.Primitive.PrimArray
+                         primitive-0.6.4.0:Data.Primitive.SmallArray
+                         primitive-0.6.4.0:Data.Primitive.UnliftedArray
+                         recursion-schemes-5.1.1:Data.Functor.Base
+                         recursion-schemes-5.1.1:Data.Functor.Foldable
+                         tagged-0.8.6:Data.Tagged
+                         template-haskell-2.14.0.0:Language.Haskell.TH.Syntax
+                         text-1.2.3.1:Data.Text text-1.2.3.1:Data.Text.Lazy
+                         th-abstraction-0.2.10.0:Language.Haskell.TH.Datatype
+                         unordered-containers-0.2.9.0:Data.HashMap.Base
+                         unordered-containers-0.2.9.0:Data.HashSet
+                         uuid-types-1.0.3:Data.UUID.Types.Internal
+                         uuid-types-1.0.3:Data.UUID.Types.Internal.Builder
+                         vector-0.12.0.2:Data.Vector vector-0.12.0.2:Data.Vector.Primitive
+                         vector-0.12.0.2:Data.Vector.Storable
+                         vector-0.12.0.2:Data.Vector.Unboxed
+                         vector-0.12.0.2:Data.Vector.Unboxed.Base
+import  -/  aeson-1.4.2.0:Data.Aeson bfba563baa214951132bfa3fc3e1a304
+import  -/  base-4.12.0.0:Control.Monad.IO.Class e8f65a5571f64fe686cca3ac75a1aa0e
+import  -/  base-4.12.0.0:Data.Either 946a3435d06773e1dbcad1ba5dc18a2c
+import  -/  base-4.12.0.0:Data.Functor 22aac80fdb6c7b7f60b4aaab86afee64
+import  -/  base-4.12.0.0:Data.Maybe 1e8e1362415df45376dffd98f8a47766
+import  -/  base-4.12.0.0:GHC.Base cc906f98291a1b830546e99a96674547
+import  -/  base-4.12.0.0:GHC.IO edc9355d7dbab399fd5d385cd5bb457d
+import  -/  base-4.12.0.0:Prelude 5c01365ec01f83bd405ac01cbb9a8d76
+import  -/  bytestring-0.10.8.2:Data.ByteString.Lazy 076931d562e248a6470c34d227dbacac
+import  -/  containers-0.6.0.1:Data.Map 4f92a276b97311a7619a6e03c8ca6ee3
+import  -/  containers-0.6.0.1:Data.Map.Internal 7258cbfb7d1b897678a42b6739fc4dac
+import  -/  directory-1.3.3.0:System.Directory 0f500eb353c86bec5fb4ae7b9d4e6507
+import  -/  exceptions-0.10.0:Control.Monad.Catch dd6491e3a9d22e42eb1cb3d6f15cf5f2
+import  -/  hgit-0.1.0.0:HGit.Core.Types 79e907bf15f7ab56c84aba27eb2d3ddb
+import  -/  Runtime.Types 8992a00702318e65c5fabfade03c19fa
+  exports: c69cf15791bec2cf3135d9b0db2121c6
+  RepoState dd587e5b3aa12f6942a059e6733288f6
+  branches dd587e5b3aa12f6942a059e6733288f6
+import  -/  mtl-2.2.2:Control.Monad.Reader d851fb94eb94072f491282515418f996
+import  -/  mtl-2.2.2:Control.Monad.Reader.Class bfd53ec9164fa16880d07775c83c6ec0
+import  -/  safe-exceptions-0.1.7.0:Control.Exception.Safe 6f575b245fbe1b9fa184294988a64060
+e534a1db329bd1373f8fa61d73023205
+  $slookup1 ::
+    HGit.Core.Types.BranchName
+    -> Data.Map.Internal.Map HGit.Core.Types.BranchName a
+    -> GHC.Maybe.Maybe a
+  {- Arity: 2, HasNoCafRefs, Strictness: <S,1*U><S,1*U> -}
+a51216f2c6bd026fd71b79041d54c1d9
+  $tc'HgitStore :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   14738756063937642##
+                   4598248408194648790##
+                   Runtime.Capabilities.$trModule
+                   Runtime.Capabilities.$tc'HgitStore2
+                   1#
+                   Runtime.Capabilities.$tc'HgitStore1) -}
+b70bcb6c197e8f28176c73fded4ed2a6
+  $tc'HgitStore1 :: GHC.Types.KindRep
+  {- HasNoCafRefs, Strictness: m4, Inline: [~] -}
+91425b837d686bfa340eb7801c763f24
+  $tc'HgitStore2 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS
+                   Runtime.Capabilities.$tc'HgitStore3) -}
+6bf287ca78570d3c801be38c03a76243
+  $tc'HgitStore3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'HgitStore"#) -}
+a1d0610b2edd00a63c5b07d71eae0f0b
+  $tc'RepoCaps :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   9070006551071261713##
+                   195837283170849348##
+                   Runtime.Capabilities.$trModule
+                   Runtime.Capabilities.$tc'RepoCaps2
+                   1#
+                   Runtime.Capabilities.$tc'RepoCaps1) -}
+8d0dcc81f60168421a0f26e718f7987c
+  $tc'RepoCaps1 :: GHC.Types.KindRep
+  {- HasNoCafRefs, Strictness: m4, Inline: [~] -}
+2b7e6a604a26c4565da81d56ee1582be
+  $tc'RepoCaps2 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS
+                   Runtime.Capabilities.$tc'RepoCaps3) -}
+899c9c2c2cc3020c1fccf865669a4ecb
+  $tc'RepoCaps3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'RepoCaps"#) -}
+f045999e8c751e59297c1941be9987ba
+  $tcHgitStore :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   15131765121699120057##
+                   11404020319194266625##
+                   Runtime.Capabilities.$trModule
+                   Runtime.Capabilities.$tcHgitStore2
+                   0#
+                   Runtime.Capabilities.$tcHgitStore1) -}
+25287191c6fb03fc92c8f53700e4f5fd
+  $tcHgitStore1 :: GHC.Types.KindRep
+  {- HasNoCafRefs, Strictness: m4, Inline: [~] -}
+2d7843ed988b4ed29aa2830bbb9b078b
+  $tcHgitStore2 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS
+                   Runtime.Capabilities.$tcHgitStore3) -}
+2cc9e934345d2a96de86676d92c42bfd
+  $tcHgitStore3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("HgitStore"#) -}
+14449826dd24928658345501ac9d9f99
+  $tcRepoCaps :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   3007949961545691327##
+                   3863578015097742595##
+                   Runtime.Capabilities.$trModule
+                   Runtime.Capabilities.$tcRepoCaps1
+                   0#
+                   Runtime.Capabilities.$tcHgitStore1) -}
+d617f1cfffb726bcfbee4491c1c5fd3f
+  $tcRepoCaps1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Capabilities.$tcRepoCaps2) -}
+3c645056b3195aa8ee14db462e49b67d
+  $tcRepoCaps2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("RepoCaps"#) -}
+0d847d0df40a1277b23f76a05bca1bf0
+  $trModule :: GHC.Types.Module
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.Module
+                   Runtime.Capabilities.$trModule3
+                   Runtime.Capabilities.$trModule1) -}
+01ad2087817fef75b19d1c4ac745f5c3
+  $trModule1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Capabilities.$trModule2) -}
+c5624ffa767d62874d2af32908dd343c
+  $trModule2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("Runtime.Capabilities"#) -}
+6080d6c39602220a4775eea3a48c125b
+  $trModule3 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS Runtime.Capabilities.$trModule4) -}
+fad52c23085343bad7d69e90365e66ae
+  $trModule4 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("main"#) -}
+cd5df6366f84ddb8e351bb76def36ef8
+  $wgetBranch ::
+    GHC.Base.Applicative m =>
+    (forall a b. m a -> (a -> m b) -> m b)
+    -> (forall e a. GHC.Exception.Type.Exception e => e -> m a)
+    -> Control.Monad.Reader.Class.MonadReader
+         (Runtime.Capabilities.RepoCaps m') m =>
+       HGit.Core.Types.BranchName
+       -> m (HGit.Core.Types.Hash HGit.Core.Types.HashableCommit)
+  {- Arity: 5,
+     Strictness: <L,1*U(A,C(U),A,A,A,A)><C(C(S)),1*C1(C1(U))><L,1*C1(C1(U))><L,1*U(A,A,A,1*C1(U))><L,U>,
+     Inline: [2],
+     Unfolding: (\ @ m :: Type -> Type
+                   @ m' :: Type -> Type
+                   (ww :: GHC.Base.Applicative m)
+                   (ww1 :: forall a b. m a -> (a -> m b) -> m b)
+                   (ww2 :: forall e a. GHC.Exception.Type.Exception e => e -> m a)
+                   (w :: Control.Monad.Reader.Class.MonadReader
+                           (Runtime.Capabilities.RepoCaps m') m)
+                   (w1 :: HGit.Core.Types.BranchName) ->
+                 ww1
+                   @ Runtime.Types.RepoState
+                   @ (HGit.Core.Types.Hash HGit.Core.Types.HashableCommit)
+                   (Control.Monad.Reader.Class.reader
+                      @ (Runtime.Capabilities.RepoCaps m')
+                      @ m
+                      w
+                      @ Runtime.Types.RepoState
+                      (Runtime.Capabilities.rcState @ m'))
+                   (Runtime.Capabilities.getBranch'
+                      @ m
+                      (Control.Monad.Catch.C:MonadThrow
+                         @ m
+                         (GHC.Base.C:Monad
+                            @ m
+                            ww
+                            ww1
+                            (Runtime.Capabilities.getBranch5 @ m)
+                            (Runtime.Capabilities.getBranch3 @ m)
+                            (Runtime.Capabilities.getBranch1 @ m))
+                         ww2)
+                      w1)) -}
+de1c8b8bf037c078c154dda387850185
+  $whgitState' ::
+    (forall a b. (a -> b) -> m a -> m b)
+    -> (forall a. GHC.Types.IO a -> m a) -> m [GHC.Types.Char]
+  {- Arity: 2, Strictness: <C(C(S)),1*C1(C1(U))><L,1*C1(U)>,
+     Inline: [2],
+     Unfolding: (\ @ m :: Type -> Type
+                   (ww :: forall a b. (a -> b) -> m a -> m b)
+                   (ww1 :: forall a. GHC.Types.IO a -> m a) ->
+                 ww
+                   @ [GHC.Types.Char]
+                   @ [GHC.Types.Char]
+                   Runtime.Capabilities.hgitState'1
+                   (ww1
+                      @ GHC.IO.FilePath
+                      System.Directory.getCurrentDirectory1
+                        `cast`
+                      (Sym (GHC.Types.N:IO[0] <GHC.IO.FilePath>_R)))) -}
+4bd25ed3907cd616e0a05a06fac906ba
+  $wreadState ::
+    GHC.Base.Applicative m =>
+    (forall a b. m a -> (a -> m b) -> m b)
+    -> (forall a. GHC.Types.IO a -> m a) -> m Runtime.Types.RepoState
+  {- Arity: 3,
+     Strictness: <L,1*U(1*U(1*C1(C1(U)),A),A,A,A,A,A)><C(C(S)),1*C1(C1(U))><L,C(U)>,
+     Inline: [2] -}
+55289d5884689d4de6d0ace82cdd4f11
+  $wwriteState ::
+    GHC.Base.Applicative m =>
+    (forall a b. m a -> (a -> m b) -> m b)
+    -> (forall a. GHC.Types.IO a -> m a)
+    -> Runtime.Types.RepoState
+    -> m ()
+  {- Arity: 4,
+     Strictness: <L,1*U(1*U(1*C1(C1(U)),A),A,A,A,A,A)><C(C(S)),1*C1(C1(U))><L,C(U)><L,U(U,U)>,
+     Inline: [2],
+     Unfolding: (\ @ m :: Type -> Type
+                   (ww :: GHC.Base.Applicative m)
+                   (ww1 :: forall a b. m a -> (a -> m b) -> m b)
+                   (ww2 :: forall a. GHC.Types.IO a -> m a)
+                   (w :: Runtime.Types.RepoState) ->
+                 let {
+                   lvl19 :: GHC.IO.Handle.Types.Handle
+                            -> GHC.Prim.State# GHC.Prim.RealWorld
+                            -> (# GHC.Prim.State# GHC.Prim.RealWorld, () #)
+                     {- Arity: 2, Strictness: <L,U><S,U>,
+                        Unfolding: InlineRule (2, True, False)
+                                   (\ (ds :: GHC.IO.Handle.Types.Handle)[OneShot]
+                                      (eta1 :: GHC.Prim.State# GHC.Prim.RealWorld)[OneShot] ->
+                                    Data.ByteString.Lazy.appendFile2
+                                      ds
+                                      (Data.ByteString.Builder.toLazyByteString
+                                         (Runtime.Types.$fToJSONRepoState1 w)
+                                           `cast`
+                                         (Nth:3
+                                              (((Sym (GHC.Generics.N:M1[0]
+                                                          <Type>_N
+                                                          <GHC.Generics.C>_P
+                                                          <'GHC.Generics.MetaCons
+                                                             "RepoState"
+                                                             'GHC.Generics.PrefixI
+                                                             'GHC.Types.True>_P
+                                                          <GHC.Generics.S1
+                                                             ('GHC.Generics.MetaSel
+                                                                ('GHC.Maybe.Just "branches")
+                                                                'GHC.Generics.NoSourceUnpackedness
+                                                                'GHC.Generics.NoSourceStrictness
+                                                                'GHC.Generics.DecidedLazy)
+                                                             (GHC.Generics.Rec0
+                                                                (Data.Map.Internal.Map
+                                                                   HGit.Core.Types.BranchName
+                                                                   (HGit.Core.Types.Hash
+                                                                      HGit.Core.Types.HashableCommit)))
+                                                           GHC.Generics.:*: GHC.Generics.S1
+                                                                              ('GHC.Generics.MetaSel
+                                                                                 ('GHC.Maybe.Just
+                                                                                    "currentBranch")
+                                                                                 'GHC.Generics.NoSourceUnpackedness
+                                                                                 'GHC.Generics.NoSourceStrictness
+                                                                                 'GHC.Generics.DecidedLazy)
+                                                                              (GHC.Generics.Rec0
+                                                                                 HGit.Core.Types.BranchName)>_R) ; Sym (GHC.Generics.N:M1[0]
+                                                                                                                            <Type>_N
+                                                                                                                            <GHC.Generics.D>_P
+                                                                                                                            <'GHC.Generics.MetaData
+                                                                                                                               "RepoState"
+                                                                                                                               "Runtime.Types"
+                                                                                                                               "main"
+                                                                                                                               'GHC.Types.False>_P
+                                                                                                                            <GHC.Generics.M1
+                                                                                                                               GHC.Generics.C
+                                                                                                                               ('GHC.Generics.MetaCons
+                                                                                                                                  "RepoState"
+                                                                                                                                  'GHC.Generics.PrefixI
+                                                                                                                                  'GHC.Types.True)
+                                                                                                                               (GHC.Generics.S1
+                                                                                                                                  ('GHC.Generics.MetaSel
+                                                                                                                                     ('GHC.Maybe.Just
+                                                                                                                                        "branches")
+                                                                                                                                     'GHC.Generics.NoSourceUnpackedness
+                                                                                                                                     'GHC.Generics.NoSourceStrictness
+                                                                                                                                     'GHC.Generics.DecidedLazy)
+                                                                                                                                  (GHC.Generics.Rec0
+                                                                                                                                     (Data.Map.Internal.Map
+                                                                                                                                        HGit.Core.Types.BranchName
+                                                                                                                                        (HGit.Core.Types.Hash
+                                                                                                                                           HGit.Core.Types.HashableCommit)))
+                                                                                                                                GHC.Generics.:*: GHC.Generics.S1
+                                                                                                                                                   ('GHC.Generics.MetaSel
+                                                                                                                                                      ('GHC.Maybe.Just
+                                                                                                                                                         "currentBranch")
+                                                                                                                                                      'GHC.Generics.NoSourceUnpackedness
+                                                                                                                                                      'GHC.Generics.NoSourceStrictness
+                                                                                                                                                      'GHC.Generics.DecidedLazy)
+                                                                                                                                                   (GHC.Generics.Rec0
+                                                                                                                                                      HGit.Core.Types.BranchName))>_R)) <GHC.Types.Any>_N
+                                                ->_R Sym (Data.ByteString.Builder.Internal.N:Builder[0]) ; Sym (Data.Aeson.Encoding.Internal.N:Encoding'[0]
+                                                                                                                    <Data.Aeson.Types.Internal.Value>_P)) ; Nth:3
+                                                                                                                                                                (Nth:3
+                                                                                                                                                                     (<Data.Aeson.Types.Internal.Options>_R
+                                                                                                                                                                      ->_R <Data.Aeson.Types.ToJSON.ToArgs
+                                                                                                                                                                              Data.Aeson.Encoding.Internal.Encoding
+                                                                                                                                                                              Data.Aeson.Types.Generic.Zero
+                                                                                                                                                                              GHC.Types.Any>_R
+                                                                                                                                                                      ->_R Sub (Sym (Runtime.Types.Rep_RepoState[0])) <GHC.Types.Any>_N
+                                                                                                                                                                      ->_R <Data.Aeson.Encoding.Internal.Encoding>_R))) ; Data.Aeson.Encoding.Internal.N:Encoding'[0]
+                                                                                                                                                                                                                              <Data.Aeson.Types.Internal.Value>_P))
+                                      eta1) -}
+                   = \ (ds :: GHC.IO.Handle.Types.Handle)[OneShot]
+                       (eta1 :: GHC.Prim.State# GHC.Prim.RealWorld)[OneShot] ->
+                     Data.ByteString.Lazy.appendFile2
+                       ds
+                       (Data.ByteString.Builder.toLazyByteString
+                          (Runtime.Types.$fToJSONRepoState1 w)
+                            `cast`
+                          (Nth:3
+                               (((Sym (GHC.Generics.N:M1[0]
+                                           <Type>_N
+                                           <GHC.Generics.C>_P
+                                           <'GHC.Generics.MetaCons
+                                              "RepoState" 'GHC.Generics.PrefixI 'GHC.Types.True>_P
+                                           <GHC.Generics.S1
+                                              ('GHC.Generics.MetaSel
+                                                 ('GHC.Maybe.Just "branches")
+                                                 'GHC.Generics.NoSourceUnpackedness
+                                                 'GHC.Generics.NoSourceStrictness
+                                                 'GHC.Generics.DecidedLazy)
+                                              (GHC.Generics.Rec0
+                                                 (Data.Map.Internal.Map
+                                                    HGit.Core.Types.BranchName
+                                                    (HGit.Core.Types.Hash
+                                                       HGit.Core.Types.HashableCommit)))
+                                            GHC.Generics.:*: GHC.Generics.S1
+                                                               ('GHC.Generics.MetaSel
+                                                                  ('GHC.Maybe.Just "currentBranch")
+                                                                  'GHC.Generics.NoSourceUnpackedness
+                                                                  'GHC.Generics.NoSourceStrictness
+                                                                  'GHC.Generics.DecidedLazy)
+                                                               (GHC.Generics.Rec0
+                                                                  HGit.Core.Types.BranchName)>_R) ; Sym (GHC.Generics.N:M1[0]
+                                                                                                             <Type>_N
+                                                                                                             <GHC.Generics.D>_P
+                                                                                                             <'GHC.Generics.MetaData
+                                                                                                                "RepoState"
+                                                                                                                "Runtime.Types"
+                                                                                                                "main"
+                                                                                                                'GHC.Types.False>_P
+                                                                                                             <GHC.Generics.M1
+                                                                                                                GHC.Generics.C
+                                                                                                                ('GHC.Generics.MetaCons
+                                                                                                                   "RepoState"
+                                                                                                                   'GHC.Generics.PrefixI
+                                                                                                                   'GHC.Types.True)
+                                                                                                                (GHC.Generics.S1
+                                                                                                                   ('GHC.Generics.MetaSel
+                                                                                                                      ('GHC.Maybe.Just
+                                                                                                                         "branches")
+                                                                                                                      'GHC.Generics.NoSourceUnpackedness
+                                                                                                                      'GHC.Generics.NoSourceStrictness
+                                                                                                                      'GHC.Generics.DecidedLazy)
+                                                                                                                   (GHC.Generics.Rec0
+                                                                                                                      (Data.Map.Internal.Map
+                                                                                                                         HGit.Core.Types.BranchName
+                                                                                                                         (HGit.Core.Types.Hash
+                                                                                                                            HGit.Core.Types.HashableCommit)))
+                                                                                                                 GHC.Generics.:*: GHC.Generics.S1
+                                                                                                                                    ('GHC.Generics.MetaSel
+                                                                                                                                       ('GHC.Maybe.Just
+                                                                                                                                          "currentBranch")
+                                                                                                                                       'GHC.Generics.NoSourceUnpackedness
+                                                                                                                                       'GHC.Generics.NoSourceStrictness
+                                                                                                                                       'GHC.Generics.DecidedLazy)
+                                                                                                                                    (GHC.Generics.Rec0
+                                                                                                                                       HGit.Core.Types.BranchName))>_R)) <GHC.Types.Any>_N
+                                 ->_R Sym (Data.ByteString.Builder.Internal.N:Builder[0]) ; Sym (Data.Aeson.Encoding.Internal.N:Encoding'[0]
+                                                                                                     <Data.Aeson.Types.Internal.Value>_P)) ; Nth:3
+                                                                                                                                                 (Nth:3
+                                                                                                                                                      (<Data.Aeson.Types.Internal.Options>_R
+                                                                                                                                                       ->_R <Data.Aeson.Types.ToJSON.ToArgs
+                                                                                                                                                               Data.Aeson.Encoding.Internal.Encoding
+                                                                                                                                                               Data.Aeson.Types.Generic.Zero
+                                                                                                                                                               GHC.Types.Any>_R
+                                                                                                                                                       ->_R Sub (Sym (Runtime.Types.Rep_RepoState[0])) <GHC.Types.Any>_N
+                                                                                                                                                       ->_R <Data.Aeson.Encoding.Internal.Encoding>_R))) ; Data.Aeson.Encoding.Internal.N:Encoding'[0]
+                                                                                                                                                                                                               <Data.Aeson.Types.Internal.Value>_P))
+                       eta1
+                 } in
+                 ww1
+                   @ GHC.IO.FilePath
+                   @ ()
+                   (case ww of ww3 { GHC.Base.C:Applicative ww4 ww5 ww6 ww7 ww8 ww9 ->
+                    case ww4 of ww10 { GHC.Base.C:Functor ww11 ww12 ->
+                    Runtime.Capabilities.$whgitState' @ m ww11 ww2 } })
+                   (\ (path :: GHC.IO.FilePath) ->
+                    ww2
+                      @ ()
+                      (\ (eta :: GHC.Prim.State# GHC.Prim.RealWorld) ->
+                       System.IO.withBinaryFile1
+                         @ ()
+                         path
+                         GHC.IO.IOMode.WriteMode
+                         lvl19
+                           `cast`
+                         (<GHC.IO.Handle.Types.Handle>_R
+                          ->_R Sym (GHC.Types.N:IO[0] <()>_R))
+                         eta)
+                        `cast`
+                      (Sym (GHC.Types.N:IO[0] <()>_R)))) -}
+4552707e66bae1e40786b903a7ed2ef7
+  data HgitStore (m :: Type -> Type)
+    = HgitStore {_blobStore :: HGit.Core.Types.Store
+                                 m HGit.Core.Types.Blob,
+                 _dirStore :: HGit.Core.Types.Store m HGit.Core.Types.HashableDir,
+                 _commitStore :: HGit.Core.Types.Store
+                                   m HGit.Core.Types.HashableCommit}
+1f275b17e52edb0bdff76891706d6bb9
+  data RepoCaps (m :: Type -> Type)
+    = RepoCaps {rcStore :: Runtime.Capabilities.HgitStore m,
+                rcState :: Runtime.Types.RepoState,
+                rcBaseDir :: GHC.IO.FilePath}
+4552707e66bae1e40786b903a7ed2ef7
+  _blobStore ::
+    Runtime.Capabilities.HgitStore m
+    -> HGit.Core.Types.Store m HGit.Core.Types.Blob
+  RecSel Left Runtime.Capabilities.HgitStore
+  {- Arity: 1, HasNoCafRefs, Strictness: <S(SLL),1*U(1*U(U,U),A,A)>m,
+     Unfolding: InlineRule (1, True, False)
+                (\ @ m :: Type -> Type (ds :: Runtime.Capabilities.HgitStore m) ->
+                 case ds of wild { Runtime.Capabilities.HgitStore ds1 ds2 ds3 ->
+                 ds1 }) -}
+4552707e66bae1e40786b903a7ed2ef7
+  _commitStore ::
+    Runtime.Capabilities.HgitStore m
+    -> HGit.Core.Types.Store m HGit.Core.Types.HashableCommit
+  RecSel Left Runtime.Capabilities.HgitStore
+  {- Arity: 1, HasNoCafRefs, Strictness: <S(LLS),1*U(A,A,1*U(U,U))>m,
+     Unfolding: InlineRule (1, True, False)
+                (\ @ m :: Type -> Type (ds :: Runtime.Capabilities.HgitStore m) ->
+                 case ds of wild { Runtime.Capabilities.HgitStore ds1 ds2 ds3 ->
+                 ds3 }) -}
+4552707e66bae1e40786b903a7ed2ef7
+  _dirStore ::
+    Runtime.Capabilities.HgitStore m
+    -> HGit.Core.Types.Store m HGit.Core.Types.HashableDir
+  RecSel Left Runtime.Capabilities.HgitStore
+  {- Arity: 1, HasNoCafRefs, Strictness: <S(LSL),1*U(A,1*U(U,U),A)>m,
+     Unfolding: InlineRule (1, True, False)
+                (\ @ m :: Type -> Type (ds :: Runtime.Capabilities.HgitStore m) ->
+                 case ds of wild { Runtime.Capabilities.HgitStore ds1 ds2 ds3 ->
+                 ds2 }) -}
+bcbaa44b5db3ece0e851dc807ab59a4b
+  getBranch ::
+    (Control.Monad.Catch.MonadThrow m,
+     Control.Monad.Reader.Class.MonadReader
+       (Runtime.Capabilities.RepoCaps m') m) =>
+    HGit.Core.Types.BranchName
+    -> m (HGit.Core.Types.Hash HGit.Core.Types.HashableCommit)
+  {- Arity: 3,
+     Strictness: <S(S(LC(C(S))LLL)L),1*U(1*U(1*U(A,C(U),A,A,A,A),1*C1(C1(U)),A,A,A),1*C1(C1(U)))><L,1*U(A,A,A,1*C1(U))><L,U>,
+     Inline: [2],
+     Unfolding: InlineRule (3, True, False)
+                (\ @ m :: Type -> Type
+                   @ m' :: Type -> Type
+                   (w :: Control.Monad.Catch.MonadThrow m)
+                   (w1 :: Control.Monad.Reader.Class.MonadReader
+                            (Runtime.Capabilities.RepoCaps m') m)
+                   (w2 :: HGit.Core.Types.BranchName) ->
+                 case w of ww { Control.Monad.Catch.C:MonadThrow ww1 ww2 ->
+                 case ww1 of ww3 { GHC.Base.C:Monad ww4 ww5 ww6 ww7 ww8 ->
+                 Runtime.Capabilities.$wgetBranch @ m @ m' ww4 ww5 ww2 w1 w2 } }) -}
+5a99efe5cb441fa5212df349c6ae33d6
+  getBranch' ::
+    Control.Monad.Catch.MonadThrow m =>
+    HGit.Core.Types.BranchName
+    -> Runtime.Types.RepoState
+    -> m (HGit.Core.Types.Hash HGit.Core.Types.HashableCommit)
+  {- Arity: 2,
+     Strictness: <L,U(1*U(1*U(A,C(U),A,A,A,A),A,A,A,A),1*C1(C1(U)))><L,U>,
+     Unfolding: (\ @ m :: Type -> Type
+                   ($dMonadThrow :: Control.Monad.Catch.MonadThrow m)
+                   (eta :: HGit.Core.Types.BranchName) ->
+                 let {
+                   $dApplicative :: GHC.Base.Monad m
+                   = Control.Monad.Catch.$p1MonadThrow @ m $dMonadThrow
+                 } in
+                 let {
+                   $dApplicative1 :: GHC.Base.Applicative m
+                   = GHC.Base.$p1Monad @ m $dApplicative
+                 } in
+                 let {
+                   n :: m (HGit.Core.Types.Hash HGit.Core.Types.HashableCommit)
+                   = case $dMonadThrow of ww { Control.Monad.Catch.C:MonadThrow ww1 ww2 ->
+                     Control.Exception.Safe.$wthrowString
+                       @ m
+                       @ (HGit.Core.Types.Hash HGit.Core.Types.HashableCommit)
+                       ww2
+                       Runtime.Capabilities.getBranch'2
+                         `cast`
+                       (Sym (GHC.Classes.N:IP[0]
+                                 <"callStack">_N <GHC.Stack.Types.CallStack>_N))
+                       (GHC.CString.unpackAppendCString#
+                          Runtime.Capabilities.getBranch'1
+                          eta) }
+                 } in
+                 \ (x :: Runtime.Types.RepoState) ->
+                 case x of wild { Runtime.Types.RepoState ds1 ds2 ->
+                 case Runtime.Capabilities.$slookup1
+                        @ (Data.Functor.Const.Const
+                             Merkle.Types.IPFS.RawIPFSHash HGit.Core.Types.HashableCommit)
+                        eta
+                        ds1 of wild1 {
+                   GHC.Maybe.Nothing -> n
+                   GHC.Maybe.Just x1
+                   -> GHC.Base.pure
+                        @ m
+                        $dApplicative1
+                        @ (HGit.Core.Types.Hash HGit.Core.Types.HashableCommit)
+                        x1 } }) -}
+5218e58bef16a93326e7999f62465033
+  getBranch'1 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("branch not found: "#) -}
+e2c45f028cdd781fcb7786265b69bff9
+  getBranch'10 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Capabilities.$trModule4) -}
+8e04c5f0c9a79cae4d04c475cf49e2e9
+  getBranch'11 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Capabilities.getBranch'12) -}
+8592144fa18c931e392787d3afecad4a
+  getBranch'12 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("throwString"#) -}
+6f04e7a3ca631b6664b72a431b91944e
+  getBranch'2 :: GHC.Stack.Types.CallStack
+  {- Strictness: m2,
+     Unfolding: (GHC.Stack.Types.PushCallStack
+                   Runtime.Capabilities.getBranch'11
+                   Runtime.Capabilities.getBranch'3
+                   GHC.Stack.Types.EmptyCallStack) -}
+c1bc1236e336a459a8380a9536fb8dfb
+  getBranch'3 :: GHC.Stack.Types.SrcLoc
+  {- Strictness: m,
+     Unfolding: (GHC.Stack.Types.SrcLoc
+                   Runtime.Capabilities.getBranch'10
+                   Runtime.Capabilities.getBranch'9
+                   Runtime.Capabilities.getBranch'7
+                   Runtime.Capabilities.getBranch'6
+                   Runtime.Capabilities.getBranch'5
+                   Runtime.Capabilities.getBranch'6
+                   Runtime.Capabilities.getBranch'4) -}
+9fa83c9a0d55527bcc0370d702ecfb6e
+  getBranch'4 :: GHC.Types.Int
+  {- HasNoCafRefs, Strictness: m, Unfolding: (GHC.Types.I# 52#) -}
+481ee7b4392400dfb67cdd1f794c675c
+  getBranch'5 :: GHC.Types.Int
+  {- HasNoCafRefs, Strictness: m, Unfolding: (GHC.Types.I# 12#) -}
+49a8773ac5e4d4ad5ecbd1187bd739ca
+  getBranch'6 :: GHC.Types.Int
+  {- HasNoCafRefs, Strictness: m, Unfolding: (GHC.Types.I# 37#) -}
+e7c72dc2b3a50133250083914f4571df
+  getBranch'7 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Capabilities.getBranch'8) -}
+c00a38b2b8a75566cd67eae174ebe801
+  getBranch'8 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("app/Runtime/Capabilities.hs"#) -}
+87baa1fcf5c4bd439ecec85c9692727e
+  getBranch'9 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Capabilities.$trModule2) -}
+4b9ddea20556f2811133c09911dd3936
+  getBranch1 :: GHC.Base.String -> m a
+  {- Unfolding: (\ @ m :: Type -> Type ->
+                 Control.Exception.Base.absentError
+                   @ (forall a. GHC.Base.String -> m a)
+                   Runtime.Capabilities.getBranch2) -}
+5498e817f9e22e7e6dc32977ad3d557b
+  getBranch2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("ww forall a. String -> m a"#) -}
+4021ce244d4a0ca50dd0e078ca0dd169
+  getBranch3 :: a -> m a
+  {- Unfolding: (\ @ m :: Type -> Type ->
+                 Control.Exception.Base.absentError
+                   @ (forall a. a -> m a)
+                   Runtime.Capabilities.getBranch4) -}
+ee84aec08ba14bc1eba64f297208c4b2
+  getBranch4 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("ww forall a. a -> m a"#) -}
+ae13f6829a1291bab2c68e8b1653003c
+  getBranch5 :: m a -> m b -> m b
+  {- Unfolding: (\ @ m :: Type -> Type ->
+                 Control.Exception.Base.absentError
+                   @ (forall a b. m a -> m b -> m b)
+                   Runtime.Capabilities.getBranch6) -}
+0c7f42c4ea9174eb1e1afe3b122c775b
+  getBranch6 :: GHC.Prim.Addr#
+  {- HasNoCafRefs,
+     Unfolding: ("ww forall a b. m a -> m b -> m b"#) -}
+d5a66592bd6cbba056cc51bd21428d74
+  hgitBaseDir ::
+    Control.Monad.IO.Class.MonadIO m => m GHC.IO.FilePath
+  {- Arity: 1, Strictness: <S(LC(S)),1*U(A,1*C1(U))>,
+     Unfolding: InlineRule (1, True, False)
+                (\ @ m :: Type -> Type
+                   ($dMonadIO :: Control.Monad.IO.Class.MonadIO m) ->
+                 Control.Monad.IO.Class.liftIO
+                   @ m
+                   $dMonadIO
+                   @ GHC.IO.FilePath
+                   System.Directory.getCurrentDirectory1
+                     `cast`
+                   (Sym (GHC.Types.N:IO[0] <GHC.IO.FilePath>_R))) -}
+215c445a9990edc6738f27dee96db82a
+  hgitState' :: Control.Monad.IO.Class.MonadIO m => m GHC.IO.FilePath
+  {- Arity: 1,
+     Strictness: <S(S(S(S(C(C(S))L)LLLLL)LLLL)L),1*U(1*U(1*U(1*U(1*C1(C1(U)),A),A,A,A,A,A),A,A,A,A),1*C1(U))>,
+     Inline: [2],
+     Unfolding: InlineRule (1, True, False)
+                (\ @ m :: Type -> Type (w :: Control.Monad.IO.Class.MonadIO m) ->
+                 case w of ww { Control.Monad.IO.Class.C:MonadIO ww1 ww2 ->
+                 case ww1 of ww3 { GHC.Base.C:Monad ww4 ww5 ww6 ww7 ww8 ->
+                 case ww4 of ww9 { GHC.Base.C:Applicative ww10 ww11 ww12 ww13 ww14 ww15 ->
+                 case ww10 of ww16 { GHC.Base.C:Functor ww17 ww18 ->
+                 Runtime.Capabilities.$whgitState' @ m ww17 ww2 } } } }) -}
+bb320b18c24b286224a8f503b555c4f5
+  hgitState'1 :: [GHC.Types.Char] -> [GHC.Types.Char]
+  {- Arity: 1, Strictness: <S,1*U>,
+     Unfolding: InlineRule (1, True, False)
+                (\ (ds :: [GHC.Types.Char]) ->
+                 GHC.Base.augment
+                   @ GHC.Types.Char
+                   (\ @ b
+                      (c :: GHC.Types.Char -> b -> b)[OneShot]
+                      (n :: b)[OneShot] ->
+                    GHC.Base.foldr @ GHC.Types.Char @ b c n ds)
+                   Runtime.Capabilities.hgitState'2) -}
+9d751c2614b613025c77c93d05ade90d
+  hgitState'2 :: [GHC.Types.Char]
+  {- Unfolding: (GHC.CString.unpackAppendCString#
+                   Runtime.Capabilities.hgitState'3
+                   Runtime.Capabilities.hgitStateFile) -}
+1970962627025259550b74dbbb163737
+  hgitState'3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("/"#) -}
+a176658a31e1b22958fbe800166afded
+  hgitStateFile :: HGit.Core.Types.PartialFilePath
+  {- Unfolding: (GHC.CString.unpackCString#
+                   Runtime.Capabilities.hgitStateFile1) -}
+8fa1b8ad6b6b37a9d08fcd6bb07df61a
+  hgitStateFile1 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: (".hgit-state.json"#) -}
+1f275b17e52edb0bdff76891706d6bb9
+  rcBaseDir :: Runtime.Capabilities.RepoCaps m -> GHC.IO.FilePath
+  RecSel Left Runtime.Capabilities.RepoCaps
+  {- Arity: 1, HasNoCafRefs, Strictness: <S(LLS),1*U(A,A,1*U)>,
+     Unfolding: InlineRule (1, True, False)
+                (\ @ m :: Type -> Type (ds :: Runtime.Capabilities.RepoCaps m) ->
+                 case ds of wild { Runtime.Capabilities.RepoCaps ds1 ds2 ds3 ->
+                 ds3 }) -}
+1f275b17e52edb0bdff76891706d6bb9
+  rcState ::
+    Runtime.Capabilities.RepoCaps m -> Runtime.Types.RepoState
+  RecSel Left Runtime.Capabilities.RepoCaps
+  {- Arity: 1, HasNoCafRefs, Strictness: <S(LSL),1*U(A,1*U(U,U),A)>m,
+     Unfolding: InlineRule (1, True, False)
+                (\ @ m :: Type -> Type (ds :: Runtime.Capabilities.RepoCaps m) ->
+                 case ds of wild { Runtime.Capabilities.RepoCaps ds1 ds2 ds3 ->
+                 ds2 }) -}
+1f275b17e52edb0bdff76891706d6bb9
+  rcStore ::
+    Runtime.Capabilities.RepoCaps m -> Runtime.Capabilities.HgitStore m
+  RecSel Left Runtime.Capabilities.RepoCaps
+  {- Arity: 1, HasNoCafRefs,
+     Strictness: <S(SLL),1*U(1*U(U,U,U),A,A)>m,
+     Unfolding: InlineRule (1, True, False)
+                (\ @ m :: Type -> Type (ds :: Runtime.Capabilities.RepoCaps m) ->
+                 case ds of wild { Runtime.Capabilities.RepoCaps ds1 ds2 ds3 ->
+                 ds1 }) -}
+95b5eb7d90341e29bbc2bb53354cf2e9
+  readState ::
+    (Control.Monad.IO.Class.MonadIO m,
+     Control.Monad.Catch.MonadThrow m) =>
+    m Runtime.Types.RepoState
+  {- Arity: 2,
+     Strictness: <S(S(LC(C(S))LLL)L),1*U(1*U(1*U(1*U(1*C1(C1(U)),A),A,A,A,A,A),1*C1(C1(U)),A,A,A),C(U))><L,A>,
+     Inline: [2],
+     Unfolding: InlineRule (2, True, False)
+                (\ @ m :: Type -> Type
+                   (w :: Control.Monad.IO.Class.MonadIO m)
+                   (w1 :: Control.Monad.Catch.MonadThrow m) ->
+                 case w of ww { Control.Monad.IO.Class.C:MonadIO ww1 ww2 ->
+                 case ww1 of ww3 { GHC.Base.C:Monad ww4 ww5 ww6 ww7 ww8 ->
+                 Runtime.Capabilities.$wreadState @ m ww4 ww5 ww2 } }) -}
+97a141d96b135681a392cec9201607bd
+  writeState ::
+    (Control.Monad.IO.Class.MonadIO m,
+     Control.Monad.Catch.MonadThrow m) =>
+    Runtime.Types.RepoState -> m ()
+  {- Arity: 3,
+     Strictness: <S(S(LC(C(S))LLL)L),1*U(1*U(1*U(1*U(1*C1(C1(U)),A),A,A,A,A,A),1*C1(C1(U)),A,A,A),C(U))><L,A><L,U(U,U)>,
+     Inline: [2],
+     Unfolding: InlineRule (3, True, False)
+                (\ @ m :: Type -> Type
+                   (w :: Control.Monad.IO.Class.MonadIO m)
+                   (w1 :: Control.Monad.Catch.MonadThrow m)
+                   (w2 :: Runtime.Types.RepoState) ->
+                 case w of ww { Control.Monad.IO.Class.C:MonadIO ww1 ww2 ->
+                 case ww1 of ww3 { GHC.Base.C:Monad ww4 ww5 ww6 ww7 ww8 ->
+                 Runtime.Capabilities.$wwriteState @ m ww4 ww5 ww2 w2 } }) -}
+trusted: none
+require own pkg trusted: False
+module header:
+  Nothing
+declaration docs:
+arg docs:
+

@@ -1,0 +1,864 @@
+
+==================== FINAL INTERFACE ====================
+2019-05-20 21:39:05.515083888 UTC
+
+interface hgit-0.1.0.0-Byck4folewAHwC9vUGKEOl:HGit.Core.Merge 8063
+  interface hash: 152ec8679632b722f20ef8a9d6b7142d
+  ABI hash: f5ff2d91c98d1674c0cdaf0715bb1457
+  export-list hash: 826170447a050cfe0e4538997e23e290
+  orphan hash: 09bb1a6bf5d7046b975df2b48763dbee
+  flag hash: ad961a7be4b4e33f9c27f1b2edc1f7a5
+  opt_hash: 6faf2de08de32d19db9870899d88e59a
+  hpc_hash: 93b885adfe0da089cdf634904fd59f71
+  plugin_hash: ad164012d6b1e14942349d58b1132007
+  sig of: Nothing
+  used TH splices: False
+  where
+exports:
+  HGit.Core.Merge.commitMerge
+  HGit.Core.Merge.mergeMerkleDirs
+  HGit.Core.Merge.MergeResult
+  HGit.Core.Merge.MergeViolation{HGit.Core.Merge.MergeViolation mergeViolationPath}
+module dependencies: HGit.Core.Types
+package dependencies: aeson-1.4.2.0 array-0.5.3.0
+                      attoparsec-0.13.2.2 base-4.12.0.0 base-compat-0.10.5
+                      base-orphans-0.8 base64-bytestring-1.0.0.2 bifunctors-5.5.3
+                      binary-0.8.6.0 bytestring-0.10.8.2 comonad-5.0.4 containers-0.6.0.1
+                      deepseq-1.4.4.0 deriving-compat-0.5.4 distributive-0.6
+                      dlist-0.8.0.5 exceptions-0.10.0 free-5.1 ghc-boot-th-8.6.3
+                      ghc-prim-0.5.3 hashable-1.2.7.0 integer-gmp-1.0.2.0
+                      integer-logarithms-1.0.2.2 merkle-schemes-0.1.0.0 mtl-2.2.2
+                      pretty-1.1.3.6 primitive-0.6.4.0 profunctors-5.3 random-1.1
+                      recursion-schemes-5.1.1 scientific-0.3.6.2 semigroupoids-5.3.2
+                      stm-2.5.0.0 tagged-0.8.6 template-haskell-2.14.0.0 text-1.2.3.1
+                      th-abstraction-0.2.10.0 time-1.8.0.2 time-locale-compat-0.1.1.5
+                      transformers-0.5.5.0 transformers-base-0.4.5.2
+                      transformers-compat-0.6.2 unordered-containers-0.2.9.0
+                      uuid-types-1.0.3 vector-0.12.0.2
+orphans: attoparsec-0.13.2.2:Data.Attoparsec.Text.Internal
+         attoparsec-0.13.2.2:Data.Attoparsec.ByteString.Char8
+         vector-0.12.0.2:Data.Vector.Unboxed
+         time-1.8.0.2:Data.Time.Format.Parse
+         time-1.8.0.2:Data.Time.LocalTime.Internal.ZonedTime
+         time-1.8.0.2:Data.Time.LocalTime.Internal.LocalTime
+         time-1.8.0.2:Data.Time.Calendar.Gregorian
+         vector-0.12.0.2:Data.Vector.Fusion.Bundle
+         stm-2.5.0.0:Control.Monad.STM
+         transformers-0.5.5.0:Control.Monad.Trans.Error
+         hashable-1.2.7.0:Data.Hashable.Generic text-1.2.3.1:Data.Text.Lazy
+         text-1.2.3.1:Data.Text binary-0.8.6.0:Data.Binary.Generic
+         bytestring-0.10.8.2:Data.ByteString.Builder
+         text-1.2.3.1:Data.Text.Show base-4.12.0.0:GHC.Float
+         base-4.12.0.0:GHC.Base
+family instance modules: aeson-1.4.2.0:Data.Aeson.Types.Internal
+                         attoparsec-0.13.2.2:Data.Attoparsec.Internal.Types
+                         base-4.12.0.0:Control.Applicative base-4.12.0.0:Data.Complex
+                         base-4.12.0.0:Data.Functor.Compose base-4.12.0.0:Data.Functor.Const
+                         base-4.12.0.0:Data.Functor.Identity
+                         base-4.12.0.0:Data.Functor.Product base-4.12.0.0:Data.Functor.Sum
+                         base-4.12.0.0:Data.Monoid base-4.12.0.0:Data.Semigroup
+                         base-4.12.0.0:Data.Semigroup.Internal base-4.12.0.0:Data.Version
+                         base-4.12.0.0:Data.Void base-4.12.0.0:GHC.Exts
+                         base-4.12.0.0:GHC.Generics base-4.12.0.0:GHC.IO.Exception
+                         bifunctors-5.5.3:Data.Bifunctor.Biff
+                         bifunctors-5.5.3:Data.Bifunctor.Clown
+                         bifunctors-5.5.3:Data.Bifunctor.Flip
+                         bifunctors-5.5.3:Data.Bifunctor.Join
+                         bifunctors-5.5.3:Data.Bifunctor.Joker
+                         bifunctors-5.5.3:Data.Bifunctor.Product
+                         bifunctors-5.5.3:Data.Bifunctor.Sum
+                         bifunctors-5.5.3:Data.Bifunctor.Tannen
+                         bifunctors-5.5.3:Data.Bifunctor.Wrapped
+                         containers-0.6.0.1:Data.Graph
+                         containers-0.6.0.1:Data.IntMap.Internal
+                         containers-0.6.0.1:Data.IntSet.Internal
+                         containers-0.6.0.1:Data.Map.Internal
+                         containers-0.6.0.1:Data.Sequence.Internal
+                         containers-0.6.0.1:Data.Set.Internal containers-0.6.0.1:Data.Tree
+                         dlist-0.8.0.5:Data.DList free-5.1:Control.Comonad.Cofree
+                         free-5.1:Control.Comonad.Trans.Cofree free-5.1:Control.Monad.Free
+                         free-5.1:Control.Monad.Trans.Free
+                         ghc-boot-th-8.6.3:GHC.ForeignSrcLang.Type
+                         ghc-boot-th-8.6.3:GHC.LanguageExtensions.Type
+                         hgit-0.1.0.0-Byck4folewAHwC9vUGKEOl:HGit.Core.Types
+                         merkle-schemes-0.1.0.0:Merkle.Types.IPFS
+                         pretty-1.1.3.6:Text.PrettyPrint.Annotated.HughesPJ
+                         pretty-1.1.3.6:Text.PrettyPrint.HughesPJ
+                         primitive-0.6.4.0:Control.Monad.Primitive
+                         primitive-0.6.4.0:Data.Primitive.Array
+                         primitive-0.6.4.0:Data.Primitive.ByteArray
+                         primitive-0.6.4.0:Data.Primitive.PrimArray
+                         primitive-0.6.4.0:Data.Primitive.SmallArray
+                         primitive-0.6.4.0:Data.Primitive.UnliftedArray
+                         recursion-schemes-5.1.1:Data.Functor.Base
+                         recursion-schemes-5.1.1:Data.Functor.Foldable
+                         tagged-0.8.6:Data.Tagged
+                         template-haskell-2.14.0.0:Language.Haskell.TH.Syntax
+                         text-1.2.3.1:Data.Text text-1.2.3.1:Data.Text.Lazy
+                         th-abstraction-0.2.10.0:Language.Haskell.TH.Datatype
+                         unordered-containers-0.2.9.0:Data.HashMap.Base
+                         unordered-containers-0.2.9.0:Data.HashSet
+                         uuid-types-1.0.3:Data.UUID.Types.Internal
+                         uuid-types-1.0.3:Data.UUID.Types.Internal.Builder
+                         vector-0.12.0.2:Data.Vector vector-0.12.0.2:Data.Vector.Primitive
+                         vector-0.12.0.2:Data.Vector.Storable
+                         vector-0.12.0.2:Data.Vector.Unboxed
+                         vector-0.12.0.2:Data.Vector.Unboxed.Base
+import  -/  base-4.12.0.0:Data.Either 946a3435d06773e1dbcad1ba5dc18a2c
+import  -/  base-4.12.0.0:Data.Functor 22aac80fdb6c7b7f60b4aaab86afee64
+import  -/  base-4.12.0.0:Data.Functor.Compose 4bf09f5e4b84ca3ec0f8df4c7c6b7c3e
+import  -/  base-4.12.0.0:GHC.Base cc906f98291a1b830546e99a96674547
+import  -/  base-4.12.0.0:GHC.Show 4e438f26d903388cc6c2c5d64ed01b98
+import  -/  base-4.12.0.0:Prelude 5c01365ec01f83bd405ac01cbb9a8d76
+import  -/  containers-0.6.0.1:Data.Map.Internal 7258cbfb7d1b897678a42b6739fc4dac
+import  -/  containers-0.6.0.1:Data.Map.Merge.Strict a4288993f9afd6cb5e39f5d7ad1169d3
+import  -/  containers-0.6.0.1:Data.Map.Strict c9c15d36149113668379264c6ca4bcc8
+import  -/  containers-0.6.0.1:Data.Map.Strict.Internal eb77e50df3bac5c0b0daef45a98deea7
+import  -/  ghc-prim-0.5.3:GHC.Classes e0d9c979f6368701f34fa421754d2cce
+import  -/  HGit.Core.Types 79e907bf15f7ab56c84aba27eb2d3ddb
+  exports: 94322bdc5d9ddb9502c2eba522a4c99c
+  Dir d7e6b948794e92c5dcccf5a479ae7b5d
+  Dir be80b6a731843e8b4df725ad76728847
+  DirEntity 5304b1897769932112c46b8713d25d3e
+  FileEntity ce47e7413baee27a5b39b9e4daa861fa
+  FileTreeEntity ae33a7ec835849f6fc910a468589c69e
+  LazyMerkleDir 4e8974f2593cf87a0bec6bcfaa775b0c
+  PartialFilePath 6644ba3cdf878cce4766b194f8a2c20b
+  PutCapability 867febbbf3b123141a0ddd340c9dc110
+  canonicalOrdering 0f1f31e7ad765374d0fec3a0c02aacbf
+  dirEntries be80b6a731843e8b4df725ad76728847
+  unPutCapability 3fff163b4111d41872337144909b418b
+import  -/  merkle-schemes-0.1.0.0:Merkle.Functors eb8956b10d3f8e04ccb8a7a2b5cc8ff0
+import  -/  merkle-schemes-0.1.0.0:Util.RecursionSchemes b224bcde365e2dc1dc7460c2c5e1f79a
+import  -/  recursion-schemes-5.1.1:Data.Functor.Foldable cfc5c666b47791f27e29eb7563647e3b
+import  -/  transformers-0.5.5.0:Control.Monad.Trans.Class f3e62b8b4b5be304a48413d1f1e4625e
+import  -/  transformers-0.5.5.0:Control.Monad.Trans.Except 492e1fc9e7bdded285216f81f05ba982
+a7b3ecacc8941dc9b4c136c71a2a1643
+  $fEqMergeViolation :: GHC.Classes.Eq HGit.Core.Merge.MergeViolation
+  DFunId
+  {- HasNoCafRefs, Strictness: m, Inline: CONLIKE,
+     Unfolding: DFun:.
+                  @ HGit.Core.Merge.MergeViolation
+                  HGit.Core.Merge.$fEqMergeViolation_$c==
+                  HGit.Core.Merge.$fEqMergeViolation_$c/= -}
+a7b3ecacc8941dc9b4c136c71a2a1643
+  $fEqMergeViolation_$c/= ::
+    HGit.Core.Merge.MergeViolation
+    -> HGit.Core.Merge.MergeViolation -> GHC.Types.Bool
+  {- Arity: 2, HasNoCafRefs,
+     Strictness: <S(S),1*U(1*U)><S(S),1*U(1*U)>, Inline: (sat-args=2),
+     Unfolding: InlineRule (2, False, False)
+                (\ (x :: HGit.Core.Merge.MergeViolation)
+                   (y :: HGit.Core.Merge.MergeViolation) ->
+                 case x of wild { HGit.Core.Merge.MergeViolation a1 ->
+                 case y of wild1 { HGit.Core.Merge.MergeViolation b1 ->
+                 case GHC.Classes.$fEq[]_$s$c==1 a1 b1 of wild2 {
+                   GHC.Types.False -> GHC.Types.True
+                   GHC.Types.True -> GHC.Types.False } } }) -}
+a7b3ecacc8941dc9b4c136c71a2a1643
+  $fEqMergeViolation_$c== ::
+    HGit.Core.Merge.MergeViolation
+    -> HGit.Core.Merge.MergeViolation -> GHC.Types.Bool
+  {- Arity: 2, HasNoCafRefs,
+     Strictness: <S(S),1*U(1*U)><S(S),1*U(1*U)>,
+     Unfolding: InlineRule (2, True, False)
+                (\ (ds :: HGit.Core.Merge.MergeViolation)
+                   (ds1 :: HGit.Core.Merge.MergeViolation) ->
+                 case ds of wild { HGit.Core.Merge.MergeViolation a1 ->
+                 case ds1 of wild1 { HGit.Core.Merge.MergeViolation b1 ->
+                 GHC.Classes.$fEq[]_$s$c==1 a1 b1 } }) -}
+a7b3ecacc8941dc9b4c136c71a2a1643
+  $fShowMergeViolation ::
+    GHC.Show.Show HGit.Core.Merge.MergeViolation
+  DFunId
+  {- Strictness: m, Inline: CONLIKE,
+     Unfolding: DFun:.
+                  @ HGit.Core.Merge.MergeViolation
+                  HGit.Core.Merge.$fShowMergeViolation_$cshowsPrec
+                  HGit.Core.Merge.$fShowMergeViolation_$cshow
+                  HGit.Core.Merge.$fShowMergeViolation_$cshowList -}
+a7b3ecacc8941dc9b4c136c71a2a1643
+  $fShowMergeViolation1 ::
+    HGit.Core.Merge.MergeViolation -> GHC.Show.ShowS
+  {- Arity: 2, Strictness: <S,1*U(1*U)><L,U>,
+     Unfolding: (\ (w :: HGit.Core.Merge.MergeViolation)
+                   (w1 :: GHC.Base.String) ->
+                 case w of ww { HGit.Core.Merge.MergeViolation ww1 ->
+                 HGit.Core.Merge.$w$cshowsPrec 0# ww1 w1 }) -}
+320958c46445a94ae6a2b88c32a11398
+  $fShowMergeViolation2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("}"#) -}
+8e5e0330a68bc37d640f9ef3506a4e2c
+  $fShowMergeViolation3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("mergeViolationPath = "#) -}
+54a65432bfeb52f017de961b2a3665ca
+  $fShowMergeViolation4 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("MergeViolation {"#) -}
+ce548fd5fbd3765e7ef21e19ab77760d
+  $fShowMergeViolation5 :: GHC.Types.Int
+  {- HasNoCafRefs, Strictness: m, Unfolding: (GHC.Types.I# 0#) -}
+a7b3ecacc8941dc9b4c136c71a2a1643
+  $fShowMergeViolation_$cshow ::
+    HGit.Core.Merge.MergeViolation -> GHC.Base.String
+  {- Arity: 1, Strictness: <S,1*U(1*U)>,
+     Unfolding: InlineRule (1, True, False)
+                (\ (x :: HGit.Core.Merge.MergeViolation) ->
+                 HGit.Core.Merge.$fShowMergeViolation_$cshowsPrec
+                   HGit.Core.Merge.$fShowMergeViolation5
+                   x
+                   (GHC.Types.[] @ GHC.Types.Char)) -}
+a7b3ecacc8941dc9b4c136c71a2a1643
+  $fShowMergeViolation_$cshowList ::
+    [HGit.Core.Merge.MergeViolation] -> GHC.Show.ShowS
+  {- Arity: 2, Strictness: <S,1*U><L,U>,
+     Unfolding: InlineRule (2, True, False)
+                (\ (ls :: [HGit.Core.Merge.MergeViolation])
+                   (s :: GHC.Base.String) ->
+                 GHC.Show.showList__
+                   @ HGit.Core.Merge.MergeViolation
+                   HGit.Core.Merge.$fShowMergeViolation1
+                   ls
+                   s) -}
+a7b3ecacc8941dc9b4c136c71a2a1643
+  $fShowMergeViolation_$cshowsPrec ::
+    GHC.Types.Int -> HGit.Core.Merge.MergeViolation -> GHC.Show.ShowS
+  {- Arity: 3, Strictness: <S(S),1*U(U)><S,1*U(1*U)><L,U>,
+     Inline: [2],
+     Unfolding: InlineRule (3, True, False)
+                (\ (w :: GHC.Types.Int)
+                   (w1 :: HGit.Core.Merge.MergeViolation)
+                   (w2 :: GHC.Base.String) ->
+                 case w of ww { GHC.Types.I# ww1 ->
+                 case w1 of ww2 { HGit.Core.Merge.MergeViolation ww3 ->
+                 HGit.Core.Merge.$w$cshowsPrec ww1 ww3 w2 } }) -}
+d6f3efacc6bed5846f6782da71350cf3
+  $sfromList ::
+    [(HGit.Core.Types.PartialFilePath, a)]
+    -> Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a
+  {- Arity: 1, Strictness: <S,1*U>,
+     Unfolding: (\ @ a (ds :: [(HGit.Core.Types.PartialFilePath, a)]) ->
+                 case ds of wild {
+                   [] -> Data.Map.Internal.Tip @ HGit.Core.Types.PartialFilePath @ a
+                   : ds1 ds2
+                   -> case ds1 of wild1 { (,) kx x ->
+                      case ds2 of wild2 {
+                        []
+                        -> case x of x1 { DEFAULT ->
+                           case kx of dt { DEFAULT ->
+                           Data.Map.Internal.Bin
+                             @ HGit.Core.Types.PartialFilePath
+                             @ a
+                             1#
+                             dt
+                             x1
+                             (Data.Map.Internal.Tip @ HGit.Core.Types.PartialFilePath @ a)
+                             (Data.Map.Internal.Tip @ HGit.Core.Types.PartialFilePath @ a) } }
+                        : ipv ipv1
+                        -> case ipv of wild3 { (,) ky ds3 ->
+                           case GHC.Classes.$fOrd[]_$s$ccompare1 kx ky of wild4 {
+                             DEFAULT
+                             -> case x of x0 { DEFAULT ->
+                                case kx of dt { DEFAULT ->
+                                HGit.Core.Merge.$sfromList1
+                                  @ a
+                                  wild2
+                                  (Data.Map.Internal.Bin
+                                     @ HGit.Core.Types.PartialFilePath
+                                     @ a
+                                     1#
+                                     dt
+                                     x0
+                                     (Data.Map.Internal.Tip @ HGit.Core.Types.PartialFilePath @ a)
+                                     (Data.Map.Internal.Tip
+                                        @ HGit.Core.Types.PartialFilePath
+                                        @ a)) } }
+                             GHC.Types.LT
+                             -> case x of x0 { DEFAULT ->
+                                case kx of dt { DEFAULT ->
+                                HGit.Core.Merge.$wpoly_go8
+                                  @ a
+                                  1#
+                                  (Data.Map.Internal.Bin
+                                     @ HGit.Core.Types.PartialFilePath
+                                     @ a
+                                     1#
+                                     dt
+                                     x0
+                                     (Data.Map.Internal.Tip @ HGit.Core.Types.PartialFilePath @ a)
+                                     (Data.Map.Internal.Tip @ HGit.Core.Types.PartialFilePath @ a))
+                                  wild2 } } } } } } }) -}
+a032ae726e7d7c0eb8714e2bf37ac116
+  $sfromList1 ::
+    [(HGit.Core.Types.PartialFilePath, a)]
+    -> Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a
+    -> Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a
+  {- Arity: 2, Strictness: <S,1*U><S,1*U> -}
+48ce7b2d92f02643b6d89a70a5fb3717
+  $sinsert_$sgo8 ::
+    HGit.Core.Types.PartialFilePath
+    -> a1
+    -> Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a1
+    -> Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a1
+  {- Arity: 3, Strictness: <S,1*U><S,1*U><S,1*U> -}
+4ce443ad0d07d6e67e4e87453578ba28
+  $tc'MergeViolation :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   6045594007383446637##
+                   11553364068305746986##
+                   HGit.Core.Merge.$trModule
+                   HGit.Core.Merge.$tc'MergeViolation2
+                   0#
+                   HGit.Core.Merge.$tc'MergeViolation1) -}
+5f3590270ef52f12b0cc1e33fd54281d
+  $tc'MergeViolation1 :: GHC.Types.KindRep
+  {- HasNoCafRefs, Strictness: m4, Inline: [~] -}
+60489bada40c8f4f8f4d417eb8efe5b7
+  $tc'MergeViolation2 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS
+                   HGit.Core.Merge.$tc'MergeViolation3) -}
+07e553d1d0fc3e91b9537afcd44a6c69
+  $tc'MergeViolation3 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("'MergeViolation"#) -}
+a30ee63743937fd54686a5f5d6dd413a
+  $tcMergeViolation :: GHC.Types.TyCon
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.TyCon
+                   6375188968397100217##
+                   15345898124312216042##
+                   HGit.Core.Merge.$trModule
+                   HGit.Core.Merge.$tcMergeViolation1
+                   0#
+                   GHC.Types.krep$*) -}
+b77a27ba2ce2b953e93f6f154101c6ac
+  $tcMergeViolation1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS
+                   HGit.Core.Merge.$tcMergeViolation2) -}
+bea897ea9bb21c3200995975260e60bd
+  $tcMergeViolation2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("MergeViolation"#) -}
+f459f90b2de973473e99170b85f96f23
+  $trModule :: GHC.Types.Module
+  {- HasNoCafRefs, Strictness: m,
+     Unfolding: (GHC.Types.Module
+                   HGit.Core.Merge.$trModule3
+                   HGit.Core.Merge.$trModule1) -}
+d6d0463db94700ebd7c8d90a8bd79bd6
+  $trModule1 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS HGit.Core.Merge.$trModule2) -}
+f29a21eb65e42e5d5951eeff97734102
+  $trModule2 :: GHC.Prim.Addr#
+  {- HasNoCafRefs, Unfolding: ("HGit.Core.Merge"#) -}
+0dfad6c9a1b07ce9246ffc07b14712a3
+  $trModule3 :: GHC.Types.TrName
+  {- HasNoCafRefs, Strictness: m1,
+     Unfolding: (GHC.Types.TrNameS HGit.Core.Merge.$trModule4) -}
+4f3bc19ef2a869b401aa6cdb68fa8a58
+  $trModule4 :: GHC.Prim.Addr#
+  {- HasNoCafRefs,
+     Unfolding: ("hgit-0.1.0.0-Byck4folewAHwC9vUGKEOl"#) -}
+41480a56527231424a03ce2f3d19a1d4
+  $w$cshowsPrec ::
+    GHC.Prim.Int#
+    -> [HGit.Core.Types.PartialFilePath]
+    -> GHC.Base.String
+    -> GHC.Base.String
+  {- Arity: 3, Strictness: <S,U><L,1*U><L,U>, Inline: [2],
+     Unfolding: (\ (ww :: GHC.Prim.Int#)
+                   (ww1 :: [HGit.Core.Types.PartialFilePath])
+                   (w :: GHC.Base.String) ->
+                 let {
+                   p :: GHC.Show.ShowS {- Arity: 1, Strictness: <L,U> -}
+                   = \ (x :: GHC.Base.String)[OneShot] ->
+                     GHC.CString.unpackAppendCString#
+                       HGit.Core.Merge.$fShowMergeViolation4
+                       (GHC.CString.unpackAppendCString#
+                          HGit.Core.Merge.$fShowMergeViolation3
+                          (let {
+                             s :: GHC.Base.String
+                             = GHC.CString.unpackAppendCString#
+                                 HGit.Core.Merge.$fShowMergeViolation2
+                                 x
+                           } in
+                           case ww1 of wild {
+                             [] -> GHC.CString.unpackAppendCString# GHC.Show.showList__4 s
+                             : x1 xs
+                             -> GHC.Types.:
+                                  @ GHC.Types.Char
+                                  GHC.Show.showList__3
+                                  (GHC.Types.:
+                                     @ GHC.Types.Char
+                                     GHC.Show.$fShow(,)3
+                                     (GHC.Show.showLitString
+                                        x1
+                                        (GHC.Types.:
+                                           @ GHC.Types.Char
+                                           GHC.Show.$fShow(,)3
+                                           (let {
+                                              lvl43 :: [GHC.Types.Char]
+                                              = GHC.Types.: @ GHC.Types.Char GHC.Show.showList__2 s
+                                            } in
+                                            letrec {
+                                              showl :: [[GHC.Types.Char]] -> GHC.Base.String
+                                                {- Arity: 1, Strictness: <S,1*U> -}
+                                              = \ (ds2 :: [[GHC.Types.Char]]) ->
+                                                case ds2 of wild1 {
+                                                  [] -> lvl43
+                                                  : y ys
+                                                  -> GHC.Types.:
+                                                       @ GHC.Types.Char
+                                                       GHC.Show.showList__1
+                                                       (GHC.Types.:
+                                                          @ GHC.Types.Char
+                                                          GHC.Show.$fShow(,)3
+                                                          (GHC.Show.showLitString
+                                                             y
+                                                             (GHC.Types.:
+                                                                @ GHC.Types.Char
+                                                                GHC.Show.$fShow(,)3
+                                                                (showl ys)))) }
+                                            } in
+                                            showl xs)))) }))
+                 } in
+                 case GHC.Prim.>=# ww 11# of lwild {
+                   DEFAULT -> p w
+                   1#
+                   -> GHC.Types.:
+                        @ GHC.Types.Char
+                        GHC.Show.$fShow(,)4
+                        (p (GHC.Types.: @ GHC.Types.Char GHC.Show.$fShow(,)2 w)) }) -}
+7164d1ec905bea3ab164681e5b509ca0
+  $w$sgo13 ::
+    HGit.Core.Types.PartialFilePath
+    -> Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a1
+    -> (# Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a1,
+          GHC.Maybe.Maybe a1,
+          Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a1 #)
+  {- Arity: 2, Strictness: <S,1*U><S,1*U>, Inline: [2] -}
+7935d51345815af80269ad8adf750ea1
+  $wcommitMerge ::
+    GHC.Base.Monad m =>
+    HGit.Core.Types.PutCapability m (HGit.Core.Types.Dir x)
+    -> Data.Functor.Foldable.Fix
+         (Data.Functor.Compose.Compose
+            (Data.Either.Either
+               (Data.Functor.Foldable.Fix
+                  (Data.Functor.Compose.Compose
+                     ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                     (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)))))
+            (HGit.Core.Types.Dir x))
+    -> m (Data.Functor.Foldable.Fix
+            (Data.Functor.Compose.Compose
+               ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+               (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))
+  {- Arity: 2,
+     Strictness: <L,U(U(U,U,U,U,U,U),C(C1(U)),A,A,A)><L,U(C(U))>,
+     Inline: [2],
+     Unfolding: (\ @ m :: Type -> Type
+                   @ x
+                   (w :: GHC.Base.Monad m)
+                   (w1 :: HGit.Core.Types.PutCapability m (HGit.Core.Types.Dir x)) ->
+                 let {
+                   $dApplicative :: GHC.Base.Applicative m = GHC.Base.$p1Monad @ m w
+                 } in
+                 Util.RecursionSchemes.cataM
+                   @ m
+                   @ (Data.Functor.Compose.Compose
+                        (Data.Either.Either
+                           (Data.Functor.Foldable.Fix
+                              (Data.Functor.Compose.Compose
+                                 ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                                 (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)))))
+                        (HGit.Core.Types.Dir x))
+                   @ (Data.Functor.Foldable.Fix
+                        (Data.Functor.Compose.Compose
+                           ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                           (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))
+                   w
+                   (HGit.Core.Merge.commitMerge2 @ x @ m)
+                   (\ (ds :: Data.Functor.Compose.Compose
+                               (Data.Either.Either
+                                  (Data.Functor.Foldable.Fix
+                                     (Data.Functor.Compose.Compose
+                                        ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                                        (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)))))
+                               (HGit.Core.Types.Dir x)
+                               (Data.Functor.Foldable.Fix
+                                  (Data.Functor.Compose.Compose
+                                     (Merkle.Functors.HashAnnotated
+                                        Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x))
+                                     (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))) ->
+                    case ds
+                           `cast`
+                         (Data.Functor.Compose.N:Compose[0]
+                              <Type>_N
+                              <Type>_N
+                              <Data.Either.Either
+                                 (Data.Functor.Foldable.Fix
+                                    (Data.Functor.Compose.Compose
+                                       ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                                       (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))>_R
+                              <HGit.Core.Types.Dir x>_N
+                              <Data.Functor.Foldable.Fix
+                                 (Data.Functor.Compose.Compose
+                                    (Merkle.Functors.HashAnnotated
+                                       Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x))
+                                    (Data.Functor.Compose.Compose
+                                       m (HGit.Core.Types.Dir x)))>_N) of wild {
+                      Data.Either.Left lmd
+                      -> GHC.Base.pure
+                           @ m
+                           $dApplicative
+                           @ (Data.Functor.Foldable.Fix
+                                (Data.Functor.Compose.Compose
+                                   ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                                   (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))
+                           lmd
+                      Data.Either.Right dir
+                      -> let {
+                           lvl2 :: m (HGit.Core.Types.Dir
+                                        x
+                                        (Data.Functor.Foldable.Fix
+                                           (Data.Functor.Compose.Compose
+                                              (Merkle.Functors.HashAnnotated
+                                                 Merkle.Types.IPFS.RawIPFSHash
+                                                 (HGit.Core.Types.Dir x))
+                                              (Data.Functor.Compose.Compose
+                                                 m (HGit.Core.Types.Dir x)))))
+                           = GHC.Base.pure
+                               @ m
+                               $dApplicative
+                               @ (HGit.Core.Types.Dir
+                                    x
+                                    (Data.Functor.Foldable.Fix
+                                       (Data.Functor.Compose.Compose
+                                          (Merkle.Functors.HashAnnotated
+                                             Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x))
+                                          (Data.Functor.Compose.Compose
+                                             m (HGit.Core.Types.Dir x)))))
+                               dir
+                         } in
+                         GHC.Base.>>=
+                           @ m
+                           w
+                           @ (HGit.Core.Types.Hash (HGit.Core.Types.Dir x))
+                           @ (Data.Functor.Foldable.Fix
+                                (Data.Functor.Compose.Compose
+                                   ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                                   (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))
+                           (case w1 of wild1 { Merkle.Store.PutCapability p ->
+                            p (case dir of ww { HGit.Core.Types.Dir ww1 ->
+                               HGit.Core.Types.Dir
+                                 @ x
+                                 @ (Merkle.Types.Hash
+                                      Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x))
+                                 (GHC.Base.map
+                                    @ (HGit.Core.Types.PartialFilePath,
+                                       HGit.Core.Types.FileTreeEntity
+                                         x
+                                         (Data.Functor.Foldable.Fix
+                                            (Data.Functor.Compose.Compose
+                                               (Merkle.Functors.HashAnnotated
+                                                  Merkle.Types.IPFS.RawIPFSHash
+                                                  (HGit.Core.Types.Dir x))
+                                               (Data.Functor.Compose.Compose
+                                                  m (HGit.Core.Types.Dir x)))))
+                                    @ (HGit.Core.Types.PartialFilePath,
+                                       HGit.Core.Types.FileTreeEntity
+                                         x
+                                         (Merkle.Types.Hash
+                                            Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x)))
+                                    (HGit.Core.Merge.commitMerge1 @ x @ m)
+                                    ww1) }) })
+                           (\ (dirHash :: HGit.Core.Types.Hash (HGit.Core.Types.Dir x)) ->
+                            GHC.Base.pure
+                              @ m
+                              $dApplicative
+                              @ (Data.Functor.Foldable.Fix
+                                   (Data.Functor.Compose.Compose
+                                      ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                                      (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))
+                              (dirHash,
+                               lvl2
+                                 `cast`
+                               (Sym (Data.Functor.Compose.N:Compose[0]
+                                         <Type>_N
+                                         <Type>_N
+                                         <m>_R
+                                         <HGit.Core.Types.Dir x>_N
+                                         <Data.Functor.Foldable.Fix
+                                            (Data.Functor.Compose.Compose
+                                               (Merkle.Functors.HashAnnotated
+                                                  Merkle.Types.IPFS.RawIPFSHash
+                                                  (HGit.Core.Types.Dir x))
+                                               (Data.Functor.Compose.Compose
+                                                  m (HGit.Core.Types.Dir x)))>_N)))
+                                `cast`
+                              (Sym (Data.Functor.Compose.N:Compose[0]
+                                        <Type>_N
+                                        <Type>_N
+                                        <(,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x))>_R
+                                        <Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)>_N
+                                        <Data.Functor.Foldable.Fix
+                                           (Data.Functor.Compose.Compose
+                                              (Merkle.Functors.HashAnnotated
+                                                 Merkle.Types.IPFS.RawIPFSHash
+                                                 (HGit.Core.Types.Dir x))
+                                              (Data.Functor.Compose.Compose
+                                                 m
+                                                 (HGit.Core.Types.Dir
+                                                    x)))>_N) ; Sym (Data.Functor.Foldable.N:Fix[0]
+                                                                        <Data.Functor.Compose.Compose
+                                                                           ((,)
+                                                                              (HGit.Core.Types.Hash
+                                                                                 (HGit.Core.Types.Dir
+                                                                                    x)))
+                                                                           (Data.Functor.Compose.Compose
+                                                                              m
+                                                                              (HGit.Core.Types.Dir
+                                                                                 x))>_N))) })) -}
+af9cc5b1c11bb109356f4f3752cc7570
+  $wmergeMerkleDirs ::
+    (GHC.Base.Monad m, GHC.Classes.Eq x) =>
+    GHC.Prim.ByteArray#
+    -> GHC.Prim.Int#
+    -> GHC.Prim.Int#
+    -> Data.Functor.Compose.Compose
+         m
+         (HGit.Core.Types.Dir x)
+         (Data.Functor.Foldable.Fix
+            (Data.Functor.Compose.Compose
+               (HGit.Core.Types.HashAnnotated (HGit.Core.Types.Dir x))
+               (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))
+    -> GHC.Prim.ByteArray#
+    -> GHC.Prim.Int#
+    -> GHC.Prim.Int#
+    -> Data.Functor.Compose.Compose
+         m
+         (HGit.Core.Types.Dir x)
+         (Data.Functor.Foldable.Fix
+            (Data.Functor.Compose.Compose
+               (HGit.Core.Types.HashAnnotated (HGit.Core.Types.Dir x))
+               (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))))
+    -> m (Data.Either.Either
+            HGit.Core.Merge.MergeViolation (HGit.Core.Merge.MergeResult m x))
+  {- Arity: 10,
+     Strictness: <L,U(1*U(1*U(C(C1(U)),A),A,A,A,A,A),C(C1(U)),A,C(U),A)><L,U(C(C1(U)),A)><S,U><S,U><S,U><L,U><S,U><S,U><S,U><L,U>,
+     Inline: [2] -}
+693b18ceba758d23960ebc6299f74f8f
+  $wpoly_go8 ::
+    GHC.Prim.Int#
+    -> Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a
+    -> [(HGit.Core.Types.PartialFilePath, a)]
+    -> Data.Map.Internal.Map HGit.Core.Types.PartialFilePath a
+  {- Arity: 3, Strictness: <L,U><S,1*U><S,1*U>, Inline: [2] -}
+d02ed847c8f23e41cbec723c31011a2a
+  type MergeResult (m :: Type -> Type) x =
+    Data.Functor.Foldable.Fix
+      (Data.Functor.Compose.Compose
+         (Data.Either.Either (HGit.Core.Types.LazyMerkleDir m x))
+         (HGit.Core.Types.Dir x))
+a7b3ecacc8941dc9b4c136c71a2a1643
+  data MergeViolation
+    = MergeViolation {mergeViolationPath :: [HGit.Core.Types.PartialFilePath]}
+bf4c0e82e7f8eb1e9a5e7daa057dcc50
+  commitMerge ::
+    (GHC.Base.Monad m, GHC.Classes.Eq x) =>
+    HGit.Core.Types.PutCapability m (HGit.Core.Types.Dir x)
+    -> HGit.Core.Merge.MergeResult m x
+    -> m (HGit.Core.Types.LazyMerkleDir m x)
+  {- Arity: 3,
+     Strictness: <L,U(U(U,U,U,U,U,U),C(C1(U)),A,A,A)><L,A><L,U(C(U))>,
+     Inline: [2],
+     Unfolding: InlineRule (3, True, True)
+                (\ @ m :: Type -> Type
+                   @ x
+                   (w :: GHC.Base.Monad m)
+                   (w1 :: GHC.Classes.Eq x)
+                   (w2 :: HGit.Core.Types.PutCapability m (HGit.Core.Types.Dir x)) ->
+                 HGit.Core.Merge.$wcommitMerge @ m @ x w w2) -}
+8c5e41dd9c7912b772fa4da1343ae772
+  commitMerge1 ::
+    (HGit.Core.Types.PartialFilePath,
+     HGit.Core.Types.FileTreeEntity
+       x
+       (Data.Functor.Foldable.Fix
+          (Data.Functor.Compose.Compose
+             (Merkle.Functors.HashAnnotated
+                Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x))
+             (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)))))
+    -> (HGit.Core.Types.PartialFilePath,
+        HGit.Core.Types.FileTreeEntity
+          x
+          (Merkle.Types.Hash
+             Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x)))
+  {- Arity: 1, HasNoCafRefs, Strictness: <S,1*U(U,1*U)>m,
+     Unfolding: (\ @ x
+                   @ m :: Type -> Type
+                   (b2 :: (HGit.Core.Types.PartialFilePath,
+                           HGit.Core.Types.FileTreeEntity
+                             x
+                             (Data.Functor.Foldable.Fix
+                                (Data.Functor.Compose.Compose
+                                   (Merkle.Functors.HashAnnotated
+                                      Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x))
+                                   (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)))))) ->
+                 case b2 of wild { (,) a2 a3 ->
+                 (a2,
+                  case a3 of wild1 {
+                    HGit.Core.Types.FileEntity a1
+                    -> HGit.Core.Types.FileEntity
+                         @ x
+                         @ (Merkle.Types.Hash
+                              Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x))
+                         a1
+                    HGit.Core.Types.DirEntity a1
+                    -> HGit.Core.Types.DirEntity
+                         @ x
+                         @ (Merkle.Types.Hash
+                              Merkle.Types.IPFS.RawIPFSHash (HGit.Core.Types.Dir x))
+                         (Merkle.Functors.htPointer
+                            @ (Type -> Type)
+                            @ Merkle.Types.IPFS.RawIPFSHash
+                            @ (HGit.Core.Types.Dir x)
+                            @ (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x))
+                            a1) }) }) -}
+4782a9f38cb347d2fa814c711044f5c7
+  commitMerge2 ::
+    Data.Traversable.Traversable
+      (Data.Functor.Compose.Compose
+         (Data.Either.Either
+            (Data.Functor.Foldable.Fix
+               (Data.Functor.Compose.Compose
+                  ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                  (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)))))
+         (HGit.Core.Types.Dir x))
+  {- Unfolding: (\ @ x @ m :: Type -> Type ->
+                 Data.Functor.Compose.$fTraversableCompose
+                   @ (Data.Either.Either
+                        (Data.Functor.Foldable.Fix
+                           (Data.Functor.Compose.Compose
+                              ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                              (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)))))
+                   @ (HGit.Core.Types.Dir x)
+                   (Data.Traversable.$fTraversableEither
+                      @ (Data.Functor.Foldable.Fix
+                           (Data.Functor.Compose.Compose
+                              ((,) (HGit.Core.Types.Hash (HGit.Core.Types.Dir x)))
+                              (Data.Functor.Compose.Compose m (HGit.Core.Types.Dir x)))))
+                   (HGit.Core.Types.$fTraversableDir @ x)) -}
+efc66f760c4efdbaacfe1a2938ba0d5d
+  mergeMerkleDirs ::
+    (GHC.Base.Monad m, GHC.Classes.Eq x) =>
+    HGit.Core.Types.LazyMerkleDir m x
+    -> HGit.Core.Types.LazyMerkleDir m x
+    -> m (Data.Either.Either
+            HGit.Core.Merge.MergeViolation (HGit.Core.Merge.MergeResult m x))
+  {- Arity: 4,
+     Strictness: <L,U(U(U(C(C1(U)),A),A,A,A,A,A),C(C1(U)),A,C(U),A)><L,U(C(C1(U)),A)><S(S(SSS)L),1*U(1*U(U,U,U),U)><S(S(SSS)L),1*U(1*U(U,U,U),U)>,
+     Inline: [2],
+     Unfolding: InlineRule (4, True, False)
+                (\ @ m :: Type -> Type
+                   @ x
+                   (w :: GHC.Base.Monad m)
+                   (w1 :: GHC.Classes.Eq x)
+                   (w2 :: HGit.Core.Types.LazyMerkleDir m x)
+                   (w3 :: HGit.Core.Types.LazyMerkleDir m x) ->
+                 case w2
+                        `cast`
+                      (Data.Functor.Foldable.N:Fix[0]
+                           <Data.Functor.Compose.Compose
+                              (HGit.Core.Types.HashAnnotated (HGit.Core.Types.Dir x))
+                              (Data.Functor.Compose.Compose
+                                 m (HGit.Core.Types.Dir x))>_N ; Data.Functor.Compose.N:Compose[0]
+                                                                     <Type>_N
+                                                                     <Type>_N
+                                                                     <HGit.Core.Types.HashAnnotated
+                                                                        (HGit.Core.Types.Dir x)>_R
+                                                                     <Data.Functor.Compose.Compose
+                                                                        m (HGit.Core.Types.Dir x)>_N
+                                                                     <Data.Functor.Foldable.Fix
+                                                                        (Data.Functor.Compose.Compose
+                                                                           (HGit.Core.Types.HashAnnotated
+                                                                              (HGit.Core.Types.Dir
+                                                                                 x))
+                                                                           (Data.Functor.Compose.Compose
+                                                                              m
+                                                                              (HGit.Core.Types.Dir
+                                                                                 x)))>_N) of ww { (,) ww1 ww2 ->
+                 case ww1
+                        `cast`
+                      (Data.Functor.Const.N:Const[0]
+                           <Type -> Type>_N
+                           <Merkle.Types.IPFS.RawIPFSHash>_R
+                           <HGit.Core.Types.Dir
+                              x>_P ; Merkle.Types.IPFS.N:RawIPFSHash[0]) of ww3 { Data.Text.Internal.Text ww4 ww5 ww6 ->
+                 case w3
+                        `cast`
+                      (Data.Functor.Foldable.N:Fix[0]
+                           <Data.Functor.Compose.Compose
+                              (HGit.Core.Types.HashAnnotated (HGit.Core.Types.Dir x))
+                              (Data.Functor.Compose.Compose
+                                 m (HGit.Core.Types.Dir x))>_N ; Data.Functor.Compose.N:Compose[0]
+                                                                     <Type>_N
+                                                                     <Type>_N
+                                                                     <HGit.Core.Types.HashAnnotated
+                                                                        (HGit.Core.Types.Dir x)>_R
+                                                                     <Data.Functor.Compose.Compose
+                                                                        m (HGit.Core.Types.Dir x)>_N
+                                                                     <Data.Functor.Foldable.Fix
+                                                                        (Data.Functor.Compose.Compose
+                                                                           (HGit.Core.Types.HashAnnotated
+                                                                              (HGit.Core.Types.Dir
+                                                                                 x))
+                                                                           (Data.Functor.Compose.Compose
+                                                                              m
+                                                                              (HGit.Core.Types.Dir
+                                                                                 x)))>_N) of ww7 { (,) ww8 ww9 ->
+                 case ww8
+                        `cast`
+                      (Data.Functor.Const.N:Const[0]
+                           <Type -> Type>_N
+                           <Merkle.Types.IPFS.RawIPFSHash>_R
+                           <HGit.Core.Types.Dir
+                              x>_P ; Merkle.Types.IPFS.N:RawIPFSHash[0]) of ww10 { Data.Text.Internal.Text ww11 ww12 ww13 ->
+                 HGit.Core.Merge.$wmergeMerkleDirs
+                   @ m
+                   @ x
+                   w
+                   w1
+                   ww4
+                   ww5
+                   ww6
+                   ww2
+                   ww11
+                   ww12
+                   ww13
+                   ww9 } } } }) -}
+a7b3ecacc8941dc9b4c136c71a2a1643
+  mergeViolationPath ::
+    HGit.Core.Merge.MergeViolation -> [HGit.Core.Types.PartialFilePath]
+  RecSel Left HGit.Core.Merge.MergeViolation
+  {- Arity: 1, HasNoCafRefs, Strictness: <S(S),1*U(1*U)>,
+     Unfolding: InlineRule (1, True, False)
+                (\ (ds :: HGit.Core.Merge.MergeViolation) ->
+                 case ds of wild { HGit.Core.Merge.MergeViolation ds1 -> ds1 }) -}
+instance GHC.Classes.Eq [HGit.Core.Merge.MergeViolation]
+  = HGit.Core.Merge.$fEqMergeViolation
+instance GHC.Show.Show [HGit.Core.Merge.MergeViolation]
+  = HGit.Core.Merge.$fShowMergeViolation
+"SPEC/HGit.Core.Merge fromList @ PartialFilePath _" [orphan] forall @ a
+                                                                    ($dOrd :: GHC.Classes.Ord
+                                                                                HGit.Core.Types.PartialFilePath)
+  Data.Map.Strict.Internal.fromList @ [GHC.Types.Char] @ a $dOrd
+  = HGit.Core.Merge.$sfromList @ a
+trusted: none
+require own pkg trusted: False
+module header:
+  Nothing
+declaration docs:
+arg docs:
+
