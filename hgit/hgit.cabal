@@ -24,7 +24,7 @@ library
       Paths_hgit
   hs-source-dirs:
       src
-  default-extensions: DerivingStrategies DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DataKinds FlexibleContexts FlexibleInstances LambdaCase KindSignatures NoStarIsType OverloadedStrings PolyKinds ScopedTypeVariables TupleSections StandaloneDeriving TemplateHaskell TypeApplications TypeOperators
+  default-extensions: DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DataKinds FlexibleContexts FlexibleInstances LambdaCase KindSignatures OverloadedStrings PolyKinds ScopedTypeVariables TupleSections StandaloneDeriving TemplateHaskell TypeApplications TypeOperators
   ghc-options: -Wall -Werror
   build-depends:
       aeson
