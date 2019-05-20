@@ -1,11 +1,5 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.1.
---
--- see: https://github.com/sol/hpack
---
--- hash: f876f6a8480800703330d12d278f81c0cb75649972425e3a52bc9592474418b5
-
 name:           hgit
 version:        0.1.0.0
 synopsis:       merkle all the things
@@ -47,35 +41,35 @@ library
     , transformers
   default-language: Haskell2010
 
-test-suite spec
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      HGit.Core.DiffSpec
-      HGit.Core.MergeSpec
-      HGit.Core.TestUtils
-      Paths_hgit
-  hs-source-dirs:
-      test
-  default-extensions: DerivingStrategies DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DataKinds FlexibleContexts FlexibleInstances LambdaCase KindSignatures NoStarIsType OverloadedStrings PolyKinds ScopedTypeVariables TupleSections StandaloneDeriving TemplateHaskell TypeApplications TypeOperators
-  ghc-options: -Wall -Werror
-  build-tool-depends:
-      hspec-discover:hspec-discover
-  build-depends:
-      aeson
-    , base >=4.8
-    , bifunctors
-    , bytestring
-    , containers
-    , deriving-compat
-    , hedgehog
-    , hgit
-    , hspec
-    , merkle-schemes
-    , mtl
-    , recursion-schemes
-    , safe-exceptions
-    , temporary
-    , text
-    , transformers
-  default-language: Haskell2010
+-- test-suite spec
+--   type: exitcode-stdio-1.0
+--   main-is: Spec.hs
+--   other-modules:
+--       HGit.Core.DiffSpec
+--       HGit.Core.MergeSpec
+--       HGit.Core.TestUtils
+--       Paths_hgit
+--   hs-source-dirs:
+--       test
+--   default-extensions: DerivingStrategies DeriveFunctor DeriveFoldable DeriveGeneric DeriveTraversable DataKinds FlexibleContexts FlexibleInstances LambdaCase KindSignatures NoStarIsType OverloadedStrings PolyKinds ScopedTypeVariables TupleSections StandaloneDeriving TemplateHaskell TypeApplications TypeOperators
+--   ghc-options: -Wall -Werror
+--   build-tool-depends: -- TODO REMOVE???
+--       hspec-discover:hspec-discover
+--   build-depends:
+--       aeson
+--     , base >=4.8
+--     , bifunctors
+--     , bytestring
+--     , containers
+--     , deriving-compat
+--     , hedgehog
+--     , hgit
+--     , hspec
+--     , merkle-schemes
+--     , mtl
+--     , recursion-schemes
+--     , safe-exceptions
+--     , temporary
+--     , text
+--     , transformers
+--   default-language: Haskell2010
