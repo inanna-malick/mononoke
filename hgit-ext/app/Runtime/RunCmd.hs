@@ -4,7 +4,6 @@ module Runtime.RunCmd where
 import           Control.Monad.Trans.Class
 import           Control.Monad.Reader
 import qualified Data.List as L
-import           Data.List.NonEmpty
 import qualified Data.Map as M
 import qualified System.Directory as Dir
 --------------------------------------------
@@ -25,8 +24,9 @@ import           Merkle.Store.Deref
 
 initRepo :: IPFSNode -> IO ()
 initRepo ipfsNode = do
-  nullCommit <- (unPutCapability $ snd $ ipfsStore ipfsNode) NullCommit
-  writeState $ initialRepoState nullCommit
+  nullRootDirHash <- (unPutCapability $ snd $ ipfsStore ipfsNode) (Dir [])
+  nullCommitHash  <- (unPutCapability $ snd $ ipfsStore ipfsNode) (Commit "init" nullRootDirHash [])
+  writeState $ initialRepoState nullCommitHash
 
 checkoutBranch :: BranchName -> ReaderT (RepoCaps IO) IO (Maybe RepoState)
 checkoutBranch bn = do
@@ -43,10 +43,9 @@ checkoutBranch bn = do
       pure Nothing
     else do
       currentCommit <- asks (currentBranch . rcState) >>= getBranch >>= sDeref' (fst commitStore)
-      topLevelCurrentDir <- commitRoot currentCommit >>= sDeref' (fst dirStore)
+      topLevelCurrentDir <- sDeref' (fst dirStore) $ commitRootDir currentCommit
 
-      currentCommitRootDir <- commitRoot targetCommit
-      setDirTo topLevelCurrentDir currentCommitRootDir
+      setDirTo topLevelCurrentDir $ commitRootDir targetCommit
 
       asks (Just . (\r -> r { currentBranch = bn
                             }
@@ -97,20 +96,20 @@ mkMergeCommit targetBranch msg = do
       targetCommitHash  <- getBranch targetBranch
       currentCommitHash <- asks (currentBranch . rcState) >>= getBranch
 
-      currentCommitRootDir <- sDeref' (fst commitStore) currentCommitHash >>= commitRoot
-      targetCommitRootDir  <- sDeref' (fst commitStore) targetCommitHash >>= commitRoot
+      currentCommit <- sDeref' (fst commitStore) currentCommitHash
+      targetCommit  <- sDeref' (fst commitStore) targetCommitHash
 
-      mergeRes <- mergeMerkleDirs (lazyDeref' (fst dirStore) currentCommitRootDir)
-                                  (lazyDeref' (fst dirStore) targetCommitRootDir)
+      mergeRes <- mergeMerkleDirs (lazyDeref' (fst dirStore) $ commitRootDir currentCommit)
+                                  (lazyDeref' (fst dirStore) $ commitRootDir targetCommit)
 
       case mergeRes of
         Left err -> liftIO . fail $ "merge nonviable due to: " ++ show err
         Right rootDir'-> do
           rootDir <- commitMerge (snd dirStore) rootDir'
-          let commit = Commit msg (htPointer rootDir) $ currentCommitHash :| [targetCommitHash]
+          let commit = Commit msg (htPointer rootDir) $ [currentCommitHash, targetCommitHash]
           commitHash <- (unPutCapability $ snd commitStore) commit
 
-          topLevelCurrentDir <- sDeref' (fst dirStore) currentCommitRootDir
+          topLevelCurrentDir <- sDeref' (fst dirStore) $ commitRootDir currentCommit
 
           setDirTo topLevelCurrentDir $ htPointer rootDir
 
@@ -123,10 +122,10 @@ getDiff bn1 bn2 = do
     commitStore <- asks (liftStore lift . _commitStore . rcStore)
     dirStore <- asks (liftStore lift . _dirStore . rcStore)
 
-    commit1RootDir <- getBranch bn1 >>= sDeref' (fst commitStore) >>= commitRoot
-    commit2RootDir <- getBranch bn2 >>= sDeref' (fst commitStore) >>= commitRoot
-    diffs     <- diffMerkleDirs (lazyDeref' (fst dirStore) commit1RootDir)
-                                (lazyDeref' (fst dirStore) commit2RootDir)
+    commit1 <- getBranch bn1 >>= sDeref' (fst commitStore)
+    commit2 <- getBranch bn2 >>= sDeref' (fst commitStore)
+    diffs     <- diffMerkleDirs (lazyDeref' (fst dirStore) $ commitRootDir commit1)
+                                (lazyDeref' (fst dirStore) $ commitRootDir commit2)
     _ <- traverse printDiff diffs
     pure Nothing
 
@@ -164,15 +163,11 @@ status = do
 
   strictCurrentState  <- liftIO $ readTree baseDir
 
-  -- FIXME: need to actually upload here to get IPFS hashes, currently. Seems inefficent
+  -- FIXME: need to actually upload current state here to get IPFS hashes. Seems inefficent
   currentState <- bitraverseFix (uploadDeep (snd blobStore)) strictCurrentState
               >>= uploadDeep (snd dirStore)
 
-
-  -- FIXME: need to upload a null dir to get that thing's hash, should have null/0 hash case
-  commitRootDir <- commitRoot currentCommit
-
-  diffMerkleDirs (lazyDeref' (fst dirStore) commitRootDir)
+  diffMerkleDirs (lazyDeref' (fst dirStore) $ commitRootDir currentCommit)
                  (lazyDeref' (fst dirStore) currentState)
 
 
@@ -198,11 +193,3 @@ setDirTo topLevelCurrentDir targetDir = do
   x' <- bitraverseFix (fmap stripTags . strictDeref . lazyDeref' (fst blobStore)) x
 
   writeTree baseDir x'
-
-
-commitRoot
-  :: Monad m -- using monad fail <- FIXME
-  => HashableCommit x
-  -> m (Hash HashableDir)
-commitRoot (Commit _ x _) = pure x
-commitRoot NullCommit     = fail "can't get commit root dir for Null Commit" -- FIXME

@@ -8,7 +8,6 @@ import qualified Data.Aeson as AE
 import           Data.Bifunctor.TH
 import           Data.Eq.Deriving
 import           Data.Functor.Compose
-import           Data.List.NonEmpty (NonEmpty, toList)
 import qualified Data.Map.Strict as Map
 import           GHC.Generics
 import           Text.Show.Deriving
@@ -108,7 +107,12 @@ instance AE.ToJSON1 (Dir (Hash (Blob)))
 instance AE.FromJSON1 (Dir (Hash (Blob)))
 
 
-data Commit a b = NullCommit | Commit String a (NonEmpty b)
+data Commit a b
+  = Commit
+  { commitMessage :: String
+  , commitRootDir :: a
+  , commitParents :: [b]
+  }
   deriving  (Eq, Ord, Functor, Foldable, Traversable, Generic1)
 
 $(deriveBifoldable    ''Commit)
@@ -123,8 +127,7 @@ $(deriveEq1   ''Commit)
 type HashableCommit = Commit (Hash HashableDir)
 
 instance ExtractKeys HashableCommit where
-  extractRawKeys  NullCommit = []
-  extractRawKeys (Commit _msg (Const rh) rhs) = [rh] ++ (fmap getConst $ toList rhs)
+  extractRawKeys (Commit _msg (Const rh) rhs) = [rh] ++ (fmap getConst rhs)
 
 
 instance AE.ToJSON1   HashableCommit
