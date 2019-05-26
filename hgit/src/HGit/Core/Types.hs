@@ -41,11 +41,15 @@ type PartialFilePath = String
 type BranchName      = String
 type CommitMessage   = String
 
+-- NOTE: use another format, linked list breaks constant time seek/lookup at position
 data Blob a
   -- NOTE: using String instead of Bytestring to allow for easy examination of serialized files
   = Chunk String a
   | Empty
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic1)
+
+$(deriveShow1 ''Blob)
+$(deriveEq1   ''Blob)
 
 instance ExtractKeys Blob where
   extractRawKeys (Chunk _x (Const rh)) = [rh]

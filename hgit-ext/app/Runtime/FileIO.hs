@@ -53,6 +53,7 @@ readTree = anaM alg
   where
     alg :: CoAlgebraM IO (Dir (Fix Blob)) FilePath
     alg path = do
+          putStrLn $ "read dir at: " ++ path
           dirContents <- Dir.getDirectoryContents path
           let dirContents'
                 = fmap (\x -> path ++ "/" ++ x)
@@ -66,6 +67,7 @@ readTree = anaM alg
       isFile <- Dir.doesFileExist p
       if isFile
         then (justTheName p,) . FileEntity <$> withFile p ReadMode readBlob
+        -- then (justTheName p,) . FileEntity . Fix . (\x -> Chunk x (Fix Empty)) <$> readFile p
         else do
           isDir <- Dir.doesDirectoryExist p
           if isDir
@@ -82,8 +84,27 @@ readBlob
   -> IO (Fix Blob)
 readBlob = anaM alg
   where
+    -- totally arbitrary and artificial, chosen based on what looks good when rendering
+    blobSizeInLines :: Integer
+    blobSizeInLines = 64
+
+    -- FIXME: totally screws up performance as compared to just reading bytestrings, but
+    --        this is a demo so that's low priority for now. What's high priority? you
+    --        guessed it, having blobs that render nicely when one is browsing raw files
+    --        in talk/demo context. Punting on dealing w/ unicode chars broken by blob
+    --        boundaries comma lmao FIXME FIXME FIXME
+    readNLines h n | n <= 0 = pure []
+                   | otherwise = do
+      isEof <- hIsEOF h
+      if isEof then pure []
+               else do
+                 nextLine <- hGetLine h -- linear types would be nice here
+                 ([nextLine] ++) <$> readNLines h (n - 1)
+
+
     alg :: CoAlgebraM IO Blob Handle
     alg h = do
-      isEof <- hIsEOF h
-      if isEof then pure Empty
-               else (flip Chunk h <$> hGetLine h) -- linear types would be nice here
+      blobLines <- readNLines h blobSizeInLines -- FIXME: janky hax
+      case blobLines of
+        [] -> pure Empty
+        ls -> pure $ Chunk (unlines ls) h

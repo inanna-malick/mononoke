@@ -3,6 +3,7 @@ module Runtime.RunCmd where
 --------------------------------------------
 import           Control.Monad.Trans.Class
 import           Control.Monad.Reader
+import           Data.Aeson (FromJSON1, ToJSON1)
 import qualified Data.List as L
 import qualified Data.Map as M
 import qualified System.Directory as Dir
@@ -19,13 +20,19 @@ import           Util.RecursionSchemes
 import           Merkle.Functors
 import           Merkle.Store (liftStore, uploadDeep)
 import           Merkle.Store.IPFS
+import qualified Merkle.Store.MockIPFS as MockIPFS
 import           Merkle.Store.Deref
+import           Merkle.Types.IPFS (ExtractKeys)
 --------------------------------------------
 
-initRepo :: IPFSNode -> IO ()
+initRepo :: IPFSNode `Either` MockIPFSNode -> IO ()
 initRepo ipfsNode = do
-  nullRootDirHash <- (unPutCapability $ snd $ ipfsStore ipfsNode) (Dir [])
-  nullCommitHash  <- (unPutCapability $ snd $ ipfsStore ipfsNode) (Commit "init" nullRootDirHash [])
+  let mkStore :: forall f. ToJSON1 f => FromJSON1 f => ExtractKeys f => ShallowStore IO f
+      mkStore = case ipfsNode of
+        Left node -> ipfsStore node
+        Right mockNodeFp -> MockIPFS.mockIpfsStore mockNodeFp
+  nullRootDirHash <- (unPutCapability $ snd $ mkStore) (Dir [])
+  nullCommitHash  <- (unPutCapability $ snd $ mkStore) (Commit "init" nullRootDirHash [])
   writeState $ initialRepoState nullCommitHash
 
 checkoutBranch :: BranchName -> ReaderT (RepoCaps IO) IO (Maybe RepoState)

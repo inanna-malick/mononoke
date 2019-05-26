@@ -1,5 +1,10 @@
 
-module Runtime.Commands (MetaCommand(..), RepoCommand(..), parse) where
+module Runtime.Commands
+  ( MockIPFSNode
+  , MetaCommand(..)
+  , RepoCommand(..)
+  , parse
+  ) where
 
 import Options.Applicative
 import Data.Semigroup ((<>))
@@ -7,8 +12,9 @@ import Data.Semigroup ((<>))
 import HGit.Core.Types
 import Merkle.Store.IPFS
 
+type MockIPFSNode = FilePath
 
-parse :: IO (IPFSNode, MetaCommand `Either` RepoCommand)
+parse :: IO (IPFSNode `Either` MockIPFSNode, MetaCommand `Either` RepoCommand)
 parse = execParser opts
   where
     opts = info (parser <**> helper)
@@ -34,9 +40,9 @@ data RepoCommand
   | GetStatus -- get status of current repo (diff current state vs. that of last commit on branch)
   | GetDiff BranchName BranchName
 
-parser :: Parser (IPFSNode, MetaCommand `Either` RepoCommand)
+parser :: Parser (IPFSNode `Either` MockIPFSNode, MetaCommand `Either` RepoCommand)
 parser
-  = (,) <$> ipfsNodeParser <*> subparser
+  = (,) <$> ipfsNodeParser' <*> subparser
       ( command "checkout" (info (fmap Right checkoutOptions) ( progDesc "checkout a branch"     ))
       <> command "branch"   (info (fmap Right branchOptions)   ( progDesc "create a new branch"   ))
       <> command "init"     (info (fmap Left  initROptions)    ( progDesc "create a new repo"     ))
@@ -87,6 +93,25 @@ parser
           ( metavar "AFTER"
          <> help "'after' branch name"
           )
+
+
+ipfsNodeParser' :: Parser (IPFSNode `Either` MockIPFSNode)
+ipfsNodeParser' = resolve <$> bothParser
+  where
+    bothParser = (,) <$> ipfsNodeParser <*> (optional filePathParser)
+
+    -- first option not optional, b/c all fields there have defaults
+    resolve (ipfs,  Nothing) = Left ipfs
+    resolve (_ipfs, Just fp) = Right fp
+
+    filePathParser :: Parser FilePath
+    filePathParser =
+             strOption
+                ( long "mock-ipfs-path"
+               <> short 'f'
+               <> metavar "MOCK-IPFS-FP"
+               <> help "mock ipfs mode file path"
+                )
 
 ipfsNodeParser :: Parser IPFSNode
 ipfsNodeParser = IPFSNode
