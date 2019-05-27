@@ -4,16 +4,8 @@ packages:
 - hgit-ext
 
 extra-deps:
-# - github: pkinsky/merkle-schemes
-#   commit: d55bac08189b0209725eb2cb694ca2a849c6ea47
-#   subdirs:
-#     - merkle-schemes
-#     - merkle-schemes-ext
-- ../merkle-schemes/merkle-schemes
-- ../merkle-schemes/merkle-schemes-ext
-
-# TODO: fix up hash gen to not req all this stuff
-- github: multiformats/haskell-multihash
-  commit: a04db45dff518fe5bd938a51a3ae62ee12a0c90f
-- base58-bytestring-0.1.0@sha256:a1da72ee89d5450bac1c792d9fcbe95ed7154ab7246f2172b57bd4fd9b5eab79
-- cryptonite-0.24@sha256:4f0865ceb2b6e99f37cb2243831a63ac76b53960c20c75f890f729635551c7d7
+- github: pkinsky/merkle-schemes
+  commit: 6ab1e4cdfabf1dc6117b6c9e1b10c1770b783672
+  subdirs:
+    - merkle-schemes
+    - merkle-schemes-ext

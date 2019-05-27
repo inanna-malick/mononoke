@@ -9,7 +9,6 @@ import           Data.Bitraversable (bitraverse)
 import qualified Data.List as List
 import           Data.Foldable (traverse_)
 import qualified System.Directory as Dir
-import           System.IO
 --------------------------------------------
 import           Util.RecursionSchemes
 import           HGit.Core.Types
@@ -26,8 +25,8 @@ writeTree
 writeTree outdir tree = evalStateT (cataM writeDir tree) [outdir]
   where
     writeFileChunk :: AlgebraM (StateT [FilePath] m) Blob ()
-    writeFileChunk (Empty) = pure ()
-    writeFileChunk (Chunk contents _) =
+    writeFileChunk (ChunkList _) = pure () -- no work here
+    writeFileChunk (Chunk contents) = -- NOTE: should probably confirm this is an in-order traversal, but IIRC it is
       gets (List.intercalate "/" . reverse) >>=  liftIO . flip appendFile contents
 
     writeDir :: AlgebraM (StateT [FilePath] m) (Dir (Fix Blob)) ()
@@ -66,7 +65,7 @@ readTree = anaM alg
     categorize p = do
       isFile <- Dir.doesFileExist p
       if isFile
-        then (justTheName p,) . FileEntity <$> withFile p ReadMode readBlob
+        then (justTheName p,) . FileEntity <$> readBlob p
         -- then (justTheName p,) . FileEntity . Fix . (\x -> Chunk x (Fix Empty)) <$> readFile p
         else do
           isDir <- Dir.doesDirectoryExist p
@@ -80,31 +79,25 @@ justTheName = reverse . takeWhile (/= '/') . reverse
 
 
 readBlob
-  :: Handle
+  :: FilePath
   -> IO (Fix Blob)
-readBlob = anaM alg
+readBlob p = do
+    b <- readFile p
+    pure . Fix
+         . ChunkList
+         $ fmap (Fix . Chunk . unlines)
+                (breakLines blobSizeInLines $ lines b)
+
   where
     -- totally arbitrary and artificial, chosen based on what looks good when rendering
-    blobSizeInLines :: Integer
-    blobSizeInLines = 64
-
     -- FIXME: totally screws up performance as compared to just reading bytestrings, but
     --        this is a demo so that's low priority for now. What's high priority? you
     --        guessed it, having blobs that render nicely when one is browsing raw files
     --        in talk/demo context. Punting on dealing w/ unicode chars broken by blob
     --        boundaries comma lmao FIXME FIXME FIXME
-    readNLines h n | n <= 0 = pure []
-                   | otherwise = do
-      isEof <- hIsEOF h
-      if isEof then pure []
-               else do
-                 nextLine <- hGetLine h -- linear types would be nice here
-                 ([nextLine] ++) <$> readNLines h (n - 1)
+    -- NOTE: this makes my partner groan when I describe it to them and is just, like
+    --       terrible. so terrible. Please fix when it seems fun/interesting to do so
+    blobSizeInLines = 32
 
-
-    alg :: CoAlgebraM IO Blob Handle
-    alg h = do
-      blobLines <- readNLines h blobSizeInLines -- FIXME: janky hax
-      case blobLines of
-        [] -> pure Empty
-        ls -> pure $ Chunk (unlines ls) h
+    breakLines _n [] = []
+    breakLines n xs  = take n xs : breakLines n (drop n xs)

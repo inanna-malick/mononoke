@@ -44,16 +44,17 @@ type CommitMessage   = String
 -- NOTE: use another format, linked list breaks constant time seek/lookup at position
 data Blob a
   -- NOTE: using String instead of Bytestring to allow for easy examination of serialized files
-  = Chunk String a
-  | Empty
+  -- NOTE: this absolutely needs to change but this is a fun project and it's low on my priority queue
+  = Chunk String
+  | ChunkList [a]
   deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic1)
 
 $(deriveShow1 ''Blob)
 $(deriveEq1   ''Blob)
 
 instance ExtractKeys Blob where
-  extractRawKeys (Chunk _x (Const rh)) = [rh]
-  extractRawKeys  Empty                = []
+  extractRawKeys (Chunk _x) = []
+  extractRawKeys (ChunkList hs) = fmap getConst hs
 
 instance AE.ToJSON1 Blob
 instance AE.FromJSON1 Blob
