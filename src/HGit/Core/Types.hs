@@ -83,6 +83,7 @@ data M a i where
 
 -- Lazy Merkle M
 type LMM m = Tagged Hash `HCompose` Compose m `HCompose` M
+type LMMT m = Term (LMM m)
 
 -- Merkle M with type level distinction betweeen preexisting persisted content that may be expanded (LMM) and fresh content that has not been persisted (just M)
 -- goal is to model applying multiple rounds of updates/changes to a structure
