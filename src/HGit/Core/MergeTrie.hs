@@ -39,19 +39,17 @@ data NodeDeleted = NodeDeleted
 -- TODO: need to account for unexpanded directory content
 data MergeTrie m a
   = MergeTrie
-  -- NOTE: is proposed only file hashes? my gut says no, has to be no, to track this merge parent case:
-  -- /foo <- file
-  -- /foo/bar <- dir with file in it
-  -- actually nvm, that would be
-  -- MergeTrie { [Hash foo], [], [(foo, MergeTrie { [Hash bar], [], []} )] }
-  -- so I guess yes - makes sense, too, file metadata is needed, dir structure is in MergeTrie
-  { mtFilesAtPath :: [( LMMT m 'FileTree -- hash of file
+  { -- | all files at this path
+    mtFilesAtPath :: [( LMMT m 'FileTree -- hash of file
                       , LMMT m 'BlobT    -- file blob
                       , LMMT m 'CommitT  -- last modified in this commit
-                      , LMMT m 'FileTree    -- previous incarnation
+                      , LMMT m 'FileTree -- previous incarnation
                      )]
-  , mtChanges  :: [ChangeType Hash] -- all changes addressed to this node
-  , mtChildren :: Map Path ((LMMT m 'FileTree) `Either` a)        -- children with addressed changes
+  -- | all changes at this path
+  , mtChanges  :: [ChangeType Hash]
+  -- | a map of child entities, if any, each either a recursion
+  --   or a pointer to some uncontested extant file tree entity
+  , mtChildren :: Map Path ((LMMT m 'FileTree) `Either` a)
   }
   deriving (Functor, Foldable, Traversable)
 
