@@ -55,8 +55,8 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
-    - HGit.Core.Diff
-    - HGit.Core.Merge
+    - HGit.Core.Snapshot
+    - HGit.Core.MergeTrie
     - HGit.Core.Types
     - HGit.Runtime.FileIO
     - HGit.Runtime.Capabilities

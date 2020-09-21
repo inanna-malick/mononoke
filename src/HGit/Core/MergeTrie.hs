@@ -14,6 +14,7 @@ import           Data.Functor.Compose
 import           Data.List.NonEmpty (NonEmpty, toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import           Data.Map.Merge.Strict
 import           Data.Text (Text)
 import           Data.Text.Encoding (decodeLatin1, encodeUtf8)
 import           Data.Singletons.TH
@@ -66,24 +67,62 @@ data MergeTrie m a
 --      specifically - commit last modified in (maybe unchanged for some merge output?)
 --                   - last version of file (maybe multiple for multi-way merges)
 
--- fold a snapshot into a mergetrie
--- buildMergeTrie :: Term (LMM m) 'FileTree -> Fix (MergeTrie m) -> m (Fix (MergeTrie m))
--- buildMergeTrie lmm mt = undefined
+-- | fold a snapshot into a mergetrie
+-- TODO: use to write diff, maybe - resulting mergetrie only expands as far as diff boundary
+buildMergeTrie :: forall m. Monad m => Fix (MergeTrie m) -> LMMT m 'FileTree -> m (Fix (MergeTrie m))
+buildMergeTrie mt = para f mt
+  where f :: MergeTrie m ( Fix (MergeTrie m)
+                         , LMMT m 'FileTree -> m (Fix (MergeTrie m))
+                         )
+          -> LMMT m 'FileTree
+          -> m (Fix (MergeTrie m))
+        f mt lmmt@(Term (HC (Tagged hash (HC (Compose m))))) = do
+              m' <- m
+              case m' of
+                Dir children -> do
+                  let lmmtOnly = traverseMissing $ \_ ft -> pure $ Left ft
+                      -- presentInBoth :: WhenMatched m Path
+                      --   ( (LMMT m 'FileTree)
+                      --     `Either` ( Fix (MergeTrie m)
+                      --              , LMMT m 'FileTree -> m (Fix (MergeTrie m))
+                      --              )
+                      --   )
+                      --   (LMMT m 'FileTree)
+                      --   ((LMMT m 'FileTree) `Either` Fix (MergeTrie m))
+                      presentInBoth = zipWithAMatched $ \_ ft e -> case e of
+                        Left ft' -> do -- two lmmt 'FileTree nodes, zip if different
+                          -- not an elegant solution, but should be valid
+                          mt1 <- buildMergeTrie emptyMergeTrie ft
+                          mt2 <- buildMergeTrie emptyMergeTrie ft'
+                          pure $ Right mt2
+                        -- ^^ NOTE: hey I was right, this is a superset of `diff`
+                        Right (_,next) -> Right <$> next ft
+                      mtOnly = traverseMissing $ \_ e -> pure $ fmap fst e
+
+                  mtChildren'
+                    <- mergeA lmmtOnly mtOnly presentInBoth children (mtChildren mt)
+
+                  let mt' = MergeTrie
+                          { mtFilesAtPath = mtFilesAtPath mt
+                          , mtChanges = mtChanges mt
+                          , mtChildren = mtChildren'
+                          }
+
+                  pure $ Fix mt'
+                File blob lastMod prev -> do
+                  let mt' = MergeTrie
+                          { mtFilesAtPath = mtFilesAtPath mt ++ [(lmmt, blob, lastMod, prev)]
+                          , mtChanges = mtChanges mt
+                          , mtChildren = fmap fst <$> mtChildren mt
+                          }
+                  pure $ Fix mt'
+
 
 -- - compare hashes, return input merge trie if no change
 
 -- empty mergetrie
 emptyMergeTrie :: Fix (MergeTrie m)
 emptyMergeTrie = Fix $ MergeTrie [] [] Map.empty
-
-
--- Plan: first pass is n-way lazy diff. outputs above structure, with diff > initial ChangeType annotations
--- Q: can this represent file>dir and dir>file changes in merge? how to choose which is cannonical?
--- ANS: dir version is cannonical b/c needs recursive structure, file version represented as dir structure with list of add operations
--- ANS: does this imply that it should be _just_ a dir tree annotated with file add operations?
--- ANS: I think yes, it does
--- ANS: this also, I think, means it can be just Compose and not HCompose
---      file is non-recursive so can be just 'Add Hash'
 
 
 -- Q: how to handle delete -> create -> delete change seq?
