@@ -3,34 +3,32 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module HGit.Core.Types where
 
+
+import Data.Aeson.GADT.TH
+import Data.Aeson as AE
+import GHC.Generics
 --------------------------------------------
-import           Data.Aeson as AE
-import qualified Data.ByteString as B
-import           Data.ByteString (ByteString)
 import           Data.Functor.Const (Const(..))
+import qualified Data.ByteString.Lazy as LB
 import           Data.Functor.Compose
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (NonEmpty(..), toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Text (Text)
-import           Data.Text.Encoding (decodeLatin1, encodeUtf8)
 import           Data.Singletons.TH
-import           GHC.Generics
 --------------------------------------------
+import           Merkle.Types.BlakeHash
 import           HGit.Render.Utils
-import           Merkle.Higher.Types hiding (Hash)
-import           Merkle.Higher.Store
-import           Merkle.Higher.Store.Deref
-import           Util.RecursionSchemes as R
 import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
-type Hash = Const () -- TODO refactor/rewrite hrecrusion schemes framework stuff
 
+-- TODO refactor/rewrite hrecrusion schemes framework stuff - this is from other pkg
+type Hash = Const RawBlakeHash
 
 $(singletons [d|
   data MTag = SnapshotT | FileTree | CommitT | BlobT
@@ -48,21 +46,20 @@ data Change a
   = Change
   { _path::   NonEmpty Path
   , _change:: ChangeType a
-  }
+  } deriving (Generic)
+
+instance ToJSON (a 'BlobT) => ToJSON (Change a) where
+    toEncoding = genericToEncoding defaultOptions
+instance FromJSON (a 'BlobT) => FromJSON (Change a)
 
 data ChangeType a
   = Add (a 'BlobT)
   | Del
+ deriving (Generic)
 
-
-fetchLMMT :: NatM m (LMMT m) (M (LMMT m))
-fetchLMMT (Term (HC (Tagged _ (HC (Compose m))))) = m
-
-flattenLMMT :: M (LMMT m) :-> M Hash
-flattenLMMT = hfmap hashOf
-
-hashOf :: LMMT x :-> Hash
-hashOf (Term (HC (Tagged h _))) = h
+instance ToJSON (a 'BlobT) => ToJSON (ChangeType a) where
+    toEncoding = genericToEncoding defaultOptions
+instance FromJSON (a 'BlobT) => FromJSON (ChangeType a)
 
 data M a i where
   -- snapshots:
@@ -104,6 +101,14 @@ data M a i where
     :: String -- TODO: use bytestring, currently string to simplify experimentations
     -> M a 'BlobT
 
+deriveJSONGADT ''M
+
+
+
+hash :: M Hash :-> Hash
+hash = Const . doHash' . pure . LB.toStrict . encode
+
+
 
 
 
@@ -132,7 +137,7 @@ renderM NullCommit = Const ["NullCommit"]
 renderM (Commit msg changes parents)
   = let renderPath = mconcat . intersperse "/" . toList
         renderChange Change{..} = case _change of
-          Add x -> [renderPath _path ++ ":"] ++ getConst x
+          Del   -> [renderPath _path ++ ": Del"]
           Add x -> [renderPath _path ++ ": Add: "] ++ getConst x
      in Const $ mconcat [["Commit \"" ++ msg ++ "\""]] ++
   ( indent $
@@ -158,19 +163,46 @@ showLMMT = (>>= const (pure ())) . (>>= traverse putStrLn) . renderLMMT
 type LMM m = Tagged Hash `HCompose` Compose m `HCompose` M
 type LMMT m = Term (LMM m)
 
-type WIP = HEither Hash `HCompose` M
+
+fetchLMMT :: NatM m (LMMT m) (M (LMMT m))
+fetchLMMT (Term (HC (Tagged _ (HC (Compose m))))) = m
+
+flattenLMMT :: M (LMMT m) :-> M Hash
+flattenLMMT = hfmap hashOfLMMT
+
+hashOfLMMT :: LMMT m :-> Hash
+hashOfLMMT (Term (HC (Tagged h _))) = h
+
+type WIP = HEither Hash `HCompose` Tagged Hash `HCompose` M
 type WIPT = Term WIP
 
-renderWIPT :: forall m (x :: MTag). SingI x => WIPT x -> [String]
+
+hashOfWIPT:: WIPT :-> Hash
+hashOfWIPT (Term (HC (L h))) = h
+hashOfWIPT (Term (HC (R (HC (Tagged h _))))) = h
+
+unmodifiedWIP :: Hash :-> WIPT
+unmodifiedWIP = Term . HC . L
+
+modifiedWIP :: M WIPT :-> WIPT
+modifiedWIP m = Term . HC . R . HC $ Tagged h m
+  where
+    h = hash $ hfmap hashOfWIPT m
+
+
+renderWIPT :: forall (x :: MTag). SingI x => WIPT x -> [String]
 renderWIPT = getConst . hcata f
   where f :: Alg WIP (Const [String])
-        f (HC (L hash)) = Const ["hash"]
-        f (HC (R m))    = renderM m
+        f (HC (L _)) = Const ["hash"] -- TODO actual hash render now
+        f (HC (R (HC (Tagged _ m)))) = renderM m
 
 -- | hash and lift (TODO: THIS IS NEEDED - dip into merkle lib for refs)
 liftLMMT :: forall m x. Applicative m => SingI x => Term M x -> LMMT m x
 liftLMMT = hcata f
-  where f x = Term $ HC $ Tagged{ _tag = Const (), _elem = HC $ Compose $ pure x}
+  where
+    f x = Term $ HC $ Tagged{ _tag = h x, _elem = HC $ Compose $ pure x}
+    h x = hash $ hfmap hashOfLMMT x
+
 
 -- ++ /a/foo foo
 -- ++ /a/bar bar
@@ -207,32 +239,32 @@ commit3 = Term $ Commit "merge" [] parents
     parents = commit1 :| [commit2]
 
 
-instance ExtractKeys M where
-  extractHashKeys (Snapshot tree orig parents) = [unHash tree, unHash orig] ++ fmap unHash parents
-  extractHashKeys (File blob lastMod prev) =
-    let prev' = fmap unHash prev
-     in [unHash blob, unHash lastMod] ++ prev'
+-- instance ExtractKeys M where
+--   extractHashKeys (Snapshot tree orig parents) = [unHash tree, unHash orig] ++ fmap unHash parents
+--   extractHashKeys (File blob lastMod prev) =
+--     let prev' = fmap unHash prev
+--      in [unHash blob, unHash lastMod] ++ prev'
 
-  extractHashKeys (Dir children) = unHash . snd <$> Map.toList children
-  extractHashKeys NullCommit = []
-  extractHashKeys (Commit _ changes parents) =
-    let unChangeHash (Add h) = [unHash h]
-        unChangeHash  Del    = []
-     in (changes >>= (unChangeHash . _change)) ++ toList (fmap unHash parents)
-  extractHashKeys (Blob _) = []
+--   extractHashKeys (Dir children) = unHash . snd <$> Map.toList children
+--   extractHashKeys NullCommit = []
+--   extractHashKeys (Commit _ changes parents) =
+--     let unChangeHash (Add h) = [unHash h]
+--         unChangeHash  Del    = []
+--      in (changes >>= (unChangeHash . _change)) ++ toList (fmap unHash parents)
+--   extractHashKeys (Blob _) = []
 
 
 instance HFunctor M where
   hfmap f (Snapshot tree orig parents) = Snapshot (f tree) (f orig) (fmap f parents)
   hfmap f (File blob lastMod prev) = File (f blob) (f lastMod) (fmap f prev)
   hfmap f (Dir children) = Dir (fmap f children)
-  hfmap f NullCommit = NullCommit
+  hfmap _ NullCommit = NullCommit
   hfmap f (Commit msg changes parents) =
     let f' Change{..} = case _change of
           Add blob -> Change { _path = _path, _change = Add $ f blob}
           Del -> Change { _path = _path, _change = Del}
      in Commit msg (fmap f' changes) (fmap f parents)
-  hfmap f (Blob x) = Blob x
+  hfmap _ (Blob x) = Blob x
 
 instance HTraversable M where
   hmapM f (Snapshot tree orig parents) = do
@@ -260,3 +292,4 @@ instance HTraversable M where
       parents' <- traverse f parents
       pure $ Commit msg changes' parents'
   hmapM _ (Blob x) = pure $ Blob x
+

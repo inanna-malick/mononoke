@@ -44,9 +44,9 @@ data NodeDeleted = NodeDeleted
 data MergeTrie m a
   = MergeTrie
   { -- | all files at this path
-    mtFilesAtPath :: [( LMMT m 'FileTree -- hash of file
-                      , LMMT m 'BlobT    -- file blob
-                      , LMMT m 'CommitT  -- last modified in this commit
+    mtFilesAtPath :: [(  LMMT m 'FileTree  -- hash of file
+                      ,  LMMT m 'BlobT     -- file blob
+                      ,  LMMT m 'CommitT   -- last modified in this commit
                       , [LMMT m 'FileTree] -- previous incarnation(s)
                      )]
   -- | all changes at this path
@@ -60,19 +60,12 @@ data MergeTrie m a
 -- can then use other function to add commit to get snapshot
 resolveMergeTrie :: forall m. Hash 'CommitT -> Fix (MergeTrie m) -> WIPT 'FileTree
 resolveMergeTrie commit mt = case cata f mt of
-      Nothing -> Term $ HC $ R $ Dir Map.empty
+      Nothing -> modifiedWIP $ Dir Map.empty
   where
-    -- g :: Map Path ((LMMT m 'FileTree) `Either` Maybe (WIPT 'FileTree))
-    --   -> [(Path, WIPT 'FileTree)]
-    -- g m = <$> Map.toList m
-    wrapHash :: Hash :-> WIPT
-    wrapHash = Term . HC . L
-    extractHash :: LMMT m :-> Hash
-    extractHash (Term (HC (Tagged{..}))) = _tag
     f :: MergeTrie m (Maybe (WIPT 'FileTree)) -> (Maybe (WIPT 'FileTree))
     f MergeTrie{..} =
       let handleChild (Left (Term (HC (Tagged{..})))) =
-            Just $ Term $ HC $ L _tag -- strip out hash from lmmt
+            Just $ unmodifiedWIP _tag -- strip out hash from lmmt
           handleChild (Right (Just wipt)) = Just $ wipt
           handleChild (Right Nothing) = Nothing
           children = Map.toList $ Map.mapMaybe handleChild mtChildren
@@ -80,16 +73,16 @@ resolveMergeTrie commit mt = case cata f mt of
         ([], Nothing, []) -> Nothing -- empty node with no files or changes - delete
         ([], Nothing, _:_) -> -- TODO: more elegant matching statement for 'any nonempty'
           let children' = Map.fromList children      -- no file or change but
-           in Just $ Term $ HC $ R $ Dir children' -- at least one child, retain
+           in Just $ modifiedWIP $ Dir children' -- at least one child, retain
         ([], Just Del, _) -> error "delete addressed to a node with no file"
         (fs, Just (Add blob), []) ->
           -- an add addressed to a node with any number of files - simple good state
-          Just $ Term $ HC $ R $ File (wrapHash $ hashOf blob)
-                                      (wrapHash commit)
-                                      (fmap (\(fh,_,_,_) -> wrapHash $ extractHash fh) fs)
+          Just $ modifiedWIP $ File (unmodifiedWIP $ hashOfLMMT blob)
+                                    (unmodifiedWIP commit)
+                                    (fmap (\(fh,_,_,_) -> unmodifiedWIP $ hashOfLMMT fh) fs)
         ([], Just (Add _), _:_) -> error "add addressed to node with children"
         ((file, _, _, _):[], Nothing, []) ->
-          Just $ Term $ HC $ L $ extractHash file -- single file with no changes, simple, valid
+          Just $ unmodifiedWIP $ hashOfLMMT file -- single file with no changes, simple, valid
         (_:_, Just Del, []) -> Nothing -- any number of files, deleted, valid
 
 
@@ -134,33 +127,34 @@ makeSnapshot commit index = do
           e = pure ([], emptyMergeTrie)
       (snapshots, mt) <- flip2 foldl e parents $ \mstate parentCommit -> do
         (snapshots, mt) <- mstate
-        index (hashOf parentCommit) >>= \case
+        index (hashOfLMMT parentCommit) >>= \case
           Just snap -> do
             fetchLMMT snap >>= \case
               Snapshot ft _ _ -> do
                 mt' <- buildMergeTrie mt ft
-                let wipt' = Term $ HC $ L $ hashOf snap
+                let wipt' = unmodifiedWIP $ hashOfLMMT snap
                     snapshots' = snapshots ++ [wipt']
                 pure (snapshots', mt')
           Nothing -> do
-            Snapshot ft _ _ <- makeSnapshot parentCommit index
-            mt' <- buildMergeTrie mt ft -- wait shit, ft is expected as LMMT not WIP dead branch
-            let wipt' = Term $ HC $ L $ hashOf snap
+            snap@(Snapshot ft _ _) <- makeSnapshot parentCommit index
+            mt' <- buildMergeTrie mt ft -- wait shit, ft is expected as LMMT not WIP dead branch FIXME
+            let wipt' = modifiedWIP snap
                 snapshots' = snapshots ++ [wipt']
             pure (snapshots', mt')
 
-      ft <- resolveMergeTrie (hashOf commit) <$> applyChanges mt changes
-      let commit' = Term $ HC $ L $ hashOf commit
+      ft <- resolveMergeTrie (hashOfLMMT commit) <$> applyChanges mt changes
+      let commit' = Term $ HC $ L $ hashOfLMMT commit
           snap = Snapshot ft commit' snapshots
       pure snap
     NullCommit -> do
-      let ft = Term $ HC $ R $ Dir Map.empty
-          commit' = Term $ HC $ L $ hashOf commit
+      let ft = modifiedWIP $ Dir Map.empty
+          commit' = unmodifiedWIP $ hashOfLMMT commit
           snap = Snapshot ft commit' []
       pure snap
 
 -- | fold a snapshot into a mergetrie
 -- TODO: use to write diff, maybe - resulting mergetrie only expands as far as diff boundary
+-- TODO: compare hashes
 buildMergeTrie :: forall m. Monad m => Fix (MergeTrie m) -> LMMT m 'FileTree -> m (Fix (MergeTrie m))
 buildMergeTrie mt = para f mt
   where f :: MergeTrie m ( Fix (MergeTrie m)
@@ -200,9 +194,6 @@ buildMergeTrie mt = para f mt
                           , mtChildren = fmap fst <$> mtChildren mt
                           }
                   pure $ Fix mt'
-
-
--- - compare hashes, return input merge trie if no change
 
 -- empty mergetrie
 emptyMergeTrie :: Fix (MergeTrie m)
