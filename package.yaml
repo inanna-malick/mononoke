@@ -5,7 +5,7 @@ github: inanna-malick/merklenoke
 author: Inanna Malick
 category: Development
 
-ghc-options: -Wall -Werror
+ghc-options: -Wall
 
 default-extensions:
   - DerivingStrategies
@@ -50,6 +50,7 @@ dependencies:
   - servant-client
   - servant-server
   - singletons
+  - stm
   - text
   - transformers
   - warp
@@ -59,18 +60,13 @@ library:
   exposed-modules:
     - HGit.Core.MergeTrie
     - HGit.Core.Types
-    - HGit.Runtime.FileIO
-    - HGit.Runtime.Capabilities
-    - HGit.Runtime.Commands
-    - HGit.Runtime.Network
-    - HGit.Runtime.RunCmd
-    - HGit.Runtime.Types
 
 executable:
   main: Main.hs
   source-dirs: app
   dependencies:
     - hgit
+    - threepenny-gui
 
 tests:
   spec:

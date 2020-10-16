@@ -13,6 +13,6 @@ indent segments =
       apply f g (x:xs) = f x : fmap g xs
       removeEmpty = filter (not . null)
     in mconcat $ reverse $ apply
-         (apply ("└── " ++) ("│   " ++))
+         (apply ("└── " ++) ("    " ++))
          (apply ("├── " ++) ("│   " ++))
          (reverse $ removeEmpty segments)

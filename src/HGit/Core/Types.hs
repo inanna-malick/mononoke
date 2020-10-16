@@ -20,6 +20,7 @@ import           Data.List.NonEmpty (NonEmpty(..), toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Singletons.TH
+import qualified Data.Text as T
 --------------------------------------------
 import           Merkle.Types.BlakeHash
 import           HGit.Render.Utils
@@ -105,8 +106,8 @@ deriveJSONGADT ''M
 
 
 
-hash :: M Hash :-> Hash
-hash = Const . doHash' . pure . LB.toStrict . encode
+hashM :: M Hash :-> Hash
+hashM = Const . doHash' . pure . LB.toStrict . encode
 
 
 
@@ -164,8 +165,8 @@ type LMM m = Tagged Hash `HCompose` Compose m `HCompose` M
 type LMMT m = Term (LMM m)
 
 
-fetchLMMT :: NatM m (LMMT m) (M (LMMT m))
-fetchLMMT (Term (HC (Tagged _ (HC (Compose m))))) = m
+fetchLMMT :: Functor m => NatM m (LMMT m) ((Tagged Hash `HCompose` M) (LMMT m))
+fetchLMMT (Term (HC (Tagged h (HC (Compose m))))) = HC . Tagged h <$> m
 
 flattenLMMT :: M (LMMT m) :-> M Hash
 flattenLMMT = hfmap hashOfLMMT
@@ -173,70 +174,100 @@ flattenLMMT = hfmap hashOfLMMT
 hashOfLMMT :: LMMT m :-> Hash
 hashOfLMMT (Term (HC (Tagged h _))) = h
 
-type WIP = HEither Hash `HCompose` Tagged Hash `HCompose` M
-type WIPT = Term WIP
+type WIP m = HEither (LMMT m) `HCompose` Tagged Hash `HCompose` M
+type WIPT m = Term (WIP m)
 
+fetchWIPT :: Applicative m => NatM m (WIPT m) ((Tagged Hash `HCompose` M) (WIPT m))
+fetchWIPT (Term (HC (L lmmt))) = hfmap unmodifiedWIP <$> fetchLMMT lmmt
+fetchWIPT (Term (HC (R hct))) = pure hct
 
-hashOfWIPT:: WIPT :-> Hash
-hashOfWIPT (Term (HC (L h))) = h
+hashOfWIPT :: WIPT m :-> Hash
+hashOfWIPT (Term (HC (L lmmt))) = hashOfLMMT lmmt
 hashOfWIPT (Term (HC (R (HC (Tagged h _))))) = h
 
-unmodifiedWIP :: Hash :-> WIPT
+unmodifiedWIP :: LMMT m :-> WIPT m
 unmodifiedWIP = Term . HC . L
 
-modifiedWIP :: M WIPT :-> WIPT
+modifiedWIP :: M (WIPT m) :-> WIPT m
 modifiedWIP m = Term . HC . R . HC $ Tagged h m
   where
-    h = hash $ hfmap hashOfWIPT m
+    h = hashM $ hfmap hashOfWIPT m
 
 
-renderWIPT :: forall (x :: MTag). SingI x => WIPT x -> [String]
+showHash :: forall (i :: MTag). SingI i => Hash i -> String
+showHash h =
+  let h' = take 6 $ T.unpack $ hashToText $ getConst h
+   in "[" ++ typeTagName (sing :: Sing i) ++ ":" ++ h' ++ "]"
+
+typeTagName :: forall (i :: MTag). Sing i -> String
+typeTagName s = case s of
+  SSnapshotT -> "snapshot"
+  SFileTree  -> "filetree"
+  SCommitT   -> "commit"
+  SBlobT     -> "blob"
+
+
+renderWIPT :: forall m (x :: MTag). SingI x => WIPT m x -> [String]
 renderWIPT = getConst . hcata f
-  where f :: Alg WIP (Const [String])
-        f (HC (L _)) = Const ["hash"] -- TODO actual hash render now
+  where f :: Alg (WIP m) (Const [String])
+        f (HC (L lmmt)) = let h = showHash $ hashOfLMMT lmmt
+                           in Const [h]
         f (HC (R (HC (Tagged _ m)))) = renderM m
+
+
+renderWIPTM :: forall m (x :: MTag). SingI x => Monad m => WIPT m x -> m [String]
+renderWIPTM = getConst . hcata f
+  where f :: Alg (WIP m) (Const (m [String]))
+        f (HC (L lmmt)) = Const $ renderLMMT lmmt
+        f (HC (R (HC (Tagged _ m)))) = Const $ do -- TODO: include hash in output
+            m' <- hmapM (\x -> Const <$> getConst x) m
+            pure $ getConst $ renderM m'
 
 -- | hash and lift (TODO: THIS IS NEEDED - dip into merkle lib for refs)
 liftLMMT :: forall m x. Applicative m => SingI x => Term M x -> LMMT m x
 liftLMMT = hcata f
   where
     f x = Term $ HC $ Tagged{ _tag = h x, _elem = HC $ Compose $ pure x}
-    h x = hash $ hfmap hashOfLMMT x
+    h x = hashM $ hfmap hashOfLMMT x
 
 
 -- ++ /a/foo foo
 -- ++ /a/bar bar
 -- ++ /baz baz
--- ++ /.DS_Store jk
-commit1 :: Term M 'CommitT
-commit1 = Term $ Commit "first commit" changes parents
+commit0 :: Term M 'CommitT
+commit0 = Term $ Commit "c0: first commit" changes parents
   where
-    changes = [c1, c2, c3, c4]
+    changes = [c1, c2, c3]
     c1 = add ("a" :| ["foo"]) . Term $ Blob "foo"
     c2 = add ("a" :| ["bar"]) . Term $ Blob "bar"
     c3 = add ("baz" :| []) . Term $ Blob "baz"
-    c4 = add (".DS_Store" :| []) . Term $ Blob "jk"
     parents = Term NullCommit :| []
 
--- ++ /a/foo foo
--- ++ /a/bar bar
--- ++ /baz baz2
+-- ++ /.DS_Store jk
+-- -- /a/bar
+commit1 :: Term M 'CommitT
+commit1 = Term $ Commit "c1: askdfj" changes parents
+  where
+    changes = [c1, c2]
+    c1 = add (".DS_Store" :| []) . Term $ Blob "jk"
+    c2 = del ("a" :| ["bar"])
+    parents = commit0 :| []
+
 -- ++ /README todo
 commit2 :: Term M 'CommitT
-commit2 = Term $ Commit "first commit" changes parents
+commit2 = Term $ Commit "c2: todo: readme" changes parents
   where
-    changes = [c1, c2, c3, c4]
-    c1 = add ("a" :| ["foo"]) . Term $ Blob "foo"
-    c2 = add ("a" :| ["bar"]) . Term $ Blob "bar"
-    c3 = add ("baz" :| [])    . Term $ Blob "baz2"
-    c4 = add ("README" :| []) . Term $ Blob "todo"
-    parents = Term NullCommit :| []
+    changes = [c1]
+    c1 = add ("README" :| []) . Term $ Blob "todo"
+    parents = commit0 :| []
 
-
+-- TODO: should this have 'bar', deleted in 1/2 of parent commits and not changed in this commit?
+-- TODO: I think that should have to be resolved (file present in one, absent in other - maybe?)
 commit3 :: Term M 'CommitT
-commit3 = Term $ Commit "merge" [] parents
+commit3 = Term $ Commit "c3: merge" [resolvingChange] parents
   where
     parents = commit1 :| [commit2]
+    resolvingChange = add ("baz" :| []) . Term $ Blob "baz3"
 
 
 -- instance ExtractKeys M where

@@ -3,8 +3,6 @@ packages:
 - .
 
 extra-deps:
-# - github: inanna-malick/merkle-schemes
-#   commit: 4eac64f4df12ea7d1d1f3bb34010424db19e0a9e
 - ../merkle-schemes/merkle-schemes
 - ../merkle-schemes/merkle-schemes-ext
 - ../merkle-schemes/merkle-schemes-higher
