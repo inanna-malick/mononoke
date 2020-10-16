@@ -3,6 +3,8 @@
 
 module Main where
 
+import           Merkle.Types.BlakeHash
+import           Data.Functor.Compose
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (toList)
 import           HGit.Core.Types
@@ -30,6 +32,8 @@ data State
 data ST x = T String x x | N
   deriving (Functor, Foldable, Traversable)
 
+type Expansions = Set RawBlakeHash
+
 
 ex :: Fix ST
 ex = Fix $ T "root" (Fix $ T "c1" (Fix N) (Fix N)) (Fix N)
@@ -51,40 +55,70 @@ renderST = cata f
 
 
 
-uiMT :: forall (x :: MTag). SingI x => Term M x -> Element -> UI Element
-uiMT t e = (getConst $ hcata f t) e
+uiMT
+  :: forall (x :: MTag). SingI x
+  => TVar Expansions
+  -> LMMT UI x
+  -> Element
+  -> UI Element
+uiMT expansions root parentElement = (getConst $ hcata g root) parentElement
   where
     nestedDiv = UI.div # set (attr "style") "margin-left:1em"
     ul = UI.ul # set (attr "style") "margin-left:1em"
+    g :: Alg (LMM UI) (Const (Element -> UI Element))
+    g (HC (Tagged (Const raw) (HC (Compose m)))) = Const $ \pn -> do
+      let minimized = do
+            expand <- UI.button #+ [string "expand"]
+            on UI.click expand $ \() -> do
+              liftIO $ atomically $ modifyTVar expansions (Set.insert raw)
+              _ <- set UI.children [] (element pn)
+              expanded
+
+            element pn #+ [element expand]
+          expanded = do
+            mm <- m
+            minimize <- UI.button #+ [string "[-]"]
+            on UI.click minimize $ \() -> do
+              liftIO $ atomically $ modifyTVar expansions (Set.delete raw)
+              _ <- set UI.children [] (element pn)
+              minimized
+
+            _ <- element pn #+ [element minimize]
+            (getConst $ f mm) pn
+
+      isExpanded <- liftIO $ atomically $ Set.member raw <$> readTVar expansions
+      case isExpanded of
+        False -> minimized
+        True -> expanded
     f :: Alg M (Const (Element -> UI Element))
-    f (Snapshot tree orig parents) = Const $ \pn -> do
+    f (Snapshot t o ps) = Const $ \pn -> do
         hdr     <- UI.string "Snapshot:"
-        tree    <- nestedDiv >>= getConst tree
-        orig    <- nestedDiv >>= getConst orig
-        parents <- ul #+ ((UI.li >>= ) . getConst <$> parents)
-        parents <- nestedDiv #+ [string "parents:", element parents]
+        tree    <- nestedDiv >>= getConst t
+        orig    <- nestedDiv >>= getConst o
+        parentList <- ul #+ ((UI.li >>= ) . getConst <$> ps)
+        parents <- nestedDiv #+ [string "parents:", element parentList]
         element pn #+ fmap element [hdr, tree, orig, parents]
 
-    f (File blob lastMod prev)
+    f (File b l p)
       = Const $ \pn -> do
         hdr <- UI.string "File:"
-        blob    <- nestedDiv >>= getConst blob
-        lastMod <- nestedDiv >>= getConst lastMod
-        prev    <- ul #+ ((UI.li >>= ) . getConst <$> prev)
+        blob    <- nestedDiv >>= getConst b
+        lastMod <- nestedDiv >>= getConst l
+        prev    <- ul #+ ((UI.li >>= ) . getConst <$> p)
         element pn #+ fmap element [hdr, blob, lastMod, prev]
 
-    f (Dir children) = Const $ \pn -> do
+    f (Dir cs) = Const $ \pn -> do
         let renderChild (k, Const v) = UI.li #+ [string (k ++ ":"), nestedDiv >>= v]
         hdr      <- UI.string "Dir:"
-        children <- ul #+ (renderChild <$> Map.toList children)
-        element pn #+ fmap element [hdr, children]
+        childrenList <- ul #+ (renderChild <$> Map.toList cs)
+        element pn #+ fmap element [hdr, childrenList]
 
 
     f NullCommit = Const $ \pn -> element pn #+ [string "NullCommit"]
 
-    f (Commit msg changes parents) = Const $ \pn -> do
+    f (Commit m cs ps) = Const $ \pn -> do
         hdr <- UI.string "Commit:"
-        msg <- UI.string $ "msg: " ++ msg
+        msg <- UI.string $ "msg: " ++ m
 
         let renderPath = mconcat . intersperse "/" . toList
             renderChange Change{..} = case _change of
@@ -93,17 +127,17 @@ uiMT t e = (getConst $ hcata f t) e
                 UI.li #+ [UI.string (renderPath _path ++ ": Add: "), nestedDiv >>= blob]
 
 
-        changes <- ul #+ (renderChange <$> changes)
-        changes <- nestedDiv #+ [string "changes:", element changes]
+        changeList <- ul #+ (renderChange <$> cs)
+        changes <- nestedDiv #+ [string "changes:", element changeList]
 
-        parents <- ul #+ ((UI.li >>= ) . getConst <$> toList parents)
-        parents <- nestedDiv #+ [string "parents:", element parents]
+        parentList <- ul #+ ((UI.li >>= ) . getConst <$> toList ps)
+        parents <- nestedDiv #+ [string "parents:", element parentList]
 
         element pn #+ fmap element [hdr, msg, changes, parents]
 
-    f (Blob content) = Const $ \pn -> do
+    f (Blob c) = Const $ \pn -> do
         hdr <- UI.string "Blob:"
-        content <- UI.string content
+        content <- UI.string c
         element pn #+ fmap element [hdr, content]
 
 
@@ -115,12 +149,13 @@ type ToDoList = Set String
 
 main :: IO ()
 main = do
-  database <- atomically $ newTVar (Map.empty)
-  startGUI defaultConfig (setup database)
+  expansions <- atomically $ newTVar (Set.empty)
+  startGUI defaultConfig (setup expansions)
 
-setup :: TVar Database -> Window -> UI ()
-setup database rootWindow = void $ do
-  getBody rootWindow >>= uiMT commit3
+setup :: TVar Expansions -> Window -> UI ()
+setup expansions rootWindow = void $ do
+  let hashed = liftLMMT commit3
+  getBody rootWindow >>= uiMT expansions hashed
 
   -- userNameInput <- UI.input # set (attr "placeholder") "User name"
   -- loginButton <- UI.button #+ [ string "Login" ]
