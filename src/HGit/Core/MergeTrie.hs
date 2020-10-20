@@ -8,8 +8,9 @@
 
 module HGit.Core.MergeTrie where
 
-import Control.Monad.IO.Class
 --------------------------------------------
+import           Control.Concurrent.STM
+import           Control.Monad.IO.Class
 import           Data.List.NonEmpty (toList)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -118,11 +119,41 @@ renderMergeTrie = cata f
 --      specifically - commit last modified in (maybe unchanged for some merge output?)
 --                   - last version of file (maybe multiple for multi-way merges)
 
+type IndexRead m  = Hash 'CommitT -> m (Maybe (Hash 'SnapshotT))
+type IndexWrite m = Hash 'CommitT -> Hash 'SnapshotT -> m ()
 
-type Index m = Hash 'CommitT -> m (Maybe (LMMT m 'SnapshotT))
+data Index m
+  = Index
+  { iRead  :: IndexRead m
+  , iWrite :: IndexWrite m
+  }
+
+stmIOIndex :: MonadIO m => TVar (Map (Hash 'CommitT) (Hash 'SnapshotT)) -> Index m
+stmIOIndex tvar
+  = let index' = stmIndex tvar
+     in Index
+  { iRead = \h    -> liftIO $ atomically $ iRead index' h
+  , iWrite = \c s -> liftIO $ atomically $ iWrite index' c s
+  }
+
+
+stmIndex :: TVar (Map (Hash 'CommitT) (Hash 'SnapshotT)) -> Index STM
+stmIndex tvar
+  = Index
+  { iRead = \c -> do
+      bs <- readTVar tvar
+      pure $ Map.lookup c bs
+  , iWrite = \c s -> do
+      modifyTVar tvar $ \m ->
+        Map.insert c s m
+      pure ()
+  }
+
+
+
 
 nullIndex :: Applicative m => Index m
-nullIndex _ = pure Nothing
+nullIndex = Index { iRead = \_ -> pure Nothing, iWrite = \_ _ -> pure () }
 
 -- | build a snapshot for a commit, recursively descending
 --   into parent commits to build snapshots if neccessary
@@ -130,9 +161,10 @@ makeSnapshot
   :: Monad m
   => MonadIO m
   => LMMT m 'CommitT -- can provide LMMT via 'unmodifiedWIP'
-  -> Index m -- index, will be always Nothing for initial WIP
+  -> IndexRead m -- index, will be always Nothing for initial WIP
+  -> StoreRead m -- for expanding index reads
   -> m (M (WIPT m) 'SnapshotT)
-makeSnapshot commit index = do
+makeSnapshot commit index storeRead = do
   (HC (Tagged _ commit')) <- fetchLMMT commit
   case commit' of
     Commit msg changes parents -> do
@@ -147,15 +179,15 @@ makeSnapshot commit index = do
         (snapshots, mt) <- mstate
         index (hashOfLMMT parentCommit) >>= \case
           Just snap -> do
-            (HC (Tagged _ snap')) <- fetchLMMT snap
+            (HC (Tagged _ snap')) <- fetchLMMT $ expandHash storeRead snap
             case snap' of
               Snapshot ft _ _ -> do
                 mt' <- buildMergeTrie mt (unmodifiedWIP ft)
-                let wipt' = unmodifiedWIP snap
+                let wipt' = unmodifiedWIP $ expandHash storeRead snap
                     snapshots' = snapshots ++ [wipt']
                 pure (snapshots', mt')
           Nothing -> do
-            snap <- makeSnapshot parentCommit index
+            snap <- makeSnapshot parentCommit index storeRead
             let (Snapshot ft _ _) = snap
             mt' <- buildMergeTrie mt ft
             -- liftIO $ do

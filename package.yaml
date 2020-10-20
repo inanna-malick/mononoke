@@ -67,6 +67,7 @@ executable:
   dependencies:
     - hgit
     - threepenny-gui
+    - threepenny-gui-flexbox
 
 tests:
   spec:

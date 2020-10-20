@@ -12,6 +12,8 @@ import Data.Aeson.GADT.TH
 import Data.Aeson as AE
 import GHC.Generics
 --------------------------------------------
+import           Control.Concurrent.STM
+import           Control.Monad.IO.Class
 import           Data.Functor.Const (Const(..))
 import qualified Data.ByteString.Lazy as LB
 import           Data.Functor.Compose
@@ -106,6 +108,8 @@ deriveJSONGADT ''M
 
 
 
+
+-- CANNONICAL HASH FN, i guess (TODO: better?)
 hashM :: M Hash :-> Hash
 hashM = Const . doHash' . pure . LB.toStrict . encode
 
@@ -177,6 +181,18 @@ hashOfLMMT (Term (HC (Tagged h _))) = h
 type WIP m = HEither (LMMT m) `HCompose` Tagged Hash `HCompose` M
 type WIPT m = Term (WIP m)
 
+uploadWIPT
+  :: forall m
+   . Monad m
+  => NatM m (M Hash) Hash
+  -> NatM m (WIPT m) (LMMT m)
+uploadWIPT upload (Term (HC (L lmmt))) = pure lmmt
+uploadWIPT upload (Term (HC (R (HC (Tagged h m))))) = do
+  lmmt <- hmapM (uploadWIPT upload) m
+  h' <- upload $ hfmap hashOfLMMT lmmt
+  -- TODO assert h == h'
+  pure $ Term $ HC $ Tagged h' $ HC $ Compose $ pure lmmt
+
 fetchWIPT :: Applicative m => NatM m (WIPT m) ((Tagged Hash `HCompose` M) (WIPT m))
 fetchWIPT (Term (HC (L lmmt))) = hfmap unmodifiedWIP <$> fetchLMMT lmmt
 fetchWIPT (Term (HC (R hct))) = pure hct
@@ -229,6 +245,21 @@ liftLMMT = hcata f
   where
     f x = Term $ HC $ Tagged{ _tag = h x, _elem = HC $ Compose $ pure x}
     h x = hashM $ hfmap hashOfLMMT x
+
+
+expandHash :: forall m. Monad m => StoreRead m -> Hash :-> (LMMT m)
+expandHash get = ana f
+  where
+    f :: Coalg (LMM m) Hash
+    f h = HC $ Tagged h $ HC $ Compose $ do
+      (HC (Compose mmh)) <- get h
+      case mmh of
+        Nothing -> error "broken link in STM storage"
+        Just mh -> pure mh
+
+
+uploadM :: Monad m => StoreWrite m -> NatM m (Term M) Hash
+uploadM upload = hcataM upload
 
 
 -- ++ /a/foo foo
@@ -323,4 +354,82 @@ instance HTraversable M where
       parents' <- traverse f parents
       pure $ Commit msg changes' parents'
   hmapM _ (Blob x) = pure $ Blob x
+
+
+
+
+
+
+
+-- TODO new module
+
+data BlobStore
+  = BlobStore
+  { snapshotBS :: (Map (Hash 'SnapshotT) (M Hash 'SnapshotT))
+  , fileTreeBS :: (Map (Hash 'FileTree)  (M Hash 'FileTree))
+  , commitBS   :: (Map (Hash 'CommitT)   (M Hash 'CommitT))
+  , blobBS     :: (Map (Hash 'BlobT)     (M Hash 'BlobT))
+  }
+
+emptyBlobStore :: BlobStore
+emptyBlobStore
+  = BlobStore
+  { snapshotBS = Map.empty
+  , fileTreeBS = Map.empty
+  , commitBS   = Map.empty
+  , blobBS     = Map.empty
+  }
+
+-- (sing :: Sing i)
+getBlobStore :: forall (i :: MTag). Sing i -> Hash i -> BlobStore -> Maybe (M Hash i)
+getBlobStore s h bs = case s of
+  SSnapshotT -> Map.lookup h $ snapshotBS bs
+  SFileTree  -> Map.lookup h $ fileTreeBS bs
+  SCommitT   -> Map.lookup h $ commitBS   bs
+  SBlobT     -> Map.lookup h $ blobBS     bs
+
+
+putBlobStore :: forall (i :: MTag). Sing i -> Hash i -> M Hash i -> BlobStore -> BlobStore
+putBlobStore s h m bs = case s of
+  SSnapshotT -> bs { snapshotBS = Map.insert h m $ snapshotBS bs }
+  SFileTree  -> bs { fileTreeBS = Map.insert h m $ fileTreeBS bs }
+  SCommitT   -> bs { commitBS   = Map.insert h m $ commitBS   bs }
+  SBlobT     -> bs { blobBS     = Map.insert h m $ blobBS     bs }
+
+
+type StoreRead  m = NatM m Hash ((Compose Maybe `HCompose` M) Hash)
+type StoreWrite m = NatM m (M Hash) Hash
+
+data Store m
+  = Store
+  { sRead  :: StoreRead  m
+  , sWrite :: StoreWrite m
+  }
+
+
+stmIOStore :: MonadIO m => TVar BlobStore -> Store m
+stmIOStore tvar
+  = let store' = stmStore tvar
+     in Store
+  { sRead = \h   -> liftIO $ atomically $ sRead store' h
+  , sWrite = \mh -> liftIO $ atomically $ sWrite store' mh
+  }
+
+
+
+
+stmStore :: TVar BlobStore -> Store STM
+stmStore tvar
+  = Store
+  { sRead = \h -> do
+      bs <- readTVar tvar
+      pure $ HC . Compose $ getBlobStore sing h bs
+  , sWrite = \mh -> do
+      let h = hashM mh
+      modifyTVar tvar $ \bs ->
+        putBlobStore sing h mh bs
+      pure h
+  }
+
+
 

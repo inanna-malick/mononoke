@@ -1,5 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Main where
 
@@ -8,7 +9,8 @@ import           Data.Functor.Compose
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (toList)
 import           HGit.Core.Types
-import           Data.Singletons.TH (SingI)
+import           HGit.Core.MergeTrie
+import           Data.Singletons.TH (SingI, sing)
 import           Util.RecursionSchemes
 import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
@@ -22,59 +24,185 @@ import qualified Data.Set as Set
 
 import Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny as UI
+import Graphics.UI.Threepenny.Ext.Flexbox
 
-data State
+
+data State m
   = State
-  { main_branch :: Hash 'CommitT
-  , other_branches:: Map String (Hash 'CommitT)
+  {
+  -- scratchpad that allows for anything from unchanged snapshots [1..n]-way merges and changes
+    workspace :: Fix (MergeTrie m)
+  -- , browser_state :: Browser m
   }
-
-data ST x = T String x x | N
-  deriving (Functor, Foldable, Traversable)
 
 type Expansions = Set RawBlakeHash
 
+data Focus m
+  = SnapshotF (LMMT m 'SnapshotT)
+  | FileTreeF (LMMT m 'FileTree)
+  | CommitF   (LMMT m 'CommitT)
+  | BlobF     (LMMT m 'BlobT)
 
-ex :: Fix ST
-ex = Fix $ T "root" (Fix $ T "c1" (Fix N) (Fix N)) (Fix N)
 
--- draw the provided tree on the provided UI element
-renderST :: Fix ST -> Element -> UI Element
-renderST = cata f
+-- (sing :: Sing i)
+wrapFocus :: forall (i :: MTag) m. Sing i -> LMMT m i -> Focus m
+wrapFocus s x = case s of
+  SSnapshotT -> SnapshotF x
+  SFileTree  -> FileTreeF x
+  SCommitT   -> CommitF   x
+  SBlobT     -> BlobF     x
+
+data BranchState m
+  = BranchState
+  { bsMainBranch :: LMMT m 'CommitT
+  , bsBranches :: [(String, LMMT m 'CommitT)]
+  }
+
+
+-- TODO: need to figure out how to _update_ branch - maybe just fetch commit from tvar on click instead of baking in value?
+branchBrowser
+  :: Element
+  -> Index UI
+  -> Store UI
+  -> TVar (BranchState UI)
+  -> Handler (Focus UI)
+  -> UI Element
+branchBrowser parentElement commitSnapshotIndex store branchState focusChangeHandler = do
+    bs <- liftIO $ atomically $ readTVar branchState
+    branchList <- UI.ul
+    drawBranch False branchList ("main", bsMainBranch bs)
+    _ <- traverse (drawBranch True branchList) (bsBranches bs)
+
+    addBranch <- UI.input
+    on UI.sendValue addBranch $ \input -> do
+      let branch = (input, liftLMMT $ Term $ NullCommit)
+      liftIO $ atomically $ modifyTVar branchState $ \bs ->
+        bs { bsBranches = bsBranches bs ++ [branch] }
+      drawBranch True branchList branch
+
+    element parentElement #+ [ element branchList
+                             , string "add branch:"
+                             , element addBranch
+                             ]
   where
-    nestedDiv = UI.div #set (attr "style") "margin-left:1em"
-    f :: Algebra ST (Element -> UI Element)
-    f (T s l r) parent = do
-      left <-  nestedDiv >>= l
-      right <- nestedDiv >>= r
-      str <- UI.div #+ [string s]
-      element parent #+ fmap element [str, left, right]
-    f N parent = do
-      x <- UI.div #+ [string "null"]
-      element parent #+ fmap element [x]
+    drawBranch del pn (branchName, commit) = do
+      thisBranch <- UI.li
+
+      focus  <- UI.button #+ [string "[commit]"]
+      on UI.click focus $ \() -> do
+        liftIO $ focusChangeHandler (CommitF commit)
+
+
+      _ <- element thisBranch #+ [string branchName, element focus]
+
+      if not del then pure () else do
+        deleteButton <- UI.button #+ [string "[-]"]
+        on UI.click deleteButton $ \() -> do
+          -- remove via branch name, simple/easy
+          liftIO $ atomically $ modifyTVar branchState $ \bs ->
+            bs { bsBranches = filter (not . (== branchName) . fst) $ bsBranches bs }
+          delete thisBranch
+        _ <- element thisBranch #+ [element deleteButton]
+        pure ()
+
+      snap <- updateSnapshotIndex store commitSnapshotIndex commit
+      focusSnap <- UI.button #+ [string "[snap]"]
+      on UI.click focusSnap $ \() -> do
+        liftIO $ focusChangeHandler (SnapshotF snap)
+
+      _ <- element thisBranch #+ [element focusSnap]
+
+
+      element pn #+ [element thisBranch]
 
 
 
-uiMT
-  :: forall (x :: MTag). SingI x
-  => TVar Expansions
-  -> LMMT UI x
+
+
+browseMergeTrie
+  :: Handler (Focus UI)
+  -> Fix (MergeTrie UI)
   -> Element
   -> UI Element
-uiMT expansions root parentElement = (getConst $ hcata g root) parentElement
+browseMergeTrie focusHandler root parentElement = (cata f root) parentElement
+  where
+    f :: MergeTrie UI (Element -> UI Element) -> Element -> UI Element
+    f mt pn = case mtChange mt of
+      Just c -> do
+        children <- renderChildren $ mtChildren mt
+        files <- renderFiles $ mtFilesAtPath mt
+        change <- UI.div #+ [string "change: ", renderChange c]
+        element pn #+ fmap element [change, files, children]
+      Nothing -> do
+        children <- renderChildren $ mtChildren mt
+        files <- renderFiles $ mtFilesAtPath mt
+        element pn #+ fmap element [files, children]
+
+    renderFiles fs = do
+      pn <- UI.ul
+      traverse (renderFile pn) fs
+      element pn
+
+    renderFile pn _ = element pn #+ [string "todo: render file"]
+
+    renderChange (Add blob@(Term(HC (Tagged _ (HC (Compose m)))))) = do
+      x <- UI.div
+
+      focus <- UI.button #+ [string "[<>]"]
+      on UI.click focus $ \() -> do
+        liftIO $ focusHandler $ BlobF blob
+
+      let shim :: forall w. M w 'BlobT -> String
+          shim (Blob blobstr) = blobstr
+      blobstr <- shim <$> m
+
+      element x #+ [string "ADD", element focus, string blobstr]
+    renderChange Del = string "DELETE"
+
+
+    renderChildren c = do
+      pn <- UI.ul
+      traverse (renderChild pn) $ Map.toList c
+      element pn
+
+    renderChild :: Element -> (Path, WIPT m 'FileTree `Either` (Element -> UI Element)) -> UI Element
+    renderChild pn (path, Left wipt) = element pn #+ [string "todo: render WIPT child"]
+    renderChild pn (path, Right next) = element pn #+ [UI.li >>= next]
+
+
+
+
+browseLMMT
+  :: Handler (Focus UI)
+  -> TVar Expansions
+  -> Focus UI
+  -> Element
+  -> UI Element
+browseLMMT focusHandler expansions focus parentElement = case focus of
+    SnapshotF root -> (getConst $ hpara g root) parentElement
+    FileTreeF root -> (getConst $ hpara g root) parentElement
+    CommitF   root -> (getConst $ hpara g root) parentElement
+    BlobF     root -> (getConst $ hpara g root) parentElement
   where
     nestedDiv = UI.div # set (attr "style") "margin-left:1em"
     ul = UI.ul # set (attr "style") "margin-left:1em"
-    g :: Alg (LMM UI) (Const (Element -> UI Element))
-    g (HC (Tagged (Const raw) (HC (Compose m)))) = Const $ \pn -> do
-      let minimized = do
-            expand <- UI.button #+ [string "expand"]
+    g :: RAlg (LMM UI) (Const (Element -> UI Element))
+    g x@(HC (Tagged (Const raw) (HC (Compose m)))) = Const $ \pn -> do
+      let drawFocus = do
+            focus <- UI.button #+ [string "[<>]"]
+            on UI.click focus $ \() -> do
+              liftIO $ focusHandler $ wrapFocus sing (Term $ hfmap _tag x)
+            element pn #+ [element focus]
+
+          minimized = do
+            expand <- UI.button #+ [string $ "[+" ++ show raw ++ "]"]
             on UI.click expand $ \() -> do
               liftIO $ atomically $ modifyTVar expansions (Set.insert raw)
               _ <- set UI.children [] (element pn)
               expanded
-
+            drawFocus
             element pn #+ [element expand]
+
           expanded = do
             mm <- m
             minimize <- UI.button #+ [string "[-]"]
@@ -82,9 +210,9 @@ uiMT expansions root parentElement = (getConst $ hcata g root) parentElement
               liftIO $ atomically $ modifyTVar expansions (Set.delete raw)
               _ <- set UI.children [] (element pn)
               minimized
-
+            drawFocus
             _ <- element pn #+ [element minimize]
-            (getConst $ f mm) pn
+            (getConst $ f $ hfmap _elem mm) pn
 
       isExpanded <- liftIO $ atomically $ Set.member raw <$> readTVar expansions
       case isExpanded of
@@ -149,64 +277,88 @@ type ToDoList = Set String
 
 main :: IO ()
 main = do
-  expansions <- atomically $ newTVar (Set.empty)
-  startGUI defaultConfig (setup expansions)
-
-setup :: TVar Expansions -> Window -> UI ()
-setup expansions rootWindow = void $ do
-  let hashed = liftLMMT commit3
-  getBody rootWindow >>= uiMT expansions hashed
-
-  -- userNameInput <- UI.input # set (attr "placeholder") "User name"
-  -- loginButton <- UI.button #+ [ string "Login" ]
-  -- getBody rootWindow #+
-  --   map element [ userNameInput, loginButton ]
-
-  -- on UI.click loginButton $ \_ -> do
-  --   userName <- get value userNameInput
-
-  --   currentItems <- fmap Set.toList $ liftIO $ atomically $ do
-  --     db <- readTVar database
-  --     case Map.lookup userName db of
-  --       Nothing -> do
-  --          writeTVar database (Map.insert userName Set.empty db)
-  --          return Set.empty
-
-  --       Just items -> return items
-
-  --   let showItem item = UI.li #+ [ string item ]
-  --   toDoContainer <- UI.ul #+ map showItem currentItems
-
-  --   newItem <- UI.input
-
-  --   on UI.sendValue newItem $ \input -> do
-  --     liftIO $ atomically $ modifyTVar database $
-  --       Map.adjust (Set.insert input) userName
-
-  --     set UI.value "" (element newItem)
-  --     element toDoContainer #+ [ showItem input ]
-
-  --   header <- UI.h1 #+ [ string $ userName ++ "'s To-Do List" ]
-  --   set children
-  --     [ header, toDoContainer, newItem ]
-  --     (getBody rootWindow)
+  startGUI defaultConfig setup
 
 
--- list of branches / commit creation interface | file snapshot viewer w/ edit capability | read-only merkle structure navigator over commit tree of current parent
--- part 2 is merging - merge based on branch A + B + C, merge conflicts that must be resolved marked using special GUI element in middle panel
+-- NOTE/TODO: this could all be in a single STM transaction. wild.
+updateSnapshotIndex :: MonadIO m => Store m -> Index m -> LMMT m 'CommitT -> m (LMMT m 'SnapshotT)
+updateSnapshotIndex store index commit = do
+  msnap <- (iRead index) (hashOfLMMT commit)
+  case msnap of
+    Just h  -> do
+      pure $ expandHash (sRead store) h
+    Nothing -> do
+      snap <- makeSnapshot commit (iRead index) (sRead store)
+      let wipt = modifiedWIP snap
+      uploadedSnap <- uploadWIPT (sWrite store) wipt
+      (iWrite index) (hashOfLMMT commit) (hashOfLMMT uploadedSnap)
+      pure uploadedSnap
 
 
+setup :: Window -> UI ()
+setup root = void $ do
+  let initialBranchState = BranchState
+                         { bsMainBranch = liftLMMT commit3
+                         , bsBranches = []
+                         }
 
--- concept: multiple columns showing different info
--- leftmost: list of branches, each given a name
--- each branch has UI via buttons:
--- - makeCommit - create a new WIP commit in middle column based on this
--- - branch (create new branch == to head commit)
--- - delete
--- middle column shows current commit w/ lazy expansion
--- - can add parents to NEL
--- - can edit commit message
--- - can add changes
--- rightmost column
--- - resulting file tree from currently selected commit
--- - or file tree or file tree with (via either) merge errors at leaves for new commit?
+
+  commitSnapshotIndexTVar <- liftIO . atomically $ newTVar Map.empty
+  let commitSnapshotIndex = stmIOIndex commitSnapshotIndexTVar
+
+
+  blobStoreTvar <- liftIO . atomically $ newTVar emptyBlobStore
+  let blobStore = stmIOStore blobStoreTvar
+
+  initCommitHash <- uploadM (sWrite blobStore) commit3
+  let innitCommit = expandHash (sRead blobStore) initCommitHash
+
+
+  -- TODO: need to be building snapshot for all branches - mb have event handler and build initial state via that
+  -- TODO: eg start with null main branch then add commits to it, offline process generates index and etc
+
+  -- at this point there's only the main branch, so just build snapshot for that? idk seems legit
+  -- updateSnapshotIndex blobStore commitSnapshotIndex $ bsMainBranch initialBranchState
+
+
+  -- FIXME: SHIM
+  -- mainBranchSnapshot <- makeSnapshot (bsMainBranch initialBranchState) nullIndex (liftIO . sRead blobStore)
+
+  -- let extractFT :: M (WIPT m) 'SnapshotT -> WIPT m 'FileTree
+  --     extractFT (Snapshot ft _ _) = ft
+  -- mt <- buildMergeTrie emptyMergeTrie (extractFT mainBranchSnapshot)
+
+  -- mergeState <- liftIO . atomically $ newTVar mt
+  branchState <- liftIO . atomically $ newTVar initialBranchState
+  expansions <- liftIO . atomically $ newTVar (Set.empty)
+
+  (focusChangeEvent, focusChangeHandler) <- liftIO $ newEvent
+
+  mergeTrieRoot <- simpleDiv
+  -- _ <- browseMergeTrie focusChangeHandler mt mergeTrieRoot
+
+  browserRoot <- simpleDiv
+  -- discarded return value deregisters handler
+  _ <- onEvent focusChangeEvent $ \focus -> do
+    element browserRoot # set children []
+    browseLMMT focusChangeHandler expansions focus browserRoot
+    pure ()
+
+  liftIO $ focusChangeHandler $ wrapFocus sing innitCommit
+
+  branchBrowserRoot <- simpleDiv
+  branchBrowser branchBrowserRoot commitSnapshotIndex blobStore branchState focusChangeHandler
+
+  flex_p (getBody root) [
+      (element branchBrowserRoot, flexGrow 1)
+    , (element mergeTrieRoot, flexGrow 2)
+    , (element browserRoot, flexGrow 2)
+    ]
+
+-- TODO: use clay directly, would greatly simplify CSS work here
+-- | Simple coloured 'div'
+simpleDiv :: UI Element
+simpleDiv = UI.div # set UI.style
+          [ ("background-color", "#F89406")
+          , ("margin", "8px")
+          ]

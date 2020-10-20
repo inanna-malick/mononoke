@@ -8,3 +8,4 @@ extra-deps:
 - ../merkle-schemes/merkle-schemes-higher
 - github: obsidiansystems/aeson-gadt-th
   commit: 0f8263aa5fb59d296874bd505551c81fedb115d1
+- ../threepenny-gui-flexbox
