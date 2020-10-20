@@ -24,7 +24,6 @@ import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 
 -- NOTE: delete operations only valid on files, not directories
 
-
 -- will add cases to enum
 data MergeError = TwoChangesAtPath Path
 

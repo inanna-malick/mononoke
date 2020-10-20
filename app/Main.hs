@@ -35,6 +35,8 @@ data State m
   -- , browser_state :: Browser m
   }
 
+data CommitFocus = MainBranch | OtherCommit String
+
 type Expansions = Set RawBlakeHash
 
 data Focus m
@@ -171,6 +173,23 @@ browseMergeTrie focusHandler root parentElement = (cata f root) parentElement
 
 
 
+browseWIPT
+  :: forall (x:: MTag). SingI x
+  => Handler (Focus UI)
+  -> TVar Expansions
+  -> WIPT UI x
+  -> Element
+  -> UI Element
+browseWIPT focusHandler expansions root parentElement
+  = (getConst $ hpara f root) parentElement
+  where
+    f :: RAlg (WIP UI) (Const (Element -> UI Element))
+    f (HC (L lmmt)) = Const $ \pn -> browseLMMT focusHandler expansions (wrapFocus sing lmmt) pn
+    f (HC (R (HC (Tagged h m)))) = Const $ \pn -> -- TODO: proper WIPT UI, this is a hack
+      -- (getConst $ uiMAlg $ HC $ Tagged h $ HC $ Compose $ pure $ hfmap _elem m) pn
+      (getConst $ uiMAlg $ hfmap _elem m) pn
+-- type WIP m = HEither (LMMT m) `HCompose` Tagged Hash `HCompose` M
+
 
 browseLMMT
   :: Handler (Focus UI)
@@ -179,94 +198,105 @@ browseLMMT
   -> Element
   -> UI Element
 browseLMMT focusHandler expansions focus parentElement = case focus of
-    SnapshotF root -> (getConst $ hpara g root) parentElement
-    FileTreeF root -> (getConst $ hpara g root) parentElement
-    CommitF   root -> (getConst $ hpara g root) parentElement
-    BlobF     root -> (getConst $ hpara g root) parentElement
-  where
-    nestedDiv = UI.div # set (attr "style") "margin-left:1em"
-    ul = UI.ul # set (attr "style") "margin-left:1em"
-    g :: RAlg (LMM UI) (Const (Element -> UI Element))
-    g x@(HC (Tagged (Const raw) (HC (Compose m)))) = Const $ \pn -> do
-      let drawFocus = do
-            focus <- UI.button #+ [string "[<>]"]
-            on UI.click focus $ \() -> do
-              liftIO $ focusHandler $ wrapFocus sing (Term $ hfmap _tag x)
-            element pn #+ [element focus]
-
-          minimized = do
-            expand <- UI.button #+ [string $ "[+" ++ show raw ++ "]"]
-            on UI.click expand $ \() -> do
-              liftIO $ atomically $ modifyTVar expansions (Set.insert raw)
-              _ <- set UI.children [] (element pn)
-              expanded
-            drawFocus
-            element pn #+ [element expand]
-
-          expanded = do
-            mm <- m
-            minimize <- UI.button #+ [string "[-]"]
-            on UI.click minimize $ \() -> do
-              liftIO $ atomically $ modifyTVar expansions (Set.delete raw)
-              _ <- set UI.children [] (element pn)
-              minimized
-            drawFocus
-            _ <- element pn #+ [element minimize]
-            (getConst $ f $ hfmap _elem mm) pn
-
-      isExpanded <- liftIO $ atomically $ Set.member raw <$> readTVar expansions
-      case isExpanded of
-        False -> minimized
-        True -> expanded
-    f :: Alg M (Const (Element -> UI Element))
-    f (Snapshot t o ps) = Const $ \pn -> do
-        hdr     <- UI.string "Snapshot:"
-        tree    <- nestedDiv >>= getConst t
-        orig    <- nestedDiv >>= getConst o
-        parentList <- ul #+ ((UI.li >>= ) . getConst <$> ps)
-        parents <- nestedDiv #+ [string "parents:", element parentList]
-        element pn #+ fmap element [hdr, tree, orig, parents]
-
-    f (File b l p)
-      = Const $ \pn -> do
-        hdr <- UI.string "File:"
-        blob    <- nestedDiv >>= getConst b
-        lastMod <- nestedDiv >>= getConst l
-        prev    <- ul #+ ((UI.li >>= ) . getConst <$> p)
-        element pn #+ fmap element [hdr, blob, lastMod, prev]
-
-    f (Dir cs) = Const $ \pn -> do
-        let renderChild (k, Const v) = UI.li #+ [string (k ++ ":"), nestedDiv >>= v]
-        hdr      <- UI.string "Dir:"
-        childrenList <- ul #+ (renderChild <$> Map.toList cs)
-        element pn #+ fmap element [hdr, childrenList]
+    SnapshotF root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
+    FileTreeF root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
+    CommitF   root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
+    BlobF     root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
 
 
-    f NullCommit = Const $ \pn -> element pn #+ [string "NullCommit"]
+nestedUL :: UI Element
+nestedUL = UI.ul # set (attr "style") "margin-left:1em"
 
-    f (Commit m cs ps) = Const $ \pn -> do
-        hdr <- UI.string "Commit:"
-        msg <- UI.string $ "msg: " ++ m
-
-        let renderPath = mconcat . intersperse "/" . toList
-            renderChange Change{..} = case _change of
-              Del -> UI.li #+ [string $ renderPath _path ++ ": Del"]
-              Add (Const blob) ->
-                UI.li #+ [UI.string (renderPath _path ++ ": Add: "), nestedDiv >>= blob]
+nestedDiv :: UI Element
+nestedDiv = UI.div # set (attr "style") "margin-left:1em"
 
 
-        changeList <- ul #+ (renderChange <$> cs)
-        changes <- nestedDiv #+ [string "changes:", element changeList]
+uiLMMAlg
+  :: Handler (Focus UI)
+  -> TVar Expansions
+  -> RAlg (LMM UI) (Const (Element -> UI Element))
+uiLMMAlg focusHandler expansions x@(HC (Tagged (Const raw) (HC (Compose m)))) = Const $ \pn -> do
+  let drawFocus = do
+        focus <- UI.button #+ [string "[<>]"]
+        on UI.click focus $ \() -> do
+          liftIO $ focusHandler $ wrapFocus sing (Term $ hfmap _tag x)
+        element pn #+ [element focus]
 
-        parentList <- ul #+ ((UI.li >>= ) . getConst <$> toList ps)
-        parents <- nestedDiv #+ [string "parents:", element parentList]
+      minimized = do
+        expand <- UI.button #+ [string $ "[+" ++ show raw ++ "]"]
+        on UI.click expand $ \() -> do
+          liftIO $ atomically $ modifyTVar expansions (Set.insert raw)
+          _ <- set UI.children [] (element pn)
+          expanded
+        drawFocus
+        element pn #+ [element expand]
 
-        element pn #+ fmap element [hdr, msg, changes, parents]
+      expanded = do
+        mm <- m
+        minimize <- UI.button #+ [string "[-]"]
+        on UI.click minimize $ \() -> do
+          liftIO $ atomically $ modifyTVar expansions (Set.delete raw)
+          _ <- set UI.children [] (element pn)
+          minimized
+        drawFocus
+        _ <- element pn #+ [element minimize]
+        (getConst $ uiMAlg $ hfmap _elem mm) pn
 
-    f (Blob c) = Const $ \pn -> do
-        hdr <- UI.string "Blob:"
-        content <- UI.string c
-        element pn #+ fmap element [hdr, content]
+  isExpanded <- liftIO $ atomically $ Set.member raw <$> readTVar expansions
+  case isExpanded of
+    False -> minimized
+    True -> expanded
+
+
+uiMAlg :: Alg M (Const (Element -> UI Element))
+uiMAlg (Snapshot t o ps) = Const $ \pn -> do
+    hdr     <- UI.string "Snapshot:"
+    tree    <- nestedDiv >>= getConst t
+    orig    <- nestedDiv >>= getConst o
+    parentList <- nestedUL #+ ((UI.li >>= ) . getConst <$> ps)
+    parents <- nestedDiv #+ [string "parents:", element parentList]
+    element pn #+ fmap element [hdr, tree, orig, parents]
+
+uiMAlg (File b l p)
+  = Const $ \pn -> do
+    hdr <- UI.string "File:"
+    blob    <- nestedDiv >>= getConst b
+    lastMod <- nestedDiv >>= getConst l
+    prev    <- nestedUL #+ ((UI.li >>= ) . getConst <$> p)
+    element pn #+ fmap element [hdr, blob, lastMod, prev]
+
+uiMAlg (Dir cs) = Const $ \pn -> do
+    let renderChild (k, Const v) = UI.li #+ [string (k ++ ":"), nestedDiv >>= v]
+    hdr      <- UI.string "Dir:"
+    childrenList <- nestedUL #+ (renderChild <$> Map.toList cs)
+    element pn #+ fmap element [hdr, childrenList]
+
+
+uiMAlg NullCommit = Const $ \pn -> element pn #+ [string "NullCommit"]
+
+uiMAlg (Commit m cs ps) = Const $ \pn -> do
+    hdr <- UI.string "Commit:"
+    msg <- UI.string $ "msg: " ++ m
+
+    let renderPath = mconcat . intersperse "/" . toList
+        renderChange Change{..} = case _change of
+          Del -> UI.li #+ [string $ renderPath _path ++ ": Del"]
+          Add (Const blob) ->
+            UI.li #+ [UI.string (renderPath _path ++ ": Add: "), nestedDiv >>= blob]
+
+
+    changeList <- nestedUL #+ (renderChange <$> cs)
+    changes <- nestedDiv #+ [string "changes:", element changeList]
+
+    parentList <- nestedUL #+ ((UI.li >>= ) . getConst <$> toList ps)
+    parents <- nestedDiv #+ [string "parents:", element parentList]
+
+    element pn #+ fmap element [hdr, msg, changes, parents]
+
+uiMAlg (Blob c) = Const $ \pn -> do
+    hdr <- UI.string "Blob:"
+    content <- UI.string c
+    element pn #+ fmap element [hdr, content]
 
 
 
@@ -314,17 +344,11 @@ setup root = void $ do
   let innitCommit = expandHash (sRead blobStore) initCommitHash
 
 
-  -- TODO: need to be building snapshot for all branches - mb have event handler and build initial state via that
-  -- TODO: eg start with null main branch then add commits to it, offline process generates index and etc
-
-  -- at this point there's only the main branch, so just build snapshot for that? idk seems legit
-  -- updateSnapshotIndex blobStore commitSnapshotIndex $ bsMainBranch initialBranchState
-
-
+  -- TODO: update all this to use snapshot file tree as basis for merge tree in center panel
+  -- TODO: tomorrow! today is done but for the dregs
   -- FIXME: SHIM
-  -- mainBranchSnapshot <- makeSnapshot (bsMainBranch initialBranchState) nullIndex (liftIO . sRead blobStore)
-
-  -- let extractFT :: M (WIPT m) 'SnapshotT -> WIPT m 'FileTree
+  -- mainBranchSnapshot <- updateSnapshotIndex blobStore commitSnapshotIndex $ bsMainBranch initialBranchState
+  -- let extractFT :: LMMT (WIPT m) 'SnapshotT -> m ()
   --     extractFT (Snapshot ft _ _) = ft
   -- mt <- buildMergeTrie emptyMergeTrie (extractFT mainBranchSnapshot)
 
