@@ -39,7 +39,7 @@ data MergeTrie m a
                          , [WIPT m 'FileTree] -- previous incarnation(s)
                          )
   -- | all changes at this path
-  , mtChange  :: Maybe (ChangeType (LMMT m)) -- only one change per path is valid (only LMMT-only field)
+  , mtChange  :: Maybe (ChangeType (WIPT m)) -- only one change per path is valid (only LMMT-only field)
   -- | a map of child entities, if any, each either a recursion
   --   or a pointer to some uncontested extant file tree entity
   , mtChildren :: Map Path ((WIPT m 'FileTree) `Either` a)
@@ -49,7 +49,7 @@ data MergeTrie m a
 -- can then use other function to add commit to get snapshot
 resolveMergeTrie
   :: forall m
-   . LMMT m 'CommitT
+   . WIPT m 'CommitT
   -> Fix (MergeTrie m)
   -> WIPT m 'FileTree
 resolveMergeTrie commit mt = case cata f mt of
@@ -67,8 +67,8 @@ resolveMergeTrie commit mt = case cata f mt of
         ([], Just Del, _) -> error "delete addressed to a node with no file"
         (fs, Just (Add blob), []) ->
           -- an add addressed to a node with any number of files - simple good state
-          Just $ modifiedWIP $ File (unmodifiedWIP blob)
-                                    (unmodifiedWIP commit)
+          Just $ modifiedWIP $ File blob
+                                    commit
                                     (fmap (\(fh,_,_,_) -> fh) fs)
         ([], Just (Add _), _:_) -> error "add addressed to node with children"
         ((file, _, _, _):[], Nothing, []) ->
@@ -159,13 +159,12 @@ nullIndex = Index { iRead = \_ -> pure Nothing, iWrite = \_ _ -> pure () }
 makeSnapshot
   :: Monad m
   => MonadIO m
-  => LMMT m 'CommitT -- can provide LMMT via 'unmodifiedWIP'
+  => M (WIPT m) 'CommitT -- can provide LMMT via 'unmodifiedWIP'
   -> IndexRead m -- index, will be always Nothing for initial WIP
   -> StoreRead m -- for expanding index reads
   -> m (M (WIPT m) 'SnapshotT)
 makeSnapshot commit index storeRead = do
-  (HC (Tagged _ commit')) <- fetchLMMT commit
-  case commit' of
+  case commit of
     Commit msg changes parents -> do
       -- lines <- renderLMMT commit
       liftIO $ do
@@ -176,7 +175,7 @@ makeSnapshot commit index storeRead = do
           e = pure ([], emptyMergeTrie)
       (snapshots, mt) <- flip2 foldl e parents $ \mstate parentCommit -> do
         (snapshots, mt) <- mstate
-        index (hashOfLMMT parentCommit) >>= \case
+        index (hashOfWIPT parentCommit) >>= \case
           Just snap -> do
             (HC (Tagged _ snap')) <- fetchLMMT $ expandHash storeRead snap
             case snap' of
@@ -186,7 +185,8 @@ makeSnapshot commit index storeRead = do
                     snapshots' = snapshots ++ [wipt']
                 pure (snapshots', mt')
           Nothing -> do
-            snap <- makeSnapshot parentCommit index storeRead
+            (HC (Tagged _ parentCommit')) <- fetchWIPT parentCommit
+            snap <- makeSnapshot parentCommit' index storeRead
             let (Snapshot ft _ _) = snap
             mt' <- buildMergeTrie mt ft
             -- liftIO $ do
@@ -204,8 +204,8 @@ makeSnapshot commit index storeRead = do
       --   let lines = renderMergeTrie mt'
       --   traverse (\s -> putStr "  " >> putStrLn s) lines
 
-      let ft = resolveMergeTrie commit mt'
-          snap = Snapshot ft (unmodifiedWIP commit) snapshots
+      let ft = resolveMergeTrie (modifiedWIP commit) mt'
+          snap = Snapshot ft (modifiedWIP commit) snapshots
 
       liftIO $ do
         print $ "done processing commit: " ++ msg
@@ -216,7 +216,7 @@ makeSnapshot commit index storeRead = do
       pure snap
     NullCommit -> do
       let ft = modifiedWIP $ Dir Map.empty
-          snap = Snapshot ft (unmodifiedWIP commit) []
+          snap = Snapshot ft (modifiedWIP commit) []
 
       liftIO $ do
         print "built snapshot for nullcommit"
@@ -285,11 +285,11 @@ applyChanges
   :: forall m
    . Monad m
   => Fix (MergeTrie m)
-  -> [Change (LMMT m)] -- could just be 'Change Hash'
+  -> [Change (WIPT m)] -- could just be 'Change Hash'
   -> m (Fix (MergeTrie m))
 applyChanges mt changes = foldl f (pure mt) changes
   where
-    f :: m (Fix (MergeTrie m)) -> Change (LMMT m) -> m (Fix (MergeTrie m))
+    f :: m (Fix (MergeTrie m)) -> Change (WIPT m) -> m (Fix (MergeTrie m))
     f mmt c = do mt' <- mmt
                  applyChange mt' c
 
@@ -299,7 +299,7 @@ applyChange
   :: forall m
    . Monad m
   => Fix (MergeTrie m)
-  -> Change (LMMT m) -- could just be 'Change Hash'
+  -> Change (WIPT m) -- could just be 'Change Hash'
   -> m (Fix (MergeTrie m))
 applyChange t c = para f t . toList $ _path c
   where f :: MergeTrie m ( Fix (MergeTrie m)
@@ -327,7 +327,7 @@ applyChange t c = para f t . toList $ _path c
                                   }
 
 -- | helper function, constructs merge trie with change at path
-constructMT :: forall m. ChangeType (LMMT m) -> [Path] -> Fix (MergeTrie m)
+constructMT :: forall m. ChangeType (WIPT m) -> [Path] -> Fix (MergeTrie m)
 constructMT change = R.ana f
   where f :: [Path] -> MergeTrie m [Path]
         f [] = MergeTrie Map.empty (Just change) Map.empty
@@ -339,7 +339,7 @@ applyChangeH
    . Monad m
   => WIPT m 'FileTree
   -> [Path]
-  -> ChangeType (LMMT m)
+  -> ChangeType (WIPT m)
   -> m (Fix (MergeTrie m)) -- TODO: ErrorT or something w/ MergeError
 applyChangeH wipt fullPath ct = do
   HC (Tagged hash m') <- fetchWIPT wipt
