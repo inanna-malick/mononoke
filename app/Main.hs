@@ -40,15 +40,17 @@ data CommitFocus = MainBranch | OtherCommit String
 
 type Expansions = Set RawBlakeHash
 
-data Focus m
-  = SnapshotF (WIPT m 'SnapshotT)
-  | FileTreeF (WIPT m 'FileTree)
-  | CommitF   (WIPT m 'CommitT)
-  | BlobF     (WIPT m 'BlobT)
+data Focus x
+  = SnapshotF (x 'SnapshotT)
+  | FileTreeF (x 'FileTree)
+  | CommitF   (x 'CommitT)
+  | BlobF     (x 'BlobT)
 
+type FocusWIPT m = Focus (WIPT m)
+type FocusLMMT m = Focus (LMMT m)
 
 -- (sing :: Sing i)
-wrapFocus :: forall (i :: MTag) m. Sing i -> WIPT m i -> Focus m
+wrapFocus :: forall (i :: MTag) x. Sing i -> x i -> Focus x
 wrapFocus s x = case s of
   SSnapshotT -> SnapshotF x
   SFileTree  -> FileTreeF x
@@ -68,9 +70,10 @@ branchBrowser
   -> Index UI
   -> Store UI
   -> TVar (BranchState UI)
-  -> Handler (Focus UI)
+  -> Handler (FocusWIPT UI)
   -> UI Element
 branchBrowser parentElement commitSnapshotIndex store branchState focusChangeHandler = do
+    liftIO $ print "branch browser"
     bs <- liftIO $ atomically $ readTVar branchState
     branchList <- UI.ul
     drawBranch False branchList ("main", bsMainBranch bs)
@@ -133,15 +136,19 @@ data UpdateMergeTrie m
 
 browseMergeTrie
   :: Handler (UpdateMergeTrie UI)
-  -> Handler (Focus UI)
+  -> Handler (FocusWIPT UI)
   -> TVar Expansions
   -> Fix (MergeTrie UI)
   -> Element
   -> UI Element
-browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElement = (cata f root) [] parentElement
+browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElement = do
+    liftIO $ print "browse merge trie"
+    (cata f root) [] parentElement
   where
     f :: MergeTrie UI ([Path] -> Element -> UI Element) -> [Path] -> Element -> UI Element
-    f mt path pn = case mtChange mt of
+    f mt path pn = do
+      liftIO $ print "browse merge trie: f"
+      case mtChange mt of
         Just c -> do
           children <- renderChildren path $ mtChildren mt
           files <- renderFiles $ mtFilesAtPath mt
@@ -166,6 +173,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
               element pn #+ fmap element [addChange, delChange, files, children]
 
     renderFiles fs = do
+      liftIO $ print "browse merge trie: renderFiles"
       pn <- UI.ul
       traverse (renderFile pn) fs
       element pn
@@ -175,6 +183,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
     -- TODO: allow for focus on WIPT trees? mb?
     renderChange :: ChangeType (WIPT UI) -> UI Element
     renderChange (Add wipt) = do
+      liftIO $ print "browse merge trie: renderChange add"
       x <- UI.div
       (HC (Tagged _ blob)) <- fetchWIPT wipt
 
@@ -192,60 +201,63 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
 
 
     renderChildren path c = do
+      liftIO $ print "browse merge trie: renderChildren"
       pn <- UI.ul
       traverse (renderChild path pn) $ Map.toList c
       element pn
 
     renderChild :: [Path] -> Element -> (Path, WIPT UI 'FileTree `Either` ([Path] -> Element -> UI Element)) -> UI Element
-    renderChild path pn (pathSegment, Left wipt) = element pn #+ [UI.li >>= browseWIPT focusHandler expansions wipt]
-    renderChild path pn (pathSegment, Right next) = element pn #+ [UI.li >>= next (path ++ [pathSegment])]
+    renderChild path pn (pathSegment, Left wipt) = do
+      liftIO $ print "browse merge trie: renderChild wipt"
+      element pn #+ [UI.li >>= browseWIPT focusHandler expansions (wrapFocus sing wipt)]
+    renderChild path pn (pathSegment, Right next) = do
+      liftIO $ print "browse merge trie: renderChild next"
+      element pn #+ [UI.li >>= next (path ++ [pathSegment])]
 
 
 
 browseWIPT
-  :: forall (x:: MTag). SingI x
-  => Handler (Focus UI)
+  :: Handler (FocusWIPT UI)
   -> TVar Expansions
-  -> WIPT UI x
+  -> FocusWIPT UI
   -> Element
   -> UI Element
-browseWIPT focusHandler expansions root parentElement
-  = (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
-
-
-uiWIPAlg
-  :: Handler (Focus UI)
-  -> TVar Expansions
-  -> RAlg (WIP UI) (Const (Element -> UI Element))
-uiWIPAlg focusHandler expansions (HC (L lmmt)) = Const $ \pn -> browseLMMT focusHandler expansions (wrapFocus sing $ unmodifiedWIP lmmt) pn
-uiWIPAlg focusHandler expansions (HC (R (HC (Tagged h m)))) = Const $ \pn -> -- TODO: proper WIPT UI, this is a hack
-  -- (getConst $ uiMAlg $ HC $ Tagged h $ HC $ Compose $ pure $ hfmap _elem m) pn
-  (getConst $ uiMAlg $ hfmap _elem m) pn
--- type WIP m = HEither (LMMT m) `HCompose` Tagged Hash `HCompose` M
-
-
-browseLMMT
-  :: Handler (Focus UI)
-  -> TVar Expansions
-  -> Focus UI
-  -> Element
-  -> UI Element
-browseLMMT focusHandler expansions focus parentElement = case focus of
+browseWIPT focusHandler expansions focus parentElement = case focus of
     SnapshotF root -> (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
     FileTreeF root -> (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
     CommitF   root -> (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
     BlobF     root -> (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
 
 
-nestedUL :: UI Element
-nestedUL = UI.ul # set (attr "style") "margin-left:1em"
+browseLMMT
+  :: Handler (FocusWIPT UI)
+  -> TVar Expansions
+  -> FocusLMMT UI
+  -> Element
+  -> UI Element
+browseLMMT focusHandler expansions focus parentElement = case focus of
+    SnapshotF root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
+    FileTreeF root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
+    CommitF   root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
+    BlobF     root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
 
-nestedDiv :: UI Element
-nestedDiv = UI.div # set (attr "style") "margin-left:1em"
+
+uiWIPAlg
+  :: Handler (FocusWIPT UI)
+  -> TVar Expansions
+  -> RAlg (WIP UI) (Const (Element -> UI Element))
+uiWIPAlg focusHandler expansions (HC (L lmmt)) = Const $ \pn -> do
+  liftIO $ print "ui WIP alg: lmmt"
+  browseLMMT focusHandler expansions (wrapFocus sing $ lmmt) pn
+uiWIPAlg focusHandler expansions (HC (R (HC (Tagged h m)))) = Const $ \pn -> do -- TODO: proper WIPT UI, this is a hack
+  -- (getConst $ uiMAlg $ HC $ Tagged h $ HC $ Compose $ pure $ hfmap _elem m) pn
+  liftIO $ print "ui WIP alg: wipt"
+  (getConst $ uiMAlg $ hfmap _elem m) pn
+-- type WIP m = HEither (LMMT m) `HCompose` Tagged Hash `HCompose` M
 
 
 uiLMMAlg
-  :: Handler (Focus UI)
+  :: Handler (FocusWIPT UI)
   -> TVar Expansions
   -> RAlg (LMM UI) (Const (Element -> UI Element))
 uiLMMAlg focusHandler expansions x@(HC (Tagged (Const raw) (HC (Compose m)))) = Const $ \pn -> do
@@ -334,10 +346,12 @@ uiMAlg (Blob c) = Const $ \pn -> do
 
 
 
+nestedUL :: UI Element
+nestedUL = UI.ul # set (attr "style") "margin-left:1em"
 
-type Database = Map UserName ToDoList
-type UserName = String
-type ToDoList = Set String
+nestedDiv :: UI Element
+nestedDiv = UI.div # set (attr "style") "margin-left:1em"
+
 
 main :: IO ()
 main = do
@@ -370,6 +384,7 @@ updateSnapshotIndexWIPT store index commit = do
 
 setup :: Window -> UI ()
 setup root = void $ do
+  liftIO $ print "start setup"
   let initialBranchState = BranchState
                          { bsMainBranch = liftLMMT commit3
                          , bsBranches = []
@@ -396,16 +411,24 @@ setup root = void $ do
   (modifyMergeTrieEvent, modifyMergeTrieHandler) <- liftIO $ newEvent
 
 
+  liftIO $ print "a"
+
   mergeTrieRoot <- simpleDiv
 
   let extractFT :: M x 'SnapshotT -> x 'FileTree
       extractFT (Snapshot ft _ _) = ft
   let handleMMTE msg = do
+        liftIO $ print "handleMMTE"
         _ <- element mergeTrieRoot # set children []
+        liftIO $ print "aa"
         commit <- liftIO $ atomically $ handleMMTE' msg
+        liftIO $ print "bb"
         snap <- makeSnapshot commit (iRead commitSnapshotIndex) (sRead blobStore)
+        liftIO $ print "cc"
         mt <- buildMergeTrie emptyMergeTrie (extractFT snap)
+        liftIO $ print "dd"
         _ <- browseMergeTrie modifyMergeTrieHandler focusChangeHandler expansions mt mergeTrieRoot
+        liftIO $ print "ee"
         pure ()
 
       handleMMTE' :: UpdateMergeTrie UI -> STM (M (WIPT UI) 'CommitT)
@@ -436,21 +459,27 @@ setup root = void $ do
   -- discarded return value deregisters handler
   _ <- onEvent modifyMergeTrieEvent handleMMTE
 
+  liftIO $ print "b"
 
   liftIO $ modifyMergeTrieHandler $ ResetWithParent $ bsMainBranch initialBranchState
 
+  liftIO $ print "c"
 
   browserRoot <- simpleDiv
   -- discarded return value deregisters handler
   _ <- onEvent focusChangeEvent $ \focus -> do
     _ <- element browserRoot # set children []
-    browseLMMT focusChangeHandler expansions focus browserRoot
+    browseWIPT focusChangeHandler expansions focus browserRoot
     pure ()
 
+  liftIO $ print "d"
   liftIO $ focusChangeHandler $ wrapFocus sing $ unmodifiedWIP innitCommit
 
+  liftIO $ print "e"
   branchBrowserRoot <- simpleDiv
   branchBrowser branchBrowserRoot commitSnapshotIndex blobStore branchState focusChangeHandler
+
+  liftIO $ print "finish setup"
 
   flex_p (getBody root) [
       (element branchBrowserRoot, flexGrow 1)

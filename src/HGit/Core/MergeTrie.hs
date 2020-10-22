@@ -167,9 +167,9 @@ makeSnapshot commit index storeRead = do
   case commit of
     Commit msg changes parents -> do
       -- lines <- renderLMMT commit
-      liftIO $ do
-        print $ "processing commit: " ++ msg
-        -- traverse (\s -> putStr "  " >> putStrLn s) lines
+      -- liftIO $ do
+      --   print $ "processing commit: " ++ msg
+      --   traverse (\s -> putStr "  " >> putStrLn s) lines
 
       let flip2 = (flip .) . flip
           e = pure ([], emptyMergeTrie)
@@ -207,19 +207,19 @@ makeSnapshot commit index storeRead = do
       let ft = resolveMergeTrie (modifiedWIP commit) mt'
           snap = Snapshot ft (modifiedWIP commit) snapshots
 
-      liftIO $ do
-        print $ "done processing commit: " ++ msg
-        print "built snapshot with ft:"
-        let lines = renderWIPT ft
-        traverse (\s -> putStr "  " >> putStrLn s) lines
+      -- liftIO $ do
+      --   print $ "done processing commit: " ++ msg
+      --   print "built snapshot with ft:"
+      --   let lines = renderWIPT ft
+      --   traverse (\s -> putStr "  " >> putStrLn s) lines
 
       pure snap
     NullCommit -> do
       let ft = modifiedWIP $ Dir Map.empty
           snap = Snapshot ft (modifiedWIP commit) []
 
-      liftIO $ do
-        print "built snapshot for nullcommit"
+      -- liftIO $ do
+      --   print "built snapshot for nullcommit"
 
       pure snap
 
