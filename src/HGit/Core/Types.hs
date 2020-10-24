@@ -215,6 +215,10 @@ showHash h =
   let h' = take 6 $ T.unpack $ hashToText $ getConst h
    in "[" ++ typeTagName (sing :: Sing i) ++ ":" ++ h' ++ "]"
 
+
+typeTagName' :: forall (i :: MTag) x. SingI i => x i -> String
+typeTagName' _ = typeTagName (sing @i)
+
 typeTagName :: forall (i :: MTag). Sing i -> String
 typeTagName s = case s of
   SSnapshotT -> "snapshot"

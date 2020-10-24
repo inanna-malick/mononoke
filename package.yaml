@@ -32,7 +32,7 @@ dependencies:
   - base >=4.8
   - aeson
   - aeson-gadt-th
-  - bifunctors
+  - clay
   - containers
   - bytestring
   - directory
@@ -60,6 +60,7 @@ library:
   exposed-modules:
     - HGit.Core.MergeTrie
     - HGit.Core.Types
+    - HGit.GUI.CSS
 
 executable:
   main: Main.hs
