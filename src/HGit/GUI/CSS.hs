@@ -18,26 +18,67 @@ css = do
       borderColor black
       display inlineBlock
       color black
-      ".focus-small" & do
-        borderRadius (pct 50) (pct 50) (pct 50) (pct 50)
-
       ".expand-small" & do
         borderRadius (pct 50) (pct 50) (pct 50) (pct 50)
 
       ".minimize-small" & do
         borderRadius (pct 50) (pct 50) (pct 50) (pct 50)
 
+      ".snapshot-focus" & do
+        backgroundColor salmon
+        ":hover" & do
+          backgroundColor lightsalmon
+
+      ".filetree-focus" & do
+        backgroundColor skyblue
+        ":hover" & do
+          backgroundColor lightskyblue
+
+      ".commit-focus" & do
+        backgroundColor violet
+        ":hover" & do
+          backgroundColor plum
+
+      ".blob-focus" & do
+        backgroundColor turquoise
+        ":hover" & do
+          backgroundColor mediumturquoise
+
+
+
+    legend ? ".filetree-viewer-legend" & do
+      ".path-segment" & do
+        padding (px 3) (px 3) (px 3) (px 3)
+      -- button ? do
+      --   backgroundColor linen
+      --   border solid (px 1) black
+      --   color black;
+      --   textAlign center
+      --   textDecoration none
+      --   display inlineBlock
+      --   cursor pointer
+      --   float floatLeft
+
+      --   ".button:not(:last-child)" & do
+      --     borderRight none (px 0) black-- /* Prevent double borders */
+
+      --   ":hover" & do
+      --     backgroundColor wheat
+
+      -- backgroundColor linen
+      -- color black
+
+    fieldset ? ".filetree-viewer" & do
+      borderColor linen
+      borderWidth (px 4)
+      borderStyle4 none none none solid
+
 
     legend ? ".vertical-legend" & do
       backgroundColor none
       borderRight solid (px 4) linen
       color black
-      textAlign center
       padding (px 3) (px 3) (px 3) (px 3)
-      height (pct 100)
-      position absolute
-      left (unitless 0)
-      top  (unitless 0)
 
       -- /* turn the text sideways */
       "-o-writing-mode" -: "vertical-lr"

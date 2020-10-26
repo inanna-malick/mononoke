@@ -6,9 +6,15 @@ module Main where
 
 --------------------------------------------
 import qualified Clay as Clay
+import           Control.Monad.Trans
+import           Control.Monad.Trans.Except
+import           Control.Monad.Trans.Maybe
+import qualified Data.Char as Char
 import           Data.Functor.Compose
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (toList, nonEmpty, (<|), NonEmpty(..))
+import qualified Data.List.NonEmpty as NEL
+import           Data.List.Split (splitOn)
 import           Data.Text.Lazy (pack, unpack)
 import           Data.Singletons.TH (SingI, sing)
 --------------------------------------------
@@ -20,6 +26,7 @@ import           Util.RecursionSchemes
 import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
+import qualified Clay.Flexbox as CFB
 import Control.Monad (void)
 import Control.Concurrent.STM
 import Data.Map (Map)
@@ -68,7 +75,6 @@ branchBrowser
   -> Handler (FocusWIPT UI)
   -> UI Element
 branchBrowser parentElement commitSnapshotIndex store branchState focusChangeHandler = do
-    liftIO $ print "branch browser"
     bs <- liftIO $ atomically $ readTVar branchState
     branchList <- UI.ul
     drawBranch False branchList ("main", bsMainBranch bs)
@@ -91,11 +97,7 @@ branchBrowser parentElement commitSnapshotIndex store branchState focusChangeHan
     drawBranch del pn (branchName, commit) = do
       thisBranch <- UI.li
 
-      focus  <- UI.button # set UI.class_ "focus-commit" # set UI.text "[commit]"
-      on UI.click focus $ \() -> do
-        -- TODO: get from tvar - commit may change w/o regening this element? idk mb
-        liftIO $ focusChangeHandler (CommitF $ unmodifiedWIP commit)
-
+      focus  <- focus2 focusChangeHandler (unmodifiedWIP commit)
 
       _ <- element thisBranch #+ [string branchName, element focus]
 
@@ -110,9 +112,7 @@ branchBrowser parentElement commitSnapshotIndex store branchState focusChangeHan
         pure ()
 
       snap <- updateSnapshotIndexLMMT store commitSnapshotIndex commit
-      focusSnap <- UI.button # set UI.class_ "focus-snap" # set UI.text "[snapshot]"
-      on UI.click focusSnap $ \() -> do
-        liftIO $ focusChangeHandler (SnapshotF $ unmodifiedWIP snap)
+      focusSnap  <- focus2 focusChangeHandler (unmodifiedWIP snap)
 
       _ <- element thisBranch #+ [element focusSnap]
 
@@ -126,7 +126,10 @@ data UpdateMergeTrie m
   | AddParent (LMMT m 'CommitT)
   | Reset
 
-
+instance Show (UpdateMergeTrie m) where
+  show (ApplyChange c) = "ApplyChange: " ++ (unlines $ renderChange $ cmapShim (Const . renderWIPT) c)
+  show (AddParent _) = "AddParent: todo"
+  show Reset = "Reset"
 
 
 -- TODO/FIXME: full custom rendering for merge trie - needs to elide last changed commit (except for 'focus-on' link mb)
@@ -138,12 +141,10 @@ browseMergeTrie
   -> Element
   -> UI Element
 browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElement = do
-    liftIO $ print "browse merge trie"
     (cata f root) [] parentElement
   where
     f :: MergeTrie UI ([Path] -> Element -> UI Element) -> [Path] -> Element -> UI Element
     f mt path pn = do
-      liftIO $ print "browse merge trie: f"
       case mtChange mt of
         Just c -> do
           children <- renderChildren path $ mtChildren mt
@@ -169,7 +170,6 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
               element pn #+ fmap element [addChange, delChange, files, children]
 
     renderFiles fs = do
-      liftIO $ print "browse merge trie: renderFiles"
       pn <- UI.ul
       traverse (renderFile pn) fs
       element pn
@@ -178,13 +178,10 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
 
     renderChange :: ChangeType (WIPT UI) -> UI Element
     renderChange (Add wipt) = do
-      liftIO $ print "browse merge trie: renderChange add"
       x <- UI.div
       (HC (Tagged _ blob)) <- fetchWIPT wipt
 
-      focus <- UI.button # set UI.class_ "focus-small" # set UI.text "<>"
-      on UI.click focus $ \() -> do
-        liftIO $ focusHandler $ BlobF wipt
+      focus <- focus2 focusHandler wipt
 
       let shim :: forall w. M w 'BlobT -> String
           shim (Blob blobstr) = blobstr
@@ -195,7 +192,6 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
 
 
     renderChildren path c = do
-      liftIO $ print "browse merge trie: renderChildren"
       pn <- UI.ul
       traverse (renderChild path pn) $ Map.toList c
       element pn
@@ -215,7 +211,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
       (HC (Tagged h blob)) <- fetchWIPT wipt
       case blob of
         Blob b -> do
-          labelDiv "blob" [string b]
+          string b
 
     -- returns fieldset
     renderWIPTFileTree :: [Path] -> Path -> WIPT UI 'FileTree -> UI Element
@@ -223,15 +219,92 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
       (HC (Tagged h ft)) <- fetchWIPT wipt
       case ft of
         Dir cs -> do
-          labelDiv (pathSegment ++ "/") $ uncurry (renderWIPTFileTree $ path ++ [pathSegment]) <$> Map.toList cs
+
+          -- FIXME: always causes error by writing blob to SAME PATH as pre-existing dir
+          -- addChild <- UI.button # set UI.class_ "mt-add-child" # set UI.text "add child"
+          -- on UI.click addChild $ \() -> do
+          --   let fullPath = maybe (pathSegment :| []) (\ps -> NEL.reverse $ pathSegment <| (NEL.reverse ps)) (nonEmpty path)
+          --   liftIO $ modifyMergeTrieHandler (ApplyChange $ Change fullPath $ Add $ modifiedWIP $ Blob "placeholder")
+
+          let cs' = (uncurry (renderWIPTFileTree $ path ++ [pathSegment]) <$> Map.toList cs)
+              cs'' = fmap f cs'
+              f me = UI.li #+ [me]
+          fileTreeEntity [UI.code # set text (pathSegment ++ "/") # set UI.class_ "path-segment"] $ cs''
         File blob commit _prev -> do
           -- TODO: focus button for prev version(s)
-          labelDiv (pathSegment ++ "/") [ focusButton focusHandler wipt
-                                        , focusButton focusHandler commit
-                                        , renderWIPTBlob (path ++ [pathSegment]) blob
-                                        ]
+          fileTreeEntity [ UI.code # set text pathSegment # set UI.class_ "path-segment"
+                         , focus2 focusHandler wipt
+                         , focus2 focusHandler commit
+                         ]
+                         [ renderWIPTBlob (path ++ [pathSegment]) blob
+                         ]
+
+drawCommitEditor
+  :: Handler (UpdateMergeTrie UI)
+  -> Maybe InProgressCommit
+  -> UI Element
+drawCommitEditor modifyMergeTrieHandler ipc = do
+
+  viewCommit <- case ipc of
+    (Just InProgressCommit{..}) -> UI.div #+ [ viewChanges ipcChanges
+                                             , viewParents ipcParentCommits
+                                             , viewMessage ipcMsg
+                                             ]
+    Nothing -> string "no in progress commit"
+
+  UI.div #+ [ addChanges
+            , element viewCommit
+            , addParent
+            , resetCommit
+            ]
+
+  where
+    addParent   = string "todo"
+    resetCommit = string "todo"
+    viewParents ps = string "todo"
+    viewMessage msg = string "todo"
+
+    viewChanges cs = do
+      UI.ul #+ fmap viewChange cs
+    viewChange c =
+      -- UI.li #+ [renderChangeElem c]
+      -- wrapper <- UI.li #+ [renderChangeElem $ ]
+      -- cmapShim uiWIPAlg c
+      string "todo" -- FIXME
+
+    addChanges = do
+      add <- UI.button # set text "add"
+      del <- UI.button # set text "del"
+
+      pathInput     <- UI.input
+      contentsInput <- UI.input
+
+      on UI.click del $ \() -> void $ runMaybeT $ do
+        path <- lift (UI.get UI.value pathInput) >>= MaybeT . pure . parsePath
+        liftIO $ modifyMergeTrieHandler (ApplyChange $ Change path Del)
+
+      on UI.click add $ \() -> void $ runMaybeT $ do
+        path <- lift (UI.get UI.value pathInput) >>= MaybeT . pure . parsePath
+        contents <- lift $ UI.get UI.value pathInput
+        liftIO $ modifyMergeTrieHandler (ApplyChange $ Change path $ Add $ modifiedWIP $ Blob contents)
+
+      UI.div #+ [ string "path:"
+                , element pathInput
+                , UI.br
+                , string "contents:"
+                , element contentsInput
+                , UI.br
+                , element del
+                , element add
+                ]
 
 
+-- TODO: TEST THIS <- also, make errors (eg change to node with no file) visible via merge trie type (?)
+parsePath :: String -> Maybe (NonEmpty Path)
+parsePath s = do
+  case nonEmpty (filter (/= "") $ splitOn "/" s) of
+    Nothing -> Nothing
+    Just xs -> Just xs
 
 
 browseWIPT
@@ -265,7 +338,6 @@ uiWIPAlg
   -> TVar Expansions
   -> RAlg (WIP UI) (Const (Element -> UI Element))
 uiWIPAlg focusHandler expansions (HC (L lmmt)) = Const $ \pn -> do
-  liftIO $ print "ui WIP alg: lmmt"
   browseLMMT focusHandler expansions (wrapFocus sing $ lmmt) pn
 uiWIPAlg focusHandler expansions (HC (R (HC (Tagged h m)))) = Const $ \pn -> do -- TODO: proper WIPT UI, this is a hack
   -- (getConst $ uiMAlg $ HC $ Tagged h $ HC $ Compose $ pure $ hfmap _elem m) pn
@@ -275,17 +347,44 @@ uiWIPAlg focusHandler expansions (HC (R (HC (Tagged h m)))) = Const $ \pn -> do 
 
   element pn #+ [element wrapper]
 
+
+
+focus2
+  :: forall (x:: MTag)
+   . SingI x
+  => Handler (FocusWIPT UI)
+  -> WIPT UI x
+  -> UI Element
+focus2 focusHandler wipt = do
+    focus <- UI.button # set UI.class_ (typeTagName' wipt ++ "-focus")
+                       #+ [UI.italics # set UI.class_ ("fas " ++ typeTagFAIcon' wipt)]
+    on UI.click focus $ \() -> do
+      liftIO $ focusHandler $ wrapFocus sing wipt
+    pure focus
+
+
+focusButton'
+  :: forall (x:: MTag)
+   . SingI x
+  => Handler (FocusWIPT UI)
+  -> Maybe String
+  -> WIPT UI x
+  -> UI Element
+focusButton' focusHandler label wipt = do
+    let label' = maybe "<>" id label
+    focus <- UI.button # set UI.class_ "focus" # set UI.text label'
+    on UI.click focus $ \() -> do
+      liftIO $ focusHandler $ wrapFocus sing wipt
+    pure focus
+
+
 focusButton
   :: forall (x:: MTag)
    . SingI x
   => Handler (FocusWIPT UI)
   -> WIPT UI x
   -> UI Element
-focusButton focusHandler wipt = do
-    focus <- UI.button # set UI.class_ "focus-small" # set UI.text "<>"
-    on UI.click focus $ \() -> do
-      liftIO $ focusHandler $ wrapFocus sing wipt
-    pure focus
+focusButton focusHandler = focusButton' focusHandler Nothing
 
 
 uiLMMAlg
@@ -302,7 +401,7 @@ uiLMMAlg focusHandler expansions x@(HC (Tagged (Const raw) (HC (Compose m)))) = 
 
         wrapper <- UI.fieldset # set (UI.class_) ("persisted " ++ typeTagName' x ++ " node")
 
-        hdr <- UI.legend # set text (typeTagName' x) #+ [ focusButton focusHandler $ unmodifiedWIP (Term $ hfmap _tag x)
+        hdr <- UI.legend # set text (typeTagName' x) #+ [ focus2 focusHandler $ unmodifiedWIP (Term $ hfmap _tag x)
                                                         , element maximize
                                                         ]
         element wrapper # set text "..." #+ [element hdr]
@@ -319,7 +418,7 @@ uiLMMAlg focusHandler expansions x@(HC (Tagged (Const raw) (HC (Compose m)))) = 
 
         wrapper <- UI.fieldset # set (UI.class_) ("persisted " ++ typeTagName' mm ++ " node")
 
-        hdr <- UI.legend # set text (typeTagName' x) #+ [ focusButton focusHandler $ unmodifiedWIP (Term $ hfmap _tag x)
+        hdr <- UI.legend # set text (typeTagName' x) #+ [ focus2 focusHandler $ unmodifiedWIP (Term $ hfmap _tag x)
                                                         , element minimize
                                                         ]
         element wrapper #+ [element hdr]
@@ -333,6 +432,14 @@ uiLMMAlg focusHandler expansions x@(HC (Tagged (Const raw) (HC (Compose m)))) = 
     False -> minimized
     True  -> maximized
 
+
+renderChangeElem :: Change (Const (Element -> UI Element)) -> UI Element
+renderChangeElem Change{..} =
+    let renderPath = mconcat . intersperse "/" . toList
+     in case _change of
+          Del -> UI.li #+ [string $ renderPath _path ++ ": Del"]
+          Add (Const blob) ->
+            UI.li #+ [UI.string (renderPath _path ++ ": Add: "), UI.div >>= blob]
 
 uiMAlg :: Alg M (Const (Element -> UI Element))
 uiMAlg (Snapshot t o ps) = Const $ \pn -> do
@@ -360,14 +467,8 @@ uiMAlg NullCommit = Const $ \pn -> element pn #+ [ UI.legend # set text "NullCom
 uiMAlg (Commit m cs ps) = Const $ \pn -> do
     msg <- UI.string $ "msg: " ++ m
 
-    let renderPath = mconcat . intersperse "/" . toList
-        renderChange Change{..} = case _change of
-          Del -> UI.li #+ [string $ renderPath _path ++ ": Del"]
-          Add (Const blob) ->
-            UI.li #+ [UI.string (renderPath _path ++ ": Add: "), UI.div >>= blob]
 
-
-    changes <- labelDiv "CHANGES" [nestedUL #+ (renderChange <$> cs)]
+    changes <- labelDiv "CHANGES" [nestedUL #+ (renderChangeElem <$> cs)]
 
     parentList <- nestedUL #+ ((UI.li >>= ) . getConst <$> toList ps)
     parents <- labelDiv "PARENTS" [element parentList]
@@ -387,6 +488,12 @@ nestedUL = UI.ul # set (attr "style") "margin-left:1em"
 nestedDiv :: UI Element
 nestedDiv = UI.div # set (attr "style") "margin-left:1em"
 
+fileTreeEntity :: [UI Element] -> [UI Element] -> UI Element
+fileTreeEntity s x = UI.fieldset
+                   # set UI.class_ "filetree-viewer"
+                   #+ ([UI.legend #+ s # set UI.class_ "filetree-viewer-legend"] ++ x)
+
+
 labelDiv :: String -> [UI Element] -> UI Element
 labelDiv s x = UI.fieldset # set UI.class_ "vertical-legend"
                            #+ [UI.legend # set text s # set UI.class_ "vertical-legend", nestedDiv #+ x]
@@ -394,7 +501,7 @@ labelDiv s x = UI.fieldset # set UI.class_ "vertical-legend"
 
 main :: IO ()
 main = do
-  startGUI defaultConfig setup
+  startGUI (defaultConfig { jsStatic = Just "static"}) setup
 
 
 -- NOTE/TODO: this could all be in a single STM transaction. wild.
@@ -406,7 +513,9 @@ updateSnapshotIndexLMMT store index commit = do
     Just h  -> do
       pure $ expandHash (sRead store) h
     Nothing -> do
-      snap <- makeSnapshot (hfmap unmodifiedWIP commit') (iRead index) (sRead store)
+      esnap <- runExceptT $ makeSnapshot (hfmap unmodifiedWIP commit') (iRead index) (sRead store)
+      -- FIXME
+      snap <- either undefined pure esnap
       let wipt = modifiedWIP snap
       uploadedSnap <- uploadWIPT (sWrite store) wipt
       (iWrite index) (hashOfLMMT commit) (hashOfLMMT uploadedSnap)
@@ -416,7 +525,8 @@ updateSnapshotIndexLMMT store index commit = do
 updateSnapshotIndexWIPT :: MonadIO m => StoreRead m -> IndexRead m -> WIPT m 'CommitT -> m (M (WIPT m) 'SnapshotT)
 updateSnapshotIndexWIPT store index commit = do
   (HC (Tagged _ commit')) <- fetchWIPT commit
-  snap <- makeSnapshot commit' index store
+  esnap <- runExceptT $ makeSnapshot commit' index store
+  snap <- either undefined pure esnap
   pure snap
 
 data InProgressCommit
@@ -432,8 +542,8 @@ setup root = void $ do
   getHead root #+ [ mkElement "style"
           # set (UI.text) (unpack (Clay.render css))
           ]
+  UI.addStyleSheet root "all.css" -- fontawesome
 
-  liftIO $ print "start setup"
   let initialBranchState = BranchState
                          { bsMainBranch = liftLMMT commit3
                          , bsBranches = []
@@ -460,29 +570,39 @@ setup root = void $ do
   (modifyMergeTrieEvent, modifyMergeTrieHandler) <- liftIO $ newEvent
 
 
-  liftIO $ print "a"
 
   mergeTrieRoot <- simpleDiv
+
+  commitEditorRoot <- simpleDiv
 
   let extractFT :: M x 'SnapshotT -> x 'FileTree
       extractFT (Snapshot ft _ _) = ft
   let handleMMTE msg = do
-        liftIO $ print "handleMMTE"
         _ <- element mergeTrieRoot # set children []
-        liftIO $ print "aa"
+        liftIO $ print $ "handle MMTE msg"
+        liftIO $ print $ show msg
         mcommit <- liftIO $ atomically $ handleMMTE' msg
-        liftIO $ print "bb"
 
         ft <- case mcommit of
           Nothing -> do
+            -- redraw commit editor
+            _ <- element commitEditorRoot # set children []
+            element commitEditorRoot #+ [drawCommitEditor modifyMergeTrieHandler Nothing]
+
             -- TODO: handle arbitrary branch focus, currently just defaulting to main branch
             commit <- liftIO $ atomically $ bsMainBranch <$> readTVar branchState
             snap' <- updateSnapshotIndexLMMT blobStore commitSnapshotIndex commit
             (HC (Tagged _ snap)) <- fetchLMMT snap'
             pure $ unmodifiedWIP $ extractFT snap
-          Just InProgressCommit{..} -> do
+          Just ipc@InProgressCommit{..} -> do
+            -- redraw commit editor
+            _ <- element commitEditorRoot # set children []
+            element commitEditorRoot #+ [drawCommitEditor modifyMergeTrieHandler $ Just ipc]
+
             let commit = Commit ipcMsg ipcChanges ipcParentCommits
-            snap <- makeSnapshot commit (iRead commitSnapshotIndex) (sRead blobStore)
+            -- FIXME
+            esnap <- runExceptT $ makeSnapshot commit (iRead commitSnapshotIndex) (sRead blobStore)
+            snap <- either undefined pure esnap
             pure $ extractFT snap
 
         mt <- buildMergeTrie emptyMergeTrie ft
@@ -492,17 +612,29 @@ setup root = void $ do
       handleMMTE' :: UpdateMergeTrie UI -> STM (Maybe InProgressCommit)
       handleMMTE' (ApplyChange change) = do
           c <- readTVar inProgressCommitTVar
-          let nextCommit = case c of
-                (Just ipc) -> pure $ ipc { ipcChanges = ipcChanges ipc ++ [change] }
-                Nothing -> undefined
+          nextCommit <- case c of
+                (Just ipc) -> pure $ Just $ ipc { ipcChanges = ipcChanges ipc ++ [change] }
+                Nothing ->    do
+                  -- TODO: handle arbitrary branch focus, currently just defaulting to main branch
+                  commit <- bsMainBranch <$> readTVar branchState
+                  pure $ Just $ InProgressCommit { ipcChanges = [change]
+                                          , ipcParentCommits = unmodifiedWIP commit :| []
+                                          , ipcMsg = "todo"
+                                          }
           writeTVar inProgressCommitTVar nextCommit
           pure nextCommit
 
       handleMMTE' (AddParent parentToAdd) = do
           c <- readTVar inProgressCommitTVar
-          let nextCommit = case c of
-                (Just ipc) -> pure $ ipc { ipcParentCommits = unmodifiedWIP parentToAdd <| ipcParentCommits ipc }
-                Nothing -> undefined
+          nextCommit <- case c of
+                (Just ipc) -> pure $ Just $ ipc { ipcParentCommits = unmodifiedWIP parentToAdd <| ipcParentCommits ipc }
+                Nothing -> do
+                  -- TODO: handle arbitrary branch focus, currently just defaulting to main branch
+                  commit <- bsMainBranch <$> readTVar branchState
+                  pure $ Just $ InProgressCommit { ipcChanges = []
+                                          , ipcParentCommits = fmap unmodifiedWIP $ parentToAdd :| [commit]
+                                          , ipcMsg = "todo"
+                                          }
           writeTVar inProgressCommitTVar nextCommit
           pure nextCommit
 
@@ -515,11 +647,7 @@ setup root = void $ do
   -- discarded return value deregisters handler
   _ <- onEvent modifyMergeTrieEvent handleMMTE
 
-  liftIO $ print "b"
-
   liftIO $ modifyMergeTrieHandler $ Reset
-
-  liftIO $ print "c"
 
   browserRoot <- simpleDiv
   -- discarded return value deregisters handler
@@ -528,20 +656,20 @@ setup root = void $ do
     browseWIPT focusChangeHandler expansions focus browserRoot
     pure ()
 
-  liftIO $ print "d"
-  liftIO $ focusChangeHandler $ wrapFocus sing $ unmodifiedWIP innitCommit
 
-  liftIO $ print "e"
+  liftIO $ focusChangeHandler $ wrapFocus sing $ unmodifiedWIP innitCommit
   branchBrowserRoot <- simpleDiv
   branchBrowser branchBrowserRoot commitSnapshotIndex blobStore branchState focusChangeHandler
 
-  liftIO $ print "finish setup"
+  sidebar <- flex UI.div (flexDirection CFB.column)
+                [ (element commitEditorRoot, flexGrow 1)
+                , (element branchBrowserRoot, flexGrow 1)
+                ]
 
-  flex_p (getBody root) [
-      (element branchBrowserRoot, flexGrow 1)
-    , (element mergeTrieRoot, flexGrow 2)
-    , (element browserRoot, flexGrow 2)
-    ]
+  flex_p (getBody root) [ (element sidebar, flexGrow 1)
+                        , (element mergeTrieRoot, flexGrow 2)
+                        , (element browserRoot, flexGrow 2)
+                        ]
 
 -- TODO: use clay directly, would greatly simplify CSS work here
 -- | Simple coloured 'div'

@@ -50,6 +50,7 @@ dependencies:
   - servant-client
   - servant-server
   - singletons
+  - split
   - stm
   - text
   - transformers

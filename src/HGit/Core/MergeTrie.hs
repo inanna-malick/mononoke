@@ -10,8 +10,12 @@ module HGit.Core.MergeTrie where
 
 --------------------------------------------
 import           Control.Concurrent.STM
+import           Control.Monad
+import           Control.Monad.Trans
+import           Control.Monad.Except
 import           Control.Monad.IO.Class
 import           Data.List.NonEmpty (toList)
+import           Data.Maybe (mapMaybe)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Map.Merge.Strict
@@ -24,8 +28,6 @@ import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 
 -- NOTE: delete operations only valid on files, not directories
 
--- will add cases to enum
-data MergeError = TwoChangesAtPath Path
 
 -- TODO: need to account for unexpanded directory content
 data MergeTrie m a
@@ -46,38 +48,48 @@ data MergeTrie m a
   }
   deriving (Functor, Foldable, Traversable)
 
+
+-- will add cases to enum
+data MergeError
+  = MoreThanOneFileButNoChange    -- [Path]
+  | DeleteAtNodeWithNoFile        -- [Path]
+  | AddChangeAtNodeWithChildren   -- [Path]
+  | OneOrMoreFilesButWithChildren -- [Path]
+
 -- can then use other function to add commit to get snapshot
 resolveMergeTrie
   :: forall m
    . WIPT m 'CommitT
   -> Fix (MergeTrie m)
-  -> WIPT m 'FileTree
-resolveMergeTrie commit mt = case cata f mt of
-      Nothing -> modifiedWIP $ Dir Map.empty
-      Just x  -> x
+  -> MergeError `Either` WIPT m 'FileTree
+resolveMergeTrie commit mt = do
+    mft <- cata f mt
+    case mft of
+      Nothing -> pure $ modifiedWIP $ Dir Map.empty
+      Just x  -> pure $ x
   where
-    f :: MergeTrie m (Maybe (WIPT m 'FileTree)) -> (Maybe (WIPT m 'FileTree))
-    f MergeTrie{..} =
-      let children = Map.toList $ Map.mapMaybe (either pure id) mtChildren
-       in case (snd <$> Map.toList mtFilesAtPath, mtChange, children) of
-        ([], Nothing, []) -> Nothing -- empty node with no files or changes - delete
+    f :: MergeTrie m (MergeError `Either` Maybe (WIPT m 'FileTree)) -> MergeError `Either` (Maybe (WIPT m 'FileTree))
+    f MergeTrie{..} = do
+      children <- Map.toList . Map.mapMaybe id <$> traverse (either (pure . Just) id) mtChildren
+      case (snd <$> Map.toList mtFilesAtPath, mtChange, children) of
+        ([], Nothing, []) -> pure Nothing -- empty node with no files or changes - delete
         ([], Nothing, _:_) -> -- TODO: more elegant matching statement for 'any nonempty'
-          let children' = Map.fromList children -- no file or change but
-           in Just $ modifiedWIP $ Dir children' -- at least one child, retain
-        ([], Just Del, _) -> error "delete addressed to a node with no file"
+          let children' = Map.fromList children                       -- no file or change but
+            in pure $ Just $ modifiedWIP $ Dir children' -- at least one child, retain
+        ([], Just Del, _) -> Left $ DeleteAtNodeWithNoFile
         (fs, Just (Add blob), []) ->
           -- an add addressed to a node with any number of files - simple good state
-          Just $ modifiedWIP $ File blob
-                                    commit
-                                    (fmap (\(fh,_,_,_) -> fh) fs)
-        ([], Just (Add _), _:_) -> error "add addressed to node with children"
+          pure $ Just $ modifiedWIP $ File blob
+                                            commit
+                                            (fmap (\(fh,_,_,_) -> fh) fs)
+        ([], Just (Add _), _:_) -> Left $ AddChangeAtNodeWithChildren
         ((file, _, _, _):[], Nothing, []) ->
-          Just file -- single file with no changes, simple, valid
-        (_:_, Just Del, []) -> Nothing -- any number of files, deleted, valid
+          pure $ Just file -- single file with no changes, simple, valid
+        (_:_, Just Del, []) -> pure Nothing -- any number of files, deleted, valid
         (xs@(x@(f,_,_,_):_:_), Nothing, []) -> -- > 1 file, TODO check if they're the same
           -- if all (\(f',_,_,_) -> hashOfWIPT f' == hashOfWIPT f) xs
-          error "n > one file, no changes to select one of n"
-        (_:_, _, _:_) -> error "n >= one file, children"
+          Left $ MoreThanOneFileButNoChange
+        (_:_, _, _:_) -> Left $ OneOrMoreFilesButWithChildren
 
 
 renderMergeTrie :: Fix (MergeTrie m) -> [String]
@@ -162,7 +174,7 @@ makeSnapshot
   => M (WIPT m) 'CommitT -- can provide LMMT via 'unmodifiedWIP'
   -> IndexRead m -- index, will be always Nothing for initial WIP
   -> StoreRead m -- for expanding index reads
-  -> m (M (WIPT m) 'SnapshotT)
+  -> ExceptT MergeError m (M (WIPT m) 'SnapshotT)
 makeSnapshot commit index storeRead = do
   case commit of
     Commit msg changes parents -> do
@@ -175,20 +187,20 @@ makeSnapshot commit index storeRead = do
           e = pure ([], emptyMergeTrie)
       (snapshots, mt) <- flip2 foldl e parents $ \mstate parentCommit -> do
         (snapshots, mt) <- mstate
-        index (hashOfWIPT parentCommit) >>= \case
+        lift (index (hashOfWIPT parentCommit)) >>= \case
           Just snap -> do
-            (HC (Tagged _ snap')) <- fetchLMMT $ expandHash storeRead snap
+            (HC (Tagged _ snap')) <- lift $ fetchLMMT $ expandHash storeRead snap
             case snap' of
               Snapshot ft _ _ -> do
-                mt' <- buildMergeTrie mt (unmodifiedWIP ft)
+                mt' <- lift $ buildMergeTrie mt (unmodifiedWIP ft)
                 let wipt' = unmodifiedWIP $ expandHash storeRead snap
                     snapshots' = snapshots ++ [wipt']
                 pure (snapshots', mt')
           Nothing -> do
-            (HC (Tagged _ parentCommit')) <- fetchWIPT parentCommit
+            (HC (Tagged _ parentCommit')) <- lift $ fetchWIPT parentCommit
             snap <- makeSnapshot parentCommit' index storeRead
             let (Snapshot ft _ _) = snap
-            mt' <- buildMergeTrie mt ft
+            mt' <- lift $ buildMergeTrie mt ft
             -- liftIO $ do
             --   print "mergetrie:"
             --   let lines = renderMergeTrie mt'
@@ -197,15 +209,16 @@ makeSnapshot commit index storeRead = do
                 snapshots' = snapshots ++ [wipt']
             pure (snapshots', mt')
 
-      mt' <- applyChanges mt changes
+      mt' <- lift $ applyChanges mt changes
 
       -- liftIO $ do
       --   print "mergetrie:"
       --   let lines = renderMergeTrie mt'
       --   traverse (\s -> putStr "  " >> putStrLn s) lines
 
-      let ft = resolveMergeTrie (modifiedWIP commit) mt'
-          snap = Snapshot ft (modifiedWIP commit) snapshots
+      -- TODO: error handling here
+      ft <- ExceptT $ pure $ resolveMergeTrie (modifiedWIP commit) mt'
+      let snap = Snapshot ft (modifiedWIP commit) snapshots
 
       -- liftIO $ do
       --   print $ "done processing commit: " ++ msg
@@ -322,7 +335,8 @@ applyChange t c = para f t . toList $ _path c
                       $ MergeTrie { mtFilesAtPath = mtFilesAtPath m
                                   , mtChange = case mtChange m of
                                       Nothing -> Just $ _change c
-                                      Just x -> error "two changes, TODO proper error"
+                                      Just _x -> -- FIXME: maybe do something else in this case, eg error (needs error channel)
+                                        Just $ _change c -- overwrite previous change at path
                                   , mtChildren = fmap fst <$> mtChildren m
                                   }
 

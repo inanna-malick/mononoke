@@ -17,6 +17,7 @@ import           Control.Monad.IO.Class
 import           Data.Functor.Const (Const(..))
 import qualified Data.ByteString.Lazy as LB
 import           Data.Functor.Compose
+import           Data.Kind (Type)
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (NonEmpty(..), toList)
 import           Data.Map.Strict (Map)
@@ -50,6 +51,25 @@ data Change a
   { _path::   NonEmpty Path
   , _change:: ChangeType a
   } deriving (Generic)
+
+
+-- ugh, shim
+ctmapShim
+  :: forall (a :: MTag -> Type) (b :: MTag -> Type)
+   . (a 'BlobT -> b 'BlobT)
+  -> ChangeType a
+  -> ChangeType b
+ctmapShim f (Add a) = Add (f a)
+ctmapShim _ Del = Del
+
+cmapShim
+  :: forall (a :: MTag -> Type) (b :: MTag -> Type)
+   . (a 'BlobT -> b 'BlobT)
+  -> Change a
+  -> Change b
+cmapShim f Change{..} = Change _path $ ctmapShim f _change
+
+
 
 instance ToJSON (a 'BlobT) => ToJSON (Change a) where
     toEncoding = genericToEncoding defaultOptions
@@ -139,18 +159,22 @@ renderM (Dir children)
   = let children' = (\(k,v) -> [k ++ ": "] ++ getConst v) <$> Map.toList children
      in Const $ mconcat [["Dir:"]] ++ indent children'
 renderM NullCommit = Const ["NullCommit"]
-renderM (Commit msg changes parents)
-  = let renderPath = mconcat . intersperse "/" . toList
-        renderChange Change{..} = case _change of
-          Del   -> [renderPath _path ++ ": Del"]
-          Add x -> [renderPath _path ++ ": Add: "] ++ getConst x
-     in Const $ mconcat [["Commit \"" ++ msg ++ "\""]] ++
+renderM (Commit msg changes parents) =
+     Const $ mconcat [["Commit \"" ++ msg ++ "\""]] ++
   ( indent $
            [ ["changes:"] ++ (indent $ (renderChange <$> changes))
            , ["parents:"] ++ (indent $ (getConst <$> toList parents))
            ]
   )
 renderM (Blob x) = Const ["Blob: " ++ x]
+
+
+renderChange :: Change (Const [String]) -> [String]
+renderChange Change{..} = case _change of
+    Del   -> [renderPath _path ++ ": Del"]
+    Add x -> [renderPath _path ++ ": Add: "] ++ getConst x
+  where
+    renderPath = mconcat . intersperse "/" . toList
 
 -- TODO: can't hcatM LMMT b/c 'm' is in the stack that needs to be HTraversable
 renderLMMT :: forall m (x :: MTag). SingI x => Monad m => LMMT m x -> m [String]
@@ -214,6 +238,17 @@ showHash :: forall (i :: MTag). SingI i => Hash i -> String
 showHash h =
   let h' = take 6 $ T.unpack $ hashToText $ getConst h
    in "[" ++ typeTagName (sing :: Sing i) ++ ":" ++ h' ++ "]"
+
+
+typeTagFAIcon' :: forall (i :: MTag) x. SingI i => x i -> String
+typeTagFAIcon' _ = typeTagFAIcon (sing @i)
+
+typeTagFAIcon :: forall (i :: MTag). Sing i -> String
+typeTagFAIcon s = case s of
+  SSnapshotT -> "fa-database"
+  SFileTree  -> "fa-folder-open"
+  SCommitT   -> "fa-history"
+  SBlobT     -> "fa-file"
 
 
 typeTagName' :: forall (i :: MTag) x. SingI i => x i -> String
