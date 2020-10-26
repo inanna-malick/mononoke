@@ -11,6 +11,11 @@ import Clay
 
 css :: Css
 css = do
+    ul ? do
+      listStyleType none
+      marginLeft  (unitless 0)
+      paddingLeft (unitless 0)
+
     button ? do
       backgroundColor linen
       borderStyle solid

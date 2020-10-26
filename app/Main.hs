@@ -38,7 +38,6 @@ import Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Ext.Flexbox
 
-data CommitFocus = MainBranch | OtherCommit String
 
 type Expansions = Set RawBlakeHash
 
@@ -63,6 +62,7 @@ data BranchState m
   = BranchState
   { bsMainBranch :: LMMT m 'CommitT
   , bsBranches :: [(String, LMMT m 'CommitT)]
+  , bsFocus :: BranchFocus
   }
 
 
@@ -71,29 +71,39 @@ branchBrowser
   :: Element
   -> Index UI
   -> Store UI
-  -> TVar (BranchState UI)
+  -> BranchState UI
   -> Handler (FocusWIPT UI)
+  -> Handler UpdateBranchState
   -> UI Element
-branchBrowser parentElement commitSnapshotIndex store branchState focusChangeHandler = do
-    bs <- liftIO $ atomically $ readTVar branchState
+branchBrowser parentElement commitSnapshotIndex store bs focusChangeHandler updateBranchStateHandler = do
     branchList <- UI.ul
     drawBranch False branchList ("main", bsMainBranch bs)
     _ <- traverse (drawBranch True branchList) (bsBranches bs)
 
     addBranch <- UI.input
     on UI.sendValue addBranch $ \input -> do
-      let nullCommit = NullCommit
-      (sWrite store) nullCommit
-      let branch = (input, liftLMMT $ Term nullCommit)
-      liftIO $ atomically $ modifyTVar branchState $ \bs ->
-        bs { bsBranches = bsBranches bs ++ [branch] }
-      drawBranch True branchList branch
+      liftIO $ updateBranchStateHandler $ AddBranch input
 
     element parentElement #+ [ element branchList
+                             , branchSelector
+                             , UI.br
                              , string "add branch:"
                              , element addBranch
                              ]
   where
+    branchSelector = do
+      let branches = [(MainBranch, bsMainBranch bs)] ++ (fmap (\(x,y) -> (OtherBranch x, y)) $ bsBranches bs)
+          options = fmap mkOption branches
+          mkOption (f, c) = do
+            let s = case f of
+                  OtherBranch s -> s
+                  MainBranch -> "main"
+            opt <- UI.option # set UI.value s # set text s
+            on UI.click opt $ \() -> void $ do
+              liftIO $ updateBranchStateHandler $ ChangeFocus f
+            pure opt
+      UI.select #+ options
+
     drawBranch del pn (branchName, commit) = do
       thisBranch <- UI.li
 
@@ -105,9 +115,7 @@ branchBrowser parentElement commitSnapshotIndex store branchState focusChangeHan
         deleteButton <- UI.button # set UI.class_ "delete-branch" # set UI.text "[delete]"
         on UI.click deleteButton $ \() -> do
           -- remove via branch name, simple/easy
-          liftIO $ atomically $ modifyTVar branchState $ \bs ->
-            bs { bsBranches = filter (not . (== branchName) . fst) $ bsBranches bs }
-          delete thisBranch
+          liftIO $ updateBranchStateHandler $ DelBranch branchName
         _ <- element thisBranch #+ [element deleteButton]
         pure ()
 
@@ -120,16 +128,26 @@ branchBrowser parentElement commitSnapshotIndex store branchState focusChangeHan
       element pn #+ [element thisBranch]
 
 
+data UpdateBranchState
+  = AddBranch String -- branch off of current focus
+  | DelBranch String
+  | ChangeFocus BranchFocus -- blocked if IPC is Just
+
+data BranchFocus
+  = MainBranch
+  | OtherBranch String
 
 data UpdateMergeTrie m
   = ApplyChange (Change (WIPT m))
   | AddParent (LMMT m 'CommitT)
   | Reset
+  | Finalize
 
 instance Show (UpdateMergeTrie m) where
   show (ApplyChange c) = "ApplyChange: " ++ (unlines $ renderChange $ cmapShim (Const . renderWIPT) c)
   show (AddParent _) = "AddParent: todo"
   show Reset = "Reset"
+  show Finalize = "Finalize"
 
 
 -- TODO/FIXME: full custom rendering for merge trie - needs to elide last changed commit (except for 'focus-on' link mb)
@@ -199,7 +217,12 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
     renderChild :: [Path] -> Element -> (Path, WIPT UI 'FileTree `Either` ([Path] -> Element -> UI Element)) -> UI Element
     renderChild path pn (pathSegment, Left wipt) = do
       -- TODO: code tag for path segment?
-      element pn #+ [renderWIPTFileTree path pathSegment wipt]
+      element pn #+ [UI.li #+ [ focus2 focusHandler wipt
+                              , UI.code # set text pathSegment # set UI.class_ "path-segment"
+                              , string ": "
+                              , renderWIPTFileTree path pathSegment wipt
+                              ]
+                    ]
 
     renderChild path pn (pathSegment, Right next) = do
       element pn #+ [UI.li >>= next (path ++ [pathSegment])]
@@ -219,58 +242,103 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
       (HC (Tagged h ft)) <- fetchWIPT wipt
       case ft of
         Dir cs -> do
-
-          -- FIXME: always causes error by writing blob to SAME PATH as pre-existing dir
-          -- addChild <- UI.button # set UI.class_ "mt-add-child" # set UI.text "add child"
-          -- on UI.click addChild $ \() -> do
-          --   let fullPath = maybe (pathSegment :| []) (\ps -> NEL.reverse $ pathSegment <| (NEL.reverse ps)) (nonEmpty path)
-          --   liftIO $ modifyMergeTrieHandler (ApplyChange $ Change fullPath $ Add $ modifiedWIP $ Blob "placeholder")
-
           let cs' = (uncurry (renderWIPTFileTree $ path ++ [pathSegment]) <$> Map.toList cs)
-              cs'' = fmap f cs'
-              f me = UI.li #+ [me]
-          fileTreeEntity [UI.code # set text (pathSegment ++ "/") # set UI.class_ "path-segment"] $ cs''
-        File blob commit _prev -> do
+              cs'' = UI.ul #+ (f <$> Map.toList cs)
+              f (p,c) = UI.li #+ [ focus2 focusHandler c
+                                 , UI.code # set text p # set UI.class_ "path-segment"
+                                 , string ": "
+                                 , renderWIPTFileTree (path ++ [pathSegment]) p c
+                                 ]
+          cs''
+        File blob commit prev -> do
           -- TODO: focus button for prev version(s)
-          fileTreeEntity [ UI.code # set text pathSegment # set UI.class_ "path-segment"
-                         , focus2 focusHandler wipt
-                         , focus2 focusHandler commit
-                         ]
-                         [ renderWIPTBlob (path ++ [pathSegment]) blob
-                         ]
+          UI.div #+ [ UI.ul #+ ( [ UI.li #+ [ string "from commit: "
+                                           , focus2 focusHandler commit
+                                           ]
+                                 ] ++
+                                 (fmap (\x -> UI.li #+ [string "prev iteration: ", focus2 focusHandler x]) prev) ++
+                                 [UI.li #+ [string "blob: "
+                                           , focus2 focusHandler blob
+                                           , renderWIPTBlob (path ++ [pathSegment]) blob
+                                           ]
+                                 ]
+                               )
+                    ]
 
 drawCommitEditor
-  :: Handler (UpdateMergeTrie UI)
+  :: BranchState UI
+  -> Handler (UpdateMergeTrie UI)
+  -> Handler (FocusWIPT UI)
   -> Maybe InProgressCommit
   -> UI Element
-drawCommitEditor modifyMergeTrieHandler ipc = do
+drawCommitEditor bs modifyMergeTrieHandler focusHandler ipc = do
 
   viewCommit <- case ipc of
-    (Just InProgressCommit{..}) -> UI.div #+ [ viewChanges ipcChanges
+    (Just InProgressCommit{..}) -> UI.div #+ [ string "changes:"
+                                             , viewChanges ipcChanges
+                                             , UI.br
+                                             , string "parents:"
                                              , viewParents ipcParentCommits
                                              , viewMessage ipcMsg
+                                             , UI.br
+                                             , finalizeCommit
+                                             , UI.br
+                                             , resetCommit
                                              ]
     Nothing -> string "no in progress commit"
 
   UI.div #+ [ addChanges
             , element viewCommit
+            , UI.br
+            , string "add parent to commit: "
             , addParent
-            , resetCommit
             ]
 
   where
-    addParent   = string "todo"
-    resetCommit = string "todo"
-    viewParents ps = string "todo"
-    viewMessage msg = string "todo"
+    addParent   = do
+      let branches = [("main", bsMainBranch bs)] ++ bsBranches bs
+          options = fmap mkOption branches
+          mkOption (s, c) = do
+            opt <- UI.option # set UI.value s # set text s
+            on UI.click opt $ \() -> void $ do
+              liftIO $ modifyMergeTrieHandler (AddParent c)
+            pure opt
+      UI.select #+ options
+
+    finalizeCommit = do
+      finalize <- UI.button # set text "finalize commit [!]"
+      on UI.click finalize $ \() -> void $ do
+        liftIO $ modifyMergeTrieHandler Finalize
+      pure finalize
+
+    resetCommit = do
+      reset <- UI.button # set text "reset commit [!]"
+      on UI.click reset $ \() -> void $ do
+        liftIO $ modifyMergeTrieHandler Reset
+      pure reset
+
+    viewParents ps = do
+      elems <- NEL.toList <$> traverse viewParent ps
+      UI.ul #+ fmap element elems
+
+    viewParent wipt = do
+      (HC (Tagged _ m)) <- fetchWIPT wipt
+      case m of
+        NullCommit -> UI.li #+ [string "nullcommit"]
+        Commit msg _ _ -> UI.li #+ [ string ("commit: \"" ++ msg ++ "\"")
+                                   , focus2 focusHandler wipt
+                                   ]
+
+    viewMessage msg = string ("msg: \"" ++ msg ++  "\"")
+
+
 
     viewChanges cs = do
       UI.ul #+ fmap viewChange cs
-    viewChange c =
-      -- UI.li #+ [renderChangeElem c]
-      -- wrapper <- UI.li #+ [renderChangeElem $ ]
-      -- cmapShim uiWIPAlg c
-      string "todo" -- FIXME
+    renderPath = mconcat . intersperse "/" . toList
+    viewChange Change{..} = case _change of
+      Add a -> UI.li #+ [string ("add: " ++ renderPath _path), focus2 focusHandler a]
+      Del -> UI.li #+ [string ("del: " ++ renderPath _path)]
 
     addChanges = do
       add <- UI.button # set text "add"
@@ -285,7 +353,7 @@ drawCommitEditor modifyMergeTrieHandler ipc = do
 
       on UI.click add $ \() -> void $ runMaybeT $ do
         path <- lift (UI.get UI.value pathInput) >>= MaybeT . pure . parsePath
-        contents <- lift $ UI.get UI.value pathInput
+        contents <- lift $ UI.get UI.value contentsInput
         liftIO $ modifyMergeTrieHandler (ApplyChange $ Change path $ Add $ modifiedWIP $ Blob contents)
 
       UI.div #+ [ string "path:"
@@ -544,11 +612,6 @@ setup root = void $ do
           ]
   UI.addStyleSheet root "all.css" -- fontawesome
 
-  let initialBranchState = BranchState
-                         { bsMainBranch = liftLMMT commit3
-                         , bsBranches = []
-                         }
-
 
   commitSnapshotIndexTVar <- liftIO . atomically $ newTVar Map.empty
   let commitSnapshotIndex = stmIOIndex commitSnapshotIndexTVar
@@ -559,45 +622,83 @@ setup root = void $ do
   blobStoreTvar <- liftIO . atomically $ newTVar emptyBlobStore
   let blobStore = stmIOStore blobStoreTvar
 
-  initCommitHash <- uploadM (sWrite blobStore) commit3
+
+  initCommitHash <- uploadM (sWrite blobStore) $ Term NullCommit
   let innitCommit = expandHash (sRead blobStore) initCommitHash
 
-  -- mergeState <- liftIO . atomically $ newTVar mt
+  let initialBranchState = BranchState
+                         { bsMainBranch = innitCommit
+                         , bsBranches = []
+                         , bsFocus = MainBranch
+                         }
+
+
   branchState <- liftIO . atomically $ newTVar initialBranchState
   expansions <- liftIO . atomically $ newTVar (Set.empty)
 
+  -- errors on key not found - not sure how to handle this, need
+  -- generic 'shit broke' error channel, eg popup/alert
+  let getCurrentBranch :: STM (BranchFocus, LMMT UI 'CommitT)
+      getCurrentBranch = do
+        bs <- readTVar branchState
+        let focus = bsFocus bs
+        case focus of
+          MainBranch -> pure $ (focus, bsMainBranch bs)
+          OtherBranch b -> pure $ maybe (error "todo") (focus, ) $ lookup b (bsBranches bs)
+
+  let updateCurrentBranch :: LMMT UI 'CommitT -> STM ()
+      updateCurrentBranch commit = do
+        bs <- readTVar branchState
+        let focus = bsFocus bs
+        case focus of
+          MainBranch -> do
+            writeTVar branchState $ bs { bsMainBranch = commit}
+          OtherBranch b -> do
+            let update (s,c) | s == b    = (s, commit) -- update commit if exists (janky? maybe, idk)
+                             | otherwise = (s,c)
+            writeTVar branchState $ bs { bsBranches = update <$> bsBranches bs}
+
+  (updateBranchStateEvent, updateBranchStateHandler) <- liftIO $ newEvent
   (focusChangeEvent, focusChangeHandler) <- liftIO $ newEvent
   (modifyMergeTrieEvent, modifyMergeTrieHandler) <- liftIO $ newEvent
 
 
-
+  -- empty root nodes for various UI elements
+  branchBrowserRoot <- simpleDiv
   mergeTrieRoot <- simpleDiv
-
   commitEditorRoot <- simpleDiv
 
   let extractFT :: M x 'SnapshotT -> x 'FileTree
       extractFT (Snapshot ft _ _) = ft
+
+  let redrawCommitEditor bs mipc = do
+        _ <- element commitEditorRoot # set children []
+        element commitEditorRoot #+ [drawCommitEditor bs modifyMergeTrieHandler focusChangeHandler mipc]
+
+  let redrawBranchBrowser bs = do
+        _ <- element branchBrowserRoot # set children []
+        branchBrowser branchBrowserRoot commitSnapshotIndex blobStore bs focusChangeHandler updateBranchStateHandler
+
   let handleMMTE msg = do
         _ <- element mergeTrieRoot # set children []
         liftIO $ print $ "handle MMTE msg"
         liftIO $ print $ show msg
-        mcommit <- liftIO $ atomically $ handleMMTE' msg
+        mcommit <- handleMMTE' msg
 
         ft <- case mcommit of
           Nothing -> do
             -- redraw commit editor
-            _ <- element commitEditorRoot # set children []
-            element commitEditorRoot #+ [drawCommitEditor modifyMergeTrieHandler Nothing]
+            bs <- liftIO $ atomically $ readTVar branchState
+            redrawCommitEditor bs Nothing
 
-            -- TODO: handle arbitrary branch focus, currently just defaulting to main branch
-            commit <- liftIO $ atomically $ bsMainBranch <$> readTVar branchState
+            commit <-  liftIO $ atomically $ snd <$> getCurrentBranch
             snap' <- updateSnapshotIndexLMMT blobStore commitSnapshotIndex commit
             (HC (Tagged _ snap)) <- fetchLMMT snap'
             pure $ unmodifiedWIP $ extractFT snap
           Just ipc@InProgressCommit{..} -> do
             -- redraw commit editor
-            _ <- element commitEditorRoot # set children []
-            element commitEditorRoot #+ [drawCommitEditor modifyMergeTrieHandler $ Just ipc]
+            bs <- liftIO $ atomically $ readTVar branchState
+            redrawCommitEditor bs $ Just ipc
 
             let commit = Commit ipcMsg ipcChanges ipcParentCommits
             -- FIXME
@@ -609,14 +710,13 @@ setup root = void $ do
         _ <- browseMergeTrie modifyMergeTrieHandler focusChangeHandler expansions mt mergeTrieRoot
         pure ()
 
-      handleMMTE' :: UpdateMergeTrie UI -> STM (Maybe InProgressCommit)
-      handleMMTE' (ApplyChange change) = do
+      handleMMTE' :: UpdateMergeTrie UI -> UI (Maybe InProgressCommit)
+      handleMMTE' (ApplyChange change) = liftIO $ atomically $ do
           c <- readTVar inProgressCommitTVar
           nextCommit <- case c of
                 (Just ipc) -> pure $ Just $ ipc { ipcChanges = ipcChanges ipc ++ [change] }
                 Nothing ->    do
-                  -- TODO: handle arbitrary branch focus, currently just defaulting to main branch
-                  commit <- bsMainBranch <$> readTVar branchState
+                  commit <- snd <$> getCurrentBranch
                   pure $ Just $ InProgressCommit { ipcChanges = [change]
                                           , ipcParentCommits = unmodifiedWIP commit :| []
                                           , ipcMsg = "todo"
@@ -624,24 +724,45 @@ setup root = void $ do
           writeTVar inProgressCommitTVar nextCommit
           pure nextCommit
 
-      handleMMTE' (AddParent parentToAdd) = do
+      handleMMTE' (AddParent parentToAdd) = liftIO $ atomically $ do
           c <- readTVar inProgressCommitTVar
           nextCommit <- case c of
                 (Just ipc) -> pure $ Just $ ipc { ipcParentCommits = unmodifiedWIP parentToAdd <| ipcParentCommits ipc }
                 Nothing -> do
-                  -- TODO: handle arbitrary branch focus, currently just defaulting to main branch
-                  commit <- bsMainBranch <$> readTVar branchState
+                  commit <- snd <$> getCurrentBranch
                   pure $ Just $ InProgressCommit { ipcChanges = []
-                                          , ipcParentCommits = fmap unmodifiedWIP $ parentToAdd :| [commit]
-                                          , ipcMsg = "todo"
-                                          }
+                                                 , ipcParentCommits = fmap unmodifiedWIP $ parentToAdd :| [commit]
+                                                 , ipcMsg = "todo"
+                                                 }
           writeTVar inProgressCommitTVar nextCommit
           pure nextCommit
 
-      handleMMTE' Reset = do
+      handleMMTE' Reset = liftIO $ atomically $ do
           let nextCommit = Nothing
           writeTVar inProgressCommitTVar nextCommit
           pure nextCommit
+
+      handleMMTE' Finalize = do
+        -- TODO: write commit to store, update bs, redrawBranchBrowser bs'
+          -- FIXME: interleaving STM and IO actions here, b/c need to upload commit. janky?
+          mipc <- liftIO $ atomically $ do
+            readTVar inProgressCommitTVar
+          case mipc of
+            Nothing  -> pure Nothing -- no-op, nothing to finalize
+            Just InProgressCommit{..} -> do
+              let commit = modifiedWIP $ Commit ipcMsg ipcChanges ipcParentCommits
+              uploadedCommit <- uploadWIPT (sWrite blobStore) commit
+
+              bs <- liftIO $ atomically $ do
+                -- assertion: IPC and current branch are always intertwined, so this is safe
+                updateCurrentBranch uploadedCommit
+                writeTVar inProgressCommitTVar Nothing
+                bs <- readTVar branchState
+                pure bs
+
+              redrawBranchBrowser bs
+
+              pure Nothing
 
 
   -- discarded return value deregisters handler
@@ -658,8 +779,46 @@ setup root = void $ do
 
 
   liftIO $ focusChangeHandler $ wrapFocus sing $ unmodifiedWIP innitCommit
-  branchBrowserRoot <- simpleDiv
-  branchBrowser branchBrowserRoot commitSnapshotIndex blobStore branchState focusChangeHandler
+
+  _ <- onEvent updateBranchStateEvent $ \ubs -> do
+    bs' <- case ubs of
+      AddBranch s -> do
+        liftIO $ print "add branch"
+        liftIO $ atomically $ do
+          bs <- readTVar branchState
+          currentBranchPersistedCommit <- snd <$> getCurrentBranch
+
+          let bs' = bs { bsBranches = bsBranches bs ++ [(s, currentBranchPersistedCommit)] }
+          writeTVar branchState bs'
+          pure bs'
+      DelBranch s -> do
+        liftIO $ print "del branch: todo"
+        liftIO $ atomically $ do
+          bs <- readTVar branchState
+          -- TODO: error if target not found in list of branches
+          -- let bs' = bs { bsFocus = f }
+          -- writeTVar branchState bs'
+          pure bs
+      ChangeFocus f -> do
+        liftIO $ print "changefocus"
+        liftIO $ atomically $ do
+          -- TODO: check in progress commit, if set -> error
+          bs <- readTVar branchState
+          -- TODO: error if focus not found in list of branches
+          let bs' = bs { bsFocus = f }
+          writeTVar branchState bs'
+          pure bs'
+
+    -- dispatch reset after change focus - will redraw merge trie & reset + redraw commit editor
+    case ubs of
+      _ -> -- FIXME: just run in all cases b/c that'll trigger redraw of commit editor - could optimize more here
+        liftIO $ modifyMergeTrieHandler Reset
+
+    redrawBranchBrowser bs'
+    pure ()
+
+  bs <- liftIO $ atomically $ readTVar branchState
+  branchBrowser branchBrowserRoot commitSnapshotIndex blobStore bs focusChangeHandler updateBranchStateHandler
 
   sidebar <- flex UI.div (flexDirection CFB.column)
                 [ (element commitEditorRoot, flexGrow 1)
