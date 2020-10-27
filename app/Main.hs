@@ -77,8 +77,8 @@ branchBrowser
   -> UI Element
 branchBrowser parentElement commitSnapshotIndex store bs focusChangeHandler updateBranchStateHandler = do
     branchList <- UI.ul
-    drawBranch False branchList ("main", bsMainBranch bs)
-    _ <- traverse (drawBranch True branchList) (bsBranches bs)
+    drawBranch branchList (MainBranch, bsMainBranch bs)
+    _ <- traverse (drawBranch branchList . (\(f,c) -> (OtherBranch f, c))) (bsBranches bs)
 
     addBranch <- UI.input
     on UI.sendValue addBranch $ \input -> do
@@ -104,20 +104,26 @@ branchBrowser parentElement commitSnapshotIndex store bs focusChangeHandler upda
             pure opt
       UI.select #+ options
 
-    drawBranch del pn (branchName, commit) = do
+    drawBranch pn (f, commit) = do
+      let branchName = case f of
+            MainBranch -> "main"
+            OtherBranch s -> s
+      let branchName' = if f == bsFocus bs then ("[focus] -> " ++ branchName) else branchName
       thisBranch <- UI.li
 
       focus  <- focus2 focusChangeHandler (unmodifiedWIP commit)
 
-      _ <- element thisBranch #+ [string branchName, element focus]
+      _ <- element thisBranch #+ [string branchName', element focus]
 
-      if not del then pure () else do
-        deleteButton <- UI.button # set UI.class_ "delete-branch" # set UI.text "[delete]"
-        on UI.click deleteButton $ \() -> do
-          -- remove via branch name, simple/easy
-          liftIO $ updateBranchStateHandler $ DelBranch branchName
-        _ <- element thisBranch #+ [element deleteButton]
-        pure ()
+      case f of
+        MainBranch -> pure ()
+        OtherBranch s -> do
+          deleteButton <- UI.button # set UI.class_ "delete-branch" # set UI.text "[delete]"
+          on UI.click deleteButton $ \() -> do
+            -- remove via branch name, simple/easy
+            liftIO $ updateBranchStateHandler $ DelBranch branchName
+          _ <- element thisBranch #+ [element deleteButton]
+          pure ()
 
       snap <- updateSnapshotIndexLMMT store commitSnapshotIndex commit
       focusSnap  <- focus2 focusChangeHandler (unmodifiedWIP snap)
@@ -136,6 +142,7 @@ data UpdateBranchState
 data BranchFocus
   = MainBranch
   | OtherBranch String
+  deriving (Eq, Ord, Show)
 
 data UpdateMergeTrie m
   = ApplyChange (Change (WIPT m))
