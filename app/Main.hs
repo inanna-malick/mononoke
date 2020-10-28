@@ -68,14 +68,13 @@ data BranchState m
 
 -- TODO: need to figure out how to _update_ branch - maybe just fetch commit from tvar on click instead of baking in value?
 branchBrowser
-  :: Element
-  -> Index UI
+  :: Index UI
   -> Store UI
   -> BranchState UI
   -> Handler (FocusWIPT UI)
   -> Handler UpdateBranchState
   -> UI Element
-branchBrowser parentElement commitSnapshotIndex store bs focusChangeHandler updateBranchStateHandler = do
+branchBrowser commitSnapshotIndex store bs focusChangeHandler updateBranchStateHandler = do
     branchList <- UI.ul
     drawBranch branchList (MainBranch, bsMainBranch bs)
     _ <- traverse (drawBranch branchList . (\(f,c) -> (OtherBranch f, c))) (bsBranches bs)
@@ -84,12 +83,12 @@ branchBrowser parentElement commitSnapshotIndex store bs focusChangeHandler upda
     on UI.sendValue addBranch $ \input -> do
       liftIO $ updateBranchStateHandler $ AddBranch input
 
-    element parentElement #+ [ element branchList
-                             , branchSelector
-                             , UI.br
-                             , string "add branch:"
-                             , element addBranch
-                             ]
+    UI.div #+ [ element branchList
+              , branchSelector
+              , UI.br
+              , string "add branch:"
+              , element addBranch
+              ]
   where
     branchSelector = do
       let branches = [(MainBranch, bsMainBranch bs)] ++ (fmap (\(x,y) -> (OtherBranch x, y)) $ bsBranches bs)
@@ -111,7 +110,7 @@ branchBrowser parentElement commitSnapshotIndex store bs focusChangeHandler upda
       let branchName' = if f == bsFocus bs then ("[focus] -> " ++ branchName) else branchName
       thisBranch <- UI.li
 
-      focus  <- focus2 focusChangeHandler (unmodifiedWIP commit)
+      focus  <- focusButton focusChangeHandler (unmodifiedWIP commit)
 
       _ <- element thisBranch #+ [string branchName', element focus]
 
@@ -126,7 +125,7 @@ branchBrowser parentElement commitSnapshotIndex store bs focusChangeHandler upda
           pure ()
 
       snap <- updateSnapshotIndexLMMT store commitSnapshotIndex commit
-      focusSnap  <- focus2 focusChangeHandler (unmodifiedWIP snap)
+      focusSnap  <- focusButton focusChangeHandler (unmodifiedWIP snap)
 
       _ <- element thisBranch #+ [element focusSnap]
 
@@ -157,32 +156,32 @@ instance Show (UpdateMergeTrie m) where
   show Finalize = "Finalize"
 
 
+-- TODO: go through this and remove parent-node idiom
 -- TODO/FIXME: full custom rendering for merge trie - needs to elide last changed commit (except for 'focus-on' link mb)
 browseMergeTrie
   :: Handler (UpdateMergeTrie UI)
   -> Handler (FocusWIPT UI)
   -> TVar Expansions
   -> Fix (MergeTrie UI)
-  -> Element
   -> UI Element
-browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElement = do
-    (cata f root) [] parentElement
+browseMergeTrie modifyMergeTrieHandler focusHandler expansions root = do
+    (cata f root) []
   where
-    f :: MergeTrie UI ([Path] -> Element -> UI Element) -> [Path] -> Element -> UI Element
-    f mt path pn = do
+    f :: MergeTrie UI ([Path] -> UI Element) -> [Path] -> UI Element
+    f mt path = do
       case mtChange mt of
         Just c -> do
           children <- renderChildren path $ mtChildren mt
-          files <- renderFiles $ mtFilesAtPath mt
+          files <- renderFiles $ Map.toList $ mtFilesAtPath mt
           change <- UI.div #+ [string "change: ", renderChange c]
           -- TODO: remove_change via UI
-          element pn #+ fmap element [change, files, children]
+          UI.div #+ fmap element [change, files, children]
         Nothing -> do
           children <- renderChildren path $ mtChildren mt
-          files <- renderFiles $ mtFilesAtPath mt
+          files <- renderFiles $ Map.toList $ mtFilesAtPath mt
 
           case nonEmpty path of
-            Nothing -> element pn #+ fmap element [files, children]
+            Nothing -> UI.div #+ fmap element [files, children]
             Just nepath -> do
               addChange <- UI.input
               on UI.sendValue addChange $ \input -> do
@@ -192,21 +191,18 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
               on UI.click delChange $ \input -> do
                 liftIO $ modifyMergeTrieHandler $ ApplyChange $ del nepath
 
-              element pn #+ fmap element [addChange, delChange, files, children]
+              UI.div #+ fmap element [addChange, delChange, files, children]
 
-    renderFiles fs = do
-      pn <- UI.ul
-      traverse (renderFile pn) fs
-      element pn
+    renderFiles fs = UI.ul #+ fmap renderFile fs
 
-    renderFile pn _ = element pn #+ [string "todo: render file"]
+    renderFile _ = string "todo: render file"
 
     renderChange :: ChangeType (WIPT UI) -> UI Element
     renderChange (Add wipt) = do
       x <- UI.div
       (HC (Tagged _ blob)) <- fetchWIPT wipt
 
-      focus <- focus2 focusHandler wipt
+      focus <- focusButton focusHandler wipt
 
       let shim :: forall w. M w 'BlobT -> String
           shim (Blob blobstr) = blobstr
@@ -216,23 +212,19 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
     renderChange Del = string "DELETE"
 
 
-    renderChildren path c = do
-      pn <- UI.ul
-      traverse (renderChild path pn) $ Map.toList c
-      element pn
+    renderChildren path c = UI.ul #+ fmap (renderChild path) (Map.toList c)
 
-    renderChild :: [Path] -> Element -> (Path, WIPT UI 'FileTree `Either` ([Path] -> Element -> UI Element)) -> UI Element
-    renderChild path pn (pathSegment, Left wipt) = do
+    renderChild :: [Path] -> (Path, WIPT UI 'FileTree `Either` ([Path] -> UI Element)) -> UI Element
+    renderChild path (pathSegment, Left wipt) = do
       -- TODO: code tag for path segment?
-      element pn #+ [UI.li #+ [ focus2 focusHandler wipt
-                              , UI.code # set text pathSegment # set UI.class_ "path-segment"
-                              , string ": "
-                              , renderWIPTFileTree path pathSegment wipt
-                              ]
-                    ]
+      UI.li #+ [ focusButton focusHandler wipt
+               , UI.code # set text pathSegment # set UI.class_ "path-segment"
+               , string ": "
+               , renderWIPTFileTree path pathSegment wipt
+               ]
 
-    renderChild path pn (pathSegment, Right next) = do
-      element pn #+ [UI.li >>= next (path ++ [pathSegment])]
+    renderChild path (pathSegment, Right next) = do
+      UI.li #+ [next (path ++ [pathSegment])]
 
 
     -- returns fieldset
@@ -251,7 +243,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
         Dir cs -> do
           let cs' = (uncurry (renderWIPTFileTree $ path ++ [pathSegment]) <$> Map.toList cs)
               cs'' = UI.ul #+ (f <$> Map.toList cs)
-              f (p,c) = UI.li #+ [ focus2 focusHandler c
+              f (p,c) = UI.li #+ [ focusButton focusHandler c
                                  , UI.code # set text p # set UI.class_ "path-segment"
                                  , string ": "
                                  , renderWIPTFileTree (path ++ [pathSegment]) p c
@@ -260,12 +252,12 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root parentElemen
         File blob commit prev -> do
           -- TODO: focus button for prev version(s)
           UI.div #+ [ UI.ul #+ ( [ UI.li #+ [ string "from commit: "
-                                           , focus2 focusHandler commit
+                                           , focusButton focusHandler commit
                                            ]
                                  ] ++
-                                 (fmap (\x -> UI.li #+ [string "prev iteration: ", focus2 focusHandler x]) prev) ++
+                                 (fmap (\x -> UI.li #+ [string "prev iteration: ", focusButton focusHandler x]) prev) ++
                                  [UI.li #+ [string "blob: "
-                                           , focus2 focusHandler blob
+                                           , focusButton focusHandler blob
                                            , renderWIPTBlob (path ++ [pathSegment]) blob
                                            ]
                                  ]
@@ -333,7 +325,7 @@ drawCommitEditor bs modifyMergeTrieHandler focusHandler ipc = do
       case m of
         NullCommit -> UI.li #+ [string "nullcommit"]
         Commit msg _ _ -> UI.li #+ [ string ("commit: \"" ++ msg ++ "\"")
-                                   , focus2 focusHandler wipt
+                                   , focusButton focusHandler wipt
                                    ]
 
     viewMessage msg = string ("msg: \"" ++ msg ++  "\"")
@@ -344,7 +336,7 @@ drawCommitEditor bs modifyMergeTrieHandler focusHandler ipc = do
       UI.ul #+ fmap viewChange cs
     renderPath = mconcat . intersperse "/" . toList
     viewChange Change{..} = case _change of
-      Add a -> UI.li #+ [string ("add: " ++ renderPath _path), focus2 focusHandler a]
+      Add a -> UI.li #+ [string ("add: " ++ renderPath _path), focusButton focusHandler a]
       Del -> UI.li #+ [string ("del: " ++ renderPath _path)]
 
     addChanges = do
@@ -384,73 +376,24 @@ parsePath s = do
 
 browseWIPT
   :: Handler (FocusWIPT UI)
-  -> TVar Expansions
   -> FocusWIPT UI
-  -> Element
   -> UI Element
-browseWIPT focusHandler expansions focus parentElement = case focus of
-    SnapshotF root -> (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
-    FileTreeF root -> (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
-    CommitF   root -> (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
-    BlobF     root -> (getConst $ hpara (uiWIPAlg focusHandler expansions) root) parentElement
+browseWIPT focusHandler focus = case focus of
+    SnapshotF root -> (getConst $ hpara (uiWIPAlg focusHandler) root)
+    FileTreeF root -> (getConst $ hpara (uiWIPAlg focusHandler) root)
+    CommitF   root -> (getConst $ hpara (uiWIPAlg focusHandler) root)
+    BlobF     root -> (getConst $ hpara (uiWIPAlg focusHandler) root)
 
 
 browseLMMT
   :: Handler (FocusWIPT UI)
-  -> TVar Expansions
   -> FocusLMMT UI
-  -> Element
   -> UI Element
-browseLMMT focusHandler expansions focus parentElement = case focus of
-    SnapshotF root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
-    FileTreeF root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
-    CommitF   root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
-    BlobF     root -> (getConst $ hpara (uiLMMAlg focusHandler expansions) root) parentElement
-
-
-uiWIPAlg
-  :: Handler (FocusWIPT UI)
-  -> TVar Expansions
-  -> RAlg (WIP UI) (Const (Element -> UI Element))
-uiWIPAlg focusHandler expansions (HC (L lmmt)) = Const $ \pn -> do
-  browseLMMT focusHandler expansions (wrapFocus sing $ lmmt) pn
-uiWIPAlg focusHandler expansions (HC (R (HC (Tagged h m)))) = Const $ \pn -> do -- TODO: proper WIPT UI, this is a hack
-  -- (getConst $ uiMAlg $ HC $ Tagged h $ HC $ Compose $ pure $ hfmap _elem m) pn
-  wrapper <- UI.fieldset # set (UI.class_) ("wip " ++ typeTagName' m ++ " node")
-
-  (getConst $ uiMAlg $ hfmap _elem m) wrapper
-
-  element pn #+ [element wrapper]
-
-
-
-focus2
-  :: forall (x:: MTag)
-   . SingI x
-  => Handler (FocusWIPT UI)
-  -> WIPT UI x
-  -> UI Element
-focus2 focusHandler wipt = do
-    focus <- UI.button # set UI.class_ (typeTagName' wipt ++ "-focus")
-                       #+ [UI.italics # set UI.class_ ("fas " ++ typeTagFAIcon' wipt)]
-    on UI.click focus $ \() -> do
-      liftIO $ focusHandler $ wrapFocus sing wipt
-    pure focus
-
-
-focusButton'
-  :: forall (x:: MTag)
-   . SingI x
-  => Handler (FocusWIPT UI)
-  -> Maybe String
-  -> WIPT UI x
-  -> UI Element
-focusButton' focusHandler label wipt = do
-    let label' = maybe "<>" id label
-    focus <- UI.button # set UI.class_ "focus" # set UI.text label'
-    on UI.click focus $ \() -> do
-      liftIO $ focusHandler $ wrapFocus sing wipt
-    pure focus
+browseLMMT focusHandler focus = case focus of
+    SnapshotF root -> (getConst $ hpara (uiLMMAlg focusHandler) root)
+    FileTreeF root -> (getConst $ hpara (uiLMMAlg focusHandler) root)
+    CommitF   root -> (getConst $ hpara (uiLMMAlg focusHandler) root)
+    BlobF     root -> (getConst $ hpara (uiLMMAlg focusHandler) root)
 
 
 focusButton
@@ -459,100 +402,88 @@ focusButton
   => Handler (FocusWIPT UI)
   -> WIPT UI x
   -> UI Element
-focusButton focusHandler = focusButton' focusHandler Nothing
+focusButton focusHandler wipt = do
+    focus <- UI.button # set UI.class_ (typeTagName' wipt ++ "-focus")
+                       #+ [UI.italics # set UI.class_ ("fas " ++ typeTagFAIcon' wipt)]
+    on UI.click focus $ \() -> do
+      liftIO $ focusHandler $ wrapFocus sing wipt
+    pure focus
+
+
+
+uiWIPAlg
+  :: Handler (FocusWIPT UI)
+  -> RAlg (WIP UI) (Const (UI Element))
+uiWIPAlg focusHandler (HC (L lmmt)) = Const $ do
+      browseLMMT focusHandler (wrapFocus sing $ lmmt)
+uiWIPAlg focusHandler wipt@(HC (R m)) = Const $ do
+      let focus = focusButton focusHandler $ Term $ hfmap _tag wipt
+      getConst $ browseMononoke focus ["wip"] $ hfmap _elem m
 
 
 uiLMMAlg
   :: Handler (FocusWIPT UI)
-  -> TVar Expansions
-  -> RAlg (LMM UI) (Const (Element -> UI Element))
-uiLMMAlg focusHandler expansions x@(HC (Tagged (Const raw) (HC (Compose m)))) = Const $ \pn -> do
-  let minimized = do
-        maximize <- UI.button # set UI.class_ "expand-small" # set UI.text "+"
-        on UI.click maximize $ \() -> do
-          liftIO $ atomically $ modifyTVar expansions (Set.insert raw)
-          _ <- set UI.children [] (element pn)
-          maximized
-
-        wrapper <- UI.fieldset # set (UI.class_) ("persisted " ++ typeTagName' x ++ " node")
-
-        hdr <- UI.legend # set text (typeTagName' x) #+ [ focus2 focusHandler $ unmodifiedWIP (Term $ hfmap _tag x)
-                                                        , element maximize
-                                                        ]
-        element wrapper # set text "..." #+ [element hdr]
-
-        element pn #+ [element wrapper]
-
-      maximized = do
-        mm <- m
-        minimize <- UI.button # set UI.class_ "minimize-small" # set UI.text "-"
-        on UI.click minimize $ \() -> do
-          liftIO $ atomically $ modifyTVar expansions (Set.delete raw)
-          _ <- set UI.children [] (element pn)
-          minimized
-
-        wrapper <- UI.fieldset # set (UI.class_) ("persisted " ++ typeTagName' mm ++ " node")
-
-        hdr <- UI.legend # set text (typeTagName' x) #+ [ focus2 focusHandler $ unmodifiedWIP (Term $ hfmap _tag x)
-                                                        , element minimize
-                                                        ]
-        element wrapper #+ [element hdr]
-
-        (getConst $ uiMAlg $ hfmap _elem mm) wrapper
-
-        element pn #+ [element wrapper]
-
-  isExpanded <- liftIO $ atomically $ Set.member raw <$> readTVar expansions
-  case isExpanded of
-    False -> minimized
-    True  -> maximized
+  -> RAlg (LMM UI) (Const (UI Element))
+uiLMMAlg focusHandler lmm = Const $ do
+      m <-  fetchLMM lmm
+      let focus = focusButton focusHandler $ unmodifiedWIP $ Term $ hfmap _tag lmm
+      getConst $ browseMononoke focus ["persisted"] $ hfmap _elem m
 
 
-renderChangeElem :: Change (Const (Element -> UI Element)) -> UI Element
-renderChangeElem Change{..} =
-    let renderPath = mconcat . intersperse "/" . toList
-     in case _change of
-          Del -> UI.li #+ [string $ renderPath _path ++ ": Del"]
-          Add (Const blob) ->
-            UI.li #+ [UI.string (renderPath _path ++ ": Add: "), UI.div >>= blob]
+browseMononoke :: UI Element -> [String] -> Alg (Tagged Hash `HCompose` M) (Const (UI Element))
+browseMononoke focus extraTags (HC (Tagged h m)) = Const $ do
+      wrapper <- UI.fieldset # set UI.class_ (mconcat $ intersperse " " $ extraTags ++ [typeTagName' m, "node"])
 
-uiMAlg :: Alg M (Const (Element -> UI Element))
-uiMAlg (Snapshot t o ps) = Const $ \pn -> do
-    tree    <- UI.div >>= getConst t
-    orig    <- UI.div >>= getConst o
-    parentList <- nestedUL #+ ((UI.li >>= ) . getConst <$> ps)
-    parents <- UI.div #+ [string "parents:", element parentList]
-    element pn #+ fmap element [tree, orig, parents]
-
-uiMAlg (File b l p)
-  = Const $ \pn -> do
-    blob    <- UI.div >>= getConst b
-    lastMod <- UI.div >>= getConst l
-    prev    <- nestedUL #+ ((UI.li >>= ) . getConst <$> p)
-    element pn #+ fmap element [blob, lastMod, prev]
-
-uiMAlg (Dir cs) = Const $ \pn -> do
-    let renderChild (k, Const v) = UI.li #+ [string (k ++ ":"), UI.div >>= v]
-    childrenList <- nestedUL #+ (renderChild <$> Map.toList cs)
-    element pn #+ fmap element [childrenList]
+      hdr <- UI.legend # set text (typeTagName' m)
+                       #+ [ focus ]
+      element wrapper #+ ([element hdr] ++ browseMononoke' m)
 
 
-uiMAlg NullCommit = Const $ \pn -> element pn #+ [ UI.legend # set text "NullCommit" ]
+  where
+    renderChange :: Change (Const (UI Element)) -> UI Element
+    renderChange Change{..} =
+        let renderPath = mconcat . intersperse "/" . toList
+        in case _change of
+              Del -> UI.li #+ [string $ renderPath _path ++ ": Del"]
+              Add (Const blob) ->
+                UI.li #+ [UI.string (renderPath _path ++ ": Add: "), blob]
 
-uiMAlg (Commit m cs ps) = Const $ \pn -> do
-    msg <- UI.string $ "msg: " ++ m
+    browseMononoke' :: forall (x:: MTag). M (Const (UI Element)) x -> [UI Element]
+    browseMononoke' (Snapshot t o ps) =
+      [ getConst t
+      , getConst o
+      , do
+          parentList <- nestedUL #+ ((UI.li #+) . pure . getConst <$> ps)
+          UI.div #+ [string "parents:", element parentList]
+      ]
 
+    browseMononoke' (File b l p) =
+      [ getConst b
+      , getConst l
+      , nestedUL #+ ((UI.li #+) . pure . getConst <$> p)
+      ]
 
-    changes <- labelDiv "CHANGES" [nestedUL #+ (renderChangeElem <$> cs)]
+    browseMononoke' (Dir cs) =
+      [ do
+          let renderChild (k, Const v) = UI.li #+ [string (k ++ ":"), v]
+          nestedUL #+ (renderChild <$> Map.toList cs)
+      ]
 
-    parentList <- nestedUL #+ ((UI.li >>= ) . getConst <$> toList ps)
-    parents <- labelDiv "PARENTS" [element parentList]
+    browseMononoke' NullCommit =
+      [ string "NullCommit"
+      ]
 
-    element pn #+ fmap element [msg, changes, parents]
+    browseMononoke' (Commit m cs ps) =
+      [ UI.string $ "msg: " ++ m
+      , labelDiv "CHANGES" [nestedUL #+ (renderChange <$> cs)]
+      , do
+          parentList <- nestedUL #+ ((UI.li #+) . pure . getConst <$> toList ps)
+          labelDiv "PARENTS" [element parentList]
+      ]
 
-uiMAlg (Blob c) = Const $ \pn -> do
-    content <- UI.string c
-    element pn #+ fmap element [content]
+    browseMononoke' (Blob c) =
+      [ UI.string c
+      ]
 
 
 
@@ -684,7 +615,12 @@ setup root = void $ do
 
   let redrawBranchBrowser bs = do
         _ <- element branchBrowserRoot # set children []
-        branchBrowser branchBrowserRoot commitSnapshotIndex blobStore bs focusChangeHandler updateBranchStateHandler
+        element branchBrowserRoot #+ [branchBrowser commitSnapshotIndex blobStore bs focusChangeHandler updateBranchStateHandler]
+
+
+  let redrawMergeTrie mt = void $ do
+        _ <- element mergeTrieRoot # set children []
+        element mergeTrieRoot #+ [browseMergeTrie modifyMergeTrieHandler focusChangeHandler expansions mt]
 
   let handleMMTE msg = do
         _ <- element mergeTrieRoot # set children []
@@ -714,7 +650,7 @@ setup root = void $ do
             pure $ extractFT snap
 
         mt <- buildMergeTrie emptyMergeTrie ft
-        _ <- browseMergeTrie modifyMergeTrieHandler focusChangeHandler expansions mt mergeTrieRoot
+        redrawMergeTrie mt
         pure ()
 
       handleMMTE' :: UpdateMergeTrie UI -> UI (Maybe InProgressCommit)
@@ -781,7 +717,7 @@ setup root = void $ do
   -- discarded return value deregisters handler
   _ <- onEvent focusChangeEvent $ \focus -> do
     _ <- element browserRoot # set children []
-    browseWIPT focusChangeHandler expansions focus browserRoot
+    element browserRoot #+ [browseWIPT focusChangeHandler focus]
     pure ()
 
 
@@ -825,7 +761,7 @@ setup root = void $ do
     pure ()
 
   bs <- liftIO $ atomically $ readTVar branchState
-  branchBrowser branchBrowserRoot commitSnapshotIndex blobStore bs focusChangeHandler updateBranchStateHandler
+  element branchBrowserRoot #+ [branchBrowser commitSnapshotIndex blobStore bs focusChangeHandler updateBranchStateHandler]
 
   sidebar <- flex UI.div (flexDirection CFB.column)
                 [ (element commitEditorRoot, flexGrow 1)

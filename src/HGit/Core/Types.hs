@@ -194,7 +194,11 @@ type LMMT m = Term (LMM m)
 
 
 fetchLMMT :: Functor m => NatM m (LMMT m) ((Tagged Hash `HCompose` M) (LMMT m))
-fetchLMMT (Term (HC (Tagged h (HC (Compose m))))) = HC . Tagged h <$> m
+fetchLMMT (Term lmm) = fetchLMM lmm
+
+fetchLMM :: Functor m => NatM m (LMM m x) ((Tagged Hash `HCompose` M) x)
+fetchLMM (HC (Tagged h (HC (Compose m)))) = HC . Tagged h <$> m
+
 
 flattenLMMT :: M (LMMT m) :-> M Hash
 flattenLMMT = hfmap hashOfLMMT
