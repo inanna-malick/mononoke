@@ -76,62 +76,47 @@ branchBrowser
   -> Handler UpdateBranchState
   -> UI Element
 branchBrowser commitSnapshotIndex store bs focusChangeHandler updateBranchStateHandler = do
-    branchList <- UI.ul
-    drawBranch branchList (MainBranch, bsMainBranch bs)
-    _ <- traverse (drawBranch branchList . (\(f,c) -> (OtherBranch f, c))) (bsBranches bs)
+    let extraBranches = (\(f,c) -> (OtherBranch f, c)) <$> bsBranches bs
+    branchList <- faUl #+ (fmap drawBranch $ [(MainBranch, bsMainBranch bs)] ++ extraBranches)
 
     addBranch <- UI.input
     on UI.sendValue addBranch $ \input -> do
       liftIO $ updateBranchStateHandler $ AddBranch input
 
-    UI.div #+ [ element branchList
-              , branchSelector
-              , UI.br
+    UI.div # withClass ["branch-browser"]
+           #+ [ element branchList
               , string "add branch:"
               , element addBranch
               ]
   where
-    branchSelector = do
-      let branches = [(MainBranch, bsMainBranch bs)] ++ (fmap (\(x,y) -> (OtherBranch x, y)) $ bsBranches bs)
-          options = fmap mkOption branches
-          mkOption (f, c) = do
-            let s = case f of
-                  OtherBranch s -> s
-                  MainBranch -> "main"
-            opt <- UI.option # set UI.value s # set text s
-            on UI.click opt $ \() -> void $ do
-              liftIO $ updateBranchStateHandler $ ChangeFocus f
-            pure opt
-      UI.select #+ options
+    drawBranch (f, commit) = do
+      snap <- updateSnapshotIndexLMMT store commitSnapshotIndex commit
 
-    drawBranch pn (f, commit) = do
-      let branchName = case f of
-            MainBranch -> "main"
-            OtherBranch s -> s
-      let branchName' = if f == bsFocus bs then ("[focus] -> " ++ branchName) else branchName
-      thisBranch <- UI.li
+      let commit' = faLi focusChangeHandler (unmodifiedWIP commit) [] (string "commit: ") UI.div
+          snap'   = faLi focusChangeHandler (unmodifiedWIP snap) [] (string "snap: ") UI.div
 
-      focus  <- focusButton focusChangeHandler (unmodifiedWIP commit)
-
-      _ <- element thisBranch #+ [string branchName', element focus]
+      let extraTags = if f == bsFocus bs then ["focus", "branch"] else ["branch"]
+      let extraActions = if f == bsFocus bs
+            then []
+            else [("fa-search", liftIO $ updateBranchStateHandler $ ChangeFocus f)]
 
       case f of
-        MainBranch -> pure ()
-        OtherBranch s -> do
-          deleteButton <- UI.button # set UI.class_ "delete-branch" # set UI.text "[delete]"
-          on UI.click deleteButton $ \() -> do
-            -- remove via branch name, simple/easy
-            liftIO $ updateBranchStateHandler $ DelBranch branchName
-          _ <- element thisBranch #+ [element deleteButton]
-          pure ()
-
-      snap <- updateSnapshotIndexLMMT store commitSnapshotIndex commit
-      focusSnap  <- focusButton focusChangeHandler (unmodifiedWIP snap)
-
-      _ <- element thisBranch #+ [element focusSnap]
+        MainBranch    -> do
+          faLiSimple extraTags "fa-code-branch" extraActions (string "main branch") $ faUl #+ [commit', snap']
+        OtherBranch branchName -> do
+          let delAction = liftIO $ do
+                print $ "delete branch w/ name " ++ branchName
+                updateBranchStateHandler $ DelBranch branchName
+          faLiSimple extraTags "fa-code-branch" ([("fa-trash-alt", delAction)] ++ extraActions)
+                                         (string branchName) $ faUl #+ [commit', snap']
 
 
-      element pn #+ [element thisBranch]
+-- can handle completing popup (eg it requests text)
+drawModal :: String -> [UI Element] -> UI Element
+drawModal hdr content =
+      UI.div # withClass ["modal"]
+            #+ [ UI.div # withClass ["modal-content"] #+ ([string hdr] ++ content)
+               ]
 
 
 data UpdateBranchState
@@ -189,14 +174,13 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
       let extraButtons = case nonEmpty path of
             Nothing -> [] -- a file at the root path is an error anyway..
             Just nel -> [("fa-trash-alt", delChange nel)]
-            -- TODO: there's a level of nesting here that's excessive
-       in faLi focusHandler ft extraButtons
-                             (string "file candidate")
-                             (faUl #+ [renderWIPTBlob blob])
+
+       in faLiSimple' [] "fa-chevron-right" (string "file candidate")
+                                            (faUl #+ [renderWIPTBlob extraButtons blob])
 
     renderChange :: ChangeType (WIPT UI) -> UI Element
     renderChange (Add wipt) =
-      faLiSimple ["add"] "fa-plus-circle" [] (string "Add") $ faUl #+ [renderWIPTBlob wipt]
+      faLiSimple ["add"] "fa-plus-circle" [] (string "Add") $ faUl #+ [renderWIPTBlob [] wipt]
     renderChange Del = faLiSimple ["del"] "fa-minus-circle" [] (string "Del") UI.div
 
 
@@ -223,8 +207,8 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
                                    (element x)
 
 
-    renderWIPTBlob :: WIPT UI 'BlobT -> UI Element
-    renderWIPTBlob wipt = do
+    renderWIPTBlob :: [(String, UI ())] -> WIPT UI 'BlobT -> UI Element
+    renderWIPTBlob actions wipt = do
       let extraTags = case wipt of
             (Term (HC (L _))) -> ["persisted"]
             (Term (HC (R _))) -> ["wip"]
@@ -234,8 +218,8 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
         Blob b -> do
           body <- UI.div # withClass (extraTags ++ [typeTagName $ sing @'BlobT])
                         #+ [string $ "\"" ++ b ++ "\""]
-          faLi focusHandler wipt [] (string "file blob")
-                                    (element body)
+          faLi focusHandler wipt actions (string "file blob")
+                                         (element body)
 
 
     renderWIPTFileTree :: [Path] -> Path -> WIPT UI 'FileTree -> UI Element
@@ -260,7 +244,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
                     ] ++
                      (fmap (\x -> faLi focusHandler x [] (string "prev iteration") UI.div) prev
                      ) ++
-                    [ renderWIPTBlob blob
+                    [ renderWIPTBlob [] blob
                     ]
                   )
       element wrapper #+ [element x]
@@ -270,6 +254,22 @@ faUl = UI.ul # withClass ["fa-ul"]
 
 withClass :: [String] -> UI Element -> UI Element
 withClass = set UI.class_ . unwords
+
+
+faLiSimple'
+  :: [String] -- li extra class
+  -> String
+  -> UI Element -- tag
+  -> UI Element -- sub-elems (content holder)
+  -> UI Element
+faLiSimple' liExtraClass faTag tag content = do
+  icon' <- UI.span # withClass (["fa-li"] ++ liExtraClass)
+                  #+ [ UI.italics # withClass ["fas", faTag]
+                     ]
+
+  hdr <- UI.span # withClass [] #+ [element icon', tag]
+
+  UI.li # withClass (["fa-li-wrapper"]) #+ [element hdr, content]
 
 
 faLiSimple
@@ -540,33 +540,33 @@ browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ d
         in case _change of
               Add (Const next) ->
                 faLiSimple ["add"] "fa-plus-circle" [] (string $ "Add: " ++ renderPath _path) $ faUl #+ [next]
-              Del -> faLiSimple ["del"] "fa-minus-circle" [] (string $ "Del" ++ renderPath _path) UI.div
+              Del -> faLiSimple ["del"] "fa-minus-circle" [] (string $ "Del: " ++ renderPath _path) UI.div
 
 
 
-    -- returns list of fa-list items
+    -- returns fa-ul item or div/string/etc
     browseMononoke' :: forall (x:: MTag). M (Const (UI Element)) x -> UI Element
     browseMononoke' (Snapshot t o ps) = (faUl #+) $
-      [ faLiSimple [] "fa-chevron-right" [] (string "root") $ getConst t
-      , faLiSimple [] "fa-chevron-right" [] (string "generated from commit") $ getConst o
+      [ faLiSimple' [] "fa-chevron-right" (string "root") $ getConst t
+      , faLiSimple' [] "fa-chevron-right" (string "generated from commit") $ getConst o
       ] ++
-      ( faLiSimple [] "fa-chevron-right" [] (string "parent snapshot") . getConst <$> ps)
+      ( faLiSimple' [] "fa-chevron-right" (string "parent snapshot") . getConst <$> ps)
 
     browseMononoke' (File b l p) = (faUl #+) $
-      [ faLiSimple [] "fa-chevron-right" [] (string "blob") $ getConst b
-      , faLiSimple [] "fa-chevron-right" [] (string "last modified") $ getConst l
-      ] ++ (faLiSimple [] "fa-chevron-right" [] (string "previous incarnation") . getConst <$>  p)
+      [ faLiSimple' [] "fa-chevron-right" (string "blob") $ getConst b
+      , faLiSimple' [] "fa-chevron-right" (string "last modified") $ getConst l
+      ] ++ (faLiSimple' [] "fa-chevron-right" (string "previous incarnation") . getConst <$>  p)
 
     browseMononoke' (Dir cs) = (faUl #+) $
-          let renderChild (k, Const v) = faLiSimple [] "fa-chevron-right" [] (string k) v
+          let renderChild (k, Const v) = faLiSimple' [] "fa-chevron-right" (string k) v
            in renderChild <$> Map.toList cs
 
     browseMononoke' NullCommit = string "NullCommit"
 
     browseMononoke' (Commit m cs ps) = (faUl #+) $
-      [ faLiSimple [] "fa-comment-alt" [] (string $ "msg: " ++ m) UI.div ] ++
+      [ faLiSimple' [] "fa-comment-alt" (string $ "msg: " ++ m) UI.div ] ++
       (renderChange <$> cs) ++
-      ( faLiSimple [] "fa-chevron-right" [] (string "parent") . getConst <$> toList ps)
+      ( faLiSimple' [] "fa-chevron-right" (string "parent") . getConst <$> toList ps)
 
     browseMononoke' (Blob c) =  UI.string $ "\"" ++ c ++ "\""
 
@@ -623,9 +623,8 @@ asWIPTCommit InProgressCommit{..} = modifiedWIP $ Commit ipcMsg ipcChanges ipcPa
 
 setup :: Window -> UI ()
 setup root = void $ do
-  getHead root #+ [ mkElement "style"
-          # set (UI.text) (unpack (Clay.render css))
-          ]
+  getHead root #+ [ mkElement "style" # set (UI.text) (unpack (Clay.render css))
+                  ]
   UI.addStyleSheet root "all.css" -- fontawesome
 
 
@@ -683,6 +682,19 @@ setup root = void $ do
   branchBrowserRoot <- UI.div
   mergeTrieRoot <- UI.div
   commitEditorRoot <- UI.div
+  modalRoot <- UI.div
+
+
+  let popError :: Show e => e -> UI ()
+      popError e = void $ do
+        _ <- element modalRoot # set children []
+        dismiss <- UI.button #+ [string "dismiss error"]
+        on UI.click dismiss $ \() -> void $ do
+          element modalRoot # set children []
+        element modalRoot #+ [drawModal "error!" [string $ "err: " ++ show e, element dismiss]]
+
+
+  popError "lmao; fuck"
 
   let extractFT :: M x 'SnapshotT -> x 'FileTree
       extractFT (Snapshot ft _ _) = ft
@@ -860,7 +872,7 @@ setup root = void $ do
 
   browserActualRoot <- UI.div # withClass ["browser"]
                              #+ [ UI.div # withClass ["browser-header"]
-                                       #+ [ UI.italics # withClass ["fas", "fa-search-5x", "browser-badge"]
+                                        #+ [ UI.italics # withClass ["fas", "fa-search-5x", "browser-badge"]
                                            ]
                                , element browserRoot
                                ]
@@ -871,3 +883,4 @@ setup root = void $ do
                           , flexGrow 2
                           )
                         ]
+  getBody root #+ [element modalRoot]
