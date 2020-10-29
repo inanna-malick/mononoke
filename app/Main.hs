@@ -170,11 +170,10 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
     f :: MergeTrie UI (Fix (MergeTrie UI), [Path] -> UI Element) -> [Path] -> UI Element
     f mt path = do
       let children = renderChildren path $ mtChildren mt
-          files    = renderFiles $ Map.toList $ mtFilesAtPath mt
-          mkChange c = [UI.div #+ [string "change: ", renderChange c]]
-          mchange  = maybe [] mkChange $ mtChange mt
+          files    = renderFiles path $ Map.toList $ mtFilesAtPath mt
+          mchange  = maybe [] (pure . renderChange) $ mtChange mt
 
-      faUl #+ (children ++ [string "files:"] ++ files ++ [string "mchange:"] ++ mchange)
+      faUl #+ (children ++ files ++ mchange)
 
 
     delChange :: NonEmpty Path -> UI ()
@@ -183,23 +182,22 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
       liftIO $ print path
       liftIO $ modifyMergeTrieHandler $ ApplyChange $ Change path Del
 
-    renderFiles fs = fmap renderFile fs
+    renderFiles path fs = fmap (renderFile path) fs
 
-    renderFile _ = string "todo: render file"
+    -- TODO: if multiple files (merge conflict), could have button to accept one as cannonical
+    renderFile path (_, (ft, blob, _lastMod, _prevs)) =
+      let extraButtons = case nonEmpty path of
+            Nothing -> [] -- a file at the root path is an error anyway..
+            Just nel -> [("fa-trash-alt", delChange nel)]
+            -- TODO: there's a level of nesting here that's excessive
+       in faLi focusHandler ft extraButtons
+                             (string "file candidate")
+                             (faUl #+ [renderWIPTBlob blob])
 
     renderChange :: ChangeType (WIPT UI) -> UI Element
-    renderChange (Add wipt) = do
-      x <- UI.div
-      (HC (Tagged _ blob)) <- fetchWIPT wipt
-
-      focus <- focusButton focusHandler wipt
-
-      let shim :: forall w. M w 'BlobT -> String
-          shim (Blob blobstr) = blobstr
-      let blobstr = shim blob
-
-      element x #+ [string "ADD", element focus, string blobstr]
-    renderChange Del = string "DELETE"
+    renderChange (Add wipt) =
+      faLiSimple ["add"] "fa-plus-circle" [] (string "Add") $ faUl #+ [renderWIPTBlob wipt]
+    renderChange Del = faLiSimple ["del"] "fa-minus-circle" [] (string "Del") UI.div
 
 
     renderChildren path c = fmap (renderChild path) (Map.toList c)
@@ -208,38 +206,52 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
     renderChild path (pathSegment, Left wipt) = do
       let pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
       faLi focusHandler wipt [("fa-trash-alt", delChange pathNEL)]
-                              (UI.code # set text ("rcl-" ++ pathSegment) # set UI.class_ "path-segment")
+                              (UI.code # set text pathSegment # set UI.class_ "path-segment")
                               (renderWIPTFileTree path pathSegment wipt)
 
 
     renderChild path (pathSegment, Right (mt, next)) = do
       let toFocusOn = case ipcOrC of
-            Left ipc -> resolveMergeTrie (asWIPTCommit ipc) mt
-            Right c  -> resolveMergeTrie (unmodifiedWIP c) mt
-      let toFocusOn' = either undefined id toFocusOn
+            Left ipc -> (["wip"], resolveMergeTrie (asWIPTCommit ipc) mt)
+            Right c  -> (["persisted"], resolveMergeTrie (unmodifiedWIP c) mt)
+      let (extraTags, toFocusOn') = fmap (either undefined id) toFocusOn
           pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
+      x <- UI.div # withClass (extraTags ++ [typeTagName $ sing @'FileTree])
+                 #+ [next (path ++ [pathSegment])]
       faLi focusHandler toFocusOn' [("fa-trash-alt", delChange pathNEL)]
-                                   (string ("rcr-" ++ pathSegment) # set UI.class_ "path-segment")
-                                   (next (path ++ [pathSegment]))
+                                   (string pathSegment # set UI.class_ "path-segment")
+                                   (element x)
 
 
-    renderWIPTBlob :: [Path] -> WIPT UI 'BlobT -> UI Element
-    renderWIPTBlob path wipt = do
+    renderWIPTBlob :: WIPT UI 'BlobT -> UI Element
+    renderWIPTBlob wipt = do
+      let extraTags = case wipt of
+            (Term (HC (L _))) -> ["persisted"]
+            (Term (HC (R _))) -> ["wip"]
+
       (HC (Tagged h blob)) <- fetchWIPT wipt
       case blob of
         Blob b -> do
-          string $ "\"" ++ b ++ "\""
+          body <- UI.div # withClass (extraTags ++ [typeTagName $ sing @'BlobT])
+                        #+ [string $ "\"" ++ b ++ "\""]
+          faLi focusHandler wipt [] (string "file blob")
+                                    (element body)
+
 
     renderWIPTFileTree :: [Path] -> Path -> WIPT UI 'FileTree -> UI Element
     renderWIPTFileTree path pathSegment wipt = do
       (HC (Tagged h ft)) <- fetchWIPT wipt
-      case ft of
+      let extraTags = case wipt of
+            (Term (HC (L _))) -> ["persisted"]
+            (Term (HC (R _))) -> ["wip"]
+      wrapper <- UI.div # withClass ([typeTagName' ft] ++ extraTags)
+      x <- case ft of
         Dir cs -> do
           let cs' = faUl #+ (f <$> Map.toList cs)
               f (p,c) =
                 let pathNEL = NEL.reverse $ p :| reverse (path ++ [pathSegment]) -- append to path while preserving NEL by construction
                  in faLi focusHandler c [("fa-trash-alt", delChange pathNEL)]
-                                        (UI.code # set text ("rwipt-dir-" ++ p) # set UI.class_ "path-segment")
+                                        (UI.code # set text p # set UI.class_ "path-segment")
                                         (renderWIPTFileTree (path ++ [pathSegment]) p c)
 
           cs'
@@ -248,10 +260,10 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
                     ] ++
                      (fmap (\x -> faLi focusHandler x [] (string "prev iteration") UI.div) prev
                      ) ++
-                    [ faLi focusHandler blob [] (string "file blob")
-                                             (renderWIPTBlob (path ++ [pathSegment]) blob)
+                    [ renderWIPTBlob blob
                     ]
                   )
+      element wrapper #+ [element x]
 
 faUl :: UI Element
 faUl = UI.ul # withClass ["fa-ul"]
@@ -260,31 +272,52 @@ withClass :: [String] -> UI Element -> UI Element
 withClass = set UI.class_ . unwords
 
 
-faLi'
-  :: forall (i :: MTag)
-   . SingI i
-  => UI () -- focus action
+faLiSimple
+  :: [String] -- li extra class
+  -> String
   -> [(String, UI ())] -- onHover actions
   -> UI Element -- tag
   -> UI Element -- sub-elems (content holder)
   -> UI Element
-faLi' focusAction onHoverButtons tag content = do
+faLiSimple liExtraClass faTag onHoverButtons tag content = do
   let mkButton (fa, a) = do
         b <- UI.button #+ [UI.italics # withClass ["fas", fa]]
         on UI.click b $ \() -> a
         pure b
 
+      dropdown = case onHoverButtons of
+        [] -> []
+        _  -> [UI.div # withClass ["dropdown"] #+ (fmap mkButton onHoverButtons)]
 
-  icon' <- UI.span # withClass ["fa-li", "clickable-bullet", typeTagName (sing @i)]
-                  #+ [ UI.italics # withClass ["fas", typeTagFAIcon (sing @i)]
-                     , UI.div # withClass ["dropdown"] #+ (fmap mkButton $ [("fa-search", focusAction)] ++ onHoverButtons)
-                     ]
-
-  li <- UI.li
+  icon' <- UI.span # withClass (["fa-li", "clickable-bullet"] ++ liExtraClass)
+                  #+ ([ UI.italics # withClass ["fas", faTag]
+                     ] ++ dropdown)
 
   hdr <- UI.span # withClass [] #+ [element icon', tag]
 
-  element li # withClass ["fa-li-wrapper"] #+ [element hdr, content]
+  UI.li # withClass (["fa-li-wrapper"]) #+ [element hdr, content]
+
+
+faLi'
+  :: forall (i :: MTag)
+   . SingI i
+  => Maybe (UI ()) -- focus action
+  -> [(String, UI ())] -- onHover actions
+  -> UI Element -- tag
+  -> UI Element -- sub-elems (content holder)
+  -> UI Element
+faLi' mFocusAction onHoverButtons = faLiSimple [typeTagName $ sing @i] (typeTagFAIcon (sing @i)) buttons
+  where
+    mkButton (fa, a) = do
+      b <- UI.button #+ [UI.italics # withClass ["fas", fa]]
+      on UI.click b $ \() -> a
+      pure b
+
+    mfocus = maybe [] (\focusAction -> [("fa-search", focusAction)]) mFocusAction
+    dropdown = case (onHoverButtons, mFocusAction) of
+      ([], Nothing) -> []
+      _  -> [UI.div # withClass ["dropdown"] #+ (fmap mkButton $ mfocus ++ onHoverButtons)]
+    buttons =  mfocus ++ onHoverButtons
 
 faLi
   :: forall (i :: MTag)
@@ -295,7 +328,7 @@ faLi
   -> UI Element
   -> UI Element
   -> UI Element
-faLi focusHandler wipt = faLi' @i action
+faLi focusHandler wipt = faLi' @i (Just action)
     where
       action = liftIO $ focusHandler $ wrapFocus (sing @i) wipt
 
@@ -478,10 +511,10 @@ browseMononoke
   -> (Tagged Hash `HCompose` M) (Const (UI Element)) i
   -> (Const (UI Element)) i
 browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ do
-      content <- UI.div #+ [faUl #+ browseMononoke' m]
-      faLi' @i focusAction [ ("fa-eye", toggleNode (getConst h) content)
-                           ]
-                          (string $ typeTagName' m) (pure content)
+      content <- UI.div # withClass ([typeTagName' m] ++ extraTags) #+ [browseMononoke' m]
+      faLi' @i (Just focusAction) [ ("fa-eye", toggleNode (getConst h) content)
+                                  ]
+                                  (string $ typeTagName' m) (pure content)
 
   where
 
@@ -505,41 +538,37 @@ browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ d
     renderChange Change{..} =
         let renderPath = mconcat . intersperse "/" . toList
         in case _change of
-              Del -> UI.li #+ [string $ renderPath _path ++ ": Del"]
-              Add (Const blob) ->
-                UI.li #+ [UI.string (renderPath _path ++ ": Add: "), blob]
+              Add (Const next) ->
+                faLiSimple ["add"] "fa-plus-circle" [] (string $ "Add: " ++ renderPath _path) $ faUl #+ [next]
+              Del -> faLiSimple ["del"] "fa-minus-circle" [] (string $ "Del" ++ renderPath _path) UI.div
 
-    browseMononoke' :: forall (x:: MTag). M (Const (UI Element)) x -> [UI Element]
-    browseMononoke' (Snapshot t o ps) =
-      [ getConst t
-      , getConst o
-      , do
-          parentList <- nestedUL #+ ((UI.li #+) . pure . getConst <$> ps)
-          UI.div #+ [string "parents:", element parentList]
-      ]
 
-    browseMononoke' (File b l p) =
-      [ getConst b
-      , getConst l
-      , nestedUL #+ ((UI.li #+) . pure . getConst <$> p)
-      ]
 
-    browseMononoke' (Dir cs) =
-          let renderChild (k, Const v) = [string (k ++ ":"), v]
-           in mconcat $ renderChild <$> Map.toList cs
+    -- returns list of fa-list items
+    browseMononoke' :: forall (x:: MTag). M (Const (UI Element)) x -> UI Element
+    browseMononoke' (Snapshot t o ps) = (faUl #+) $
+      [ faLiSimple [] "fa-chevron-right" [] (string "root") $ getConst t
+      , faLiSimple [] "fa-chevron-right" [] (string "generated from commit") $ getConst o
+      ] ++
+      ( faLiSimple [] "fa-chevron-right" [] (string "parent snapshot") . getConst <$> ps)
 
-    browseMononoke' NullCommit =
-      [ string "NullCommit"
-      ]
+    browseMononoke' (File b l p) = (faUl #+) $
+      [ faLiSimple [] "fa-chevron-right" [] (string "blob") $ getConst b
+      , faLiSimple [] "fa-chevron-right" [] (string "last modified") $ getConst l
+      ] ++ (faLiSimple [] "fa-chevron-right" [] (string "previous incarnation") . getConst <$>  p)
 
-    browseMononoke' (Commit m cs ps) =
-      [ UI.string $ "msg: " ++ m ] ++
+    browseMononoke' (Dir cs) = (faUl #+) $
+          let renderChild (k, Const v) = faLiSimple [] "fa-chevron-right" [] (string k) v
+           in renderChild <$> Map.toList cs
+
+    browseMononoke' NullCommit = string "NullCommit"
+
+    browseMononoke' (Commit m cs ps) = (faUl #+) $
+      [ faLiSimple [] "fa-comment-alt" [] (string $ "msg: " ++ m) UI.div ] ++
       (renderChange <$> cs) ++
-      (getConst <$> toList ps)
+      ( faLiSimple [] "fa-chevron-right" [] (string "parent") . getConst <$> toList ps)
 
-    browseMononoke' (Blob c) =
-      [ UI.string c
-      ]
+    browseMononoke' (Blob c) =  UI.string $ "\"" ++ c ++ "\""
 
 
 
@@ -829,7 +858,16 @@ setup root = void $ do
                 , (element branchBrowserRoot, flexGrow 1)
                 ]
 
+  browserActualRoot <- UI.div # withClass ["browser"]
+                             #+ [ UI.div # withClass ["browser-header"]
+                                       #+ [ UI.italics # withClass ["fas", "fa-search-5x", "browser-badge"]
+                                           ]
+                               , element browserRoot
+                               ]
+
   flex_p (getBody root) [ (element sidebar, flexGrow 1)
                         , (element mergeTrieRoot, flexGrow 2)
-                        , (element browserRoot, flexGrow 2)
+                        , ( UI.div #+ [element browserActualRoot]
+                          , flexGrow 2
+                          )
                         ]

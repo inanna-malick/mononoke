@@ -22,6 +22,27 @@ css = do
       ":hover" |> ".dropdown" ? do
         display block
 
+
+    div ? do
+      borderColor black
+      borderWidth (px 3)
+      ".wip" & do
+        borderStyle dashed
+      ".persisted" & do
+        borderStyle solid
+
+
+      ".snapshot" & do
+        backgroundColor palegreen
+      ".filetree" & do
+        backgroundColor aqua
+      ".commit" & do
+        backgroundColor magenta
+      ".blob" & do
+        backgroundColor tomato
+
+
+
     div ? do
       ".dropdown" & do
         display none
@@ -55,6 +76,14 @@ css = do
         borderStyle solid
         borderWidth (px 2)
         borderColor black
+
+        ".add" & do
+          color white
+          backgroundColor limegreen
+
+        ".del" & do
+          color white
+          backgroundColor red
 
         ".snapshot" & do
           backgroundColor palegreen
