@@ -1,6 +1,7 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE RankNTypes #-}
 
 module Main where
 
@@ -39,7 +40,7 @@ import qualified Graphics.UI.Threepenny as UI
 import Graphics.UI.Threepenny.Ext.Flexbox
 
 
-type Expansions = Set RawBlakeHash
+type Minimizations = Set RawBlakeHash
 
 data Focus x
   = SnapshotF (x 'SnapshotT)
@@ -156,44 +157,27 @@ instance Show (UpdateMergeTrie m) where
   show Finalize = "Finalize"
 
 
--- TODO: go through this and remove parent-node idiom
--- TODO/FIXME: full custom rendering for merge trie - needs to elide last changed commit (except for 'focus-on' link mb)
 browseMergeTrie
   :: Handler (UpdateMergeTrie UI)
   -> Handler (FocusWIPT UI)
-  -> TVar Expansions
+  -> TVar Minimizations
+  -> InProgressCommit `Either` LMMT UI 'CommitT
   -> Fix (MergeTrie UI)
   -> UI Element
-browseMergeTrie modifyMergeTrieHandler focusHandler expansions root = do
-    (cata f root) []
+browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = do
+    (para f root) []
   where
-    f :: MergeTrie UI ([Path] -> UI Element) -> [Path] -> UI Element
+    f :: MergeTrie UI (Fix (MergeTrie UI), [Path] -> UI Element) -> [Path] -> UI Element
     f mt path = do
-      case mtChange mt of
-        Just c -> do
-          children <- renderChildren path $ mtChildren mt
-          files <- renderFiles $ Map.toList $ mtFilesAtPath mt
-          change <- UI.div #+ [string "change: ", renderChange c]
-          -- TODO: remove_change via UI
-          UI.div #+ fmap element [change, files, children]
-        Nothing -> do
-          children <- renderChildren path $ mtChildren mt
-          files <- renderFiles $ Map.toList $ mtFilesAtPath mt
+      let children = renderChildren path $ mtChildren mt
+          files    = renderFiles $ Map.toList $ mtFilesAtPath mt
+          mkChange c = [UI.div #+ [string "change: ", renderChange c]]
+          mchange  = maybe [] mkChange $ mtChange mt
 
-          case nonEmpty path of
-            Nothing -> UI.div #+ fmap element [files, children]
-            Just nepath -> do
-              addChange <- UI.input
-              on UI.sendValue addChange $ \input -> do
-                liftIO $ modifyMergeTrieHandler $ ApplyChange $ add nepath $ modifiedWIP $ Blob input
+      faUl #+ (children ++ files ++ mchange)
 
-              delChange <- UI.button # set UI.class_ "make-delete-change" # set UI.text "[delete]"
-              on UI.click delChange $ \input -> do
-                liftIO $ modifyMergeTrieHandler $ ApplyChange $ del nepath
 
-              UI.div #+ fmap element [addChange, delChange, files, children]
-
-    renderFiles fs = UI.ul #+ fmap renderFile fs
+    renderFiles fs = fmap renderFile fs
 
     renderFile _ = string "todo: render file"
 
@@ -212,57 +196,90 @@ browseMergeTrie modifyMergeTrieHandler focusHandler expansions root = do
     renderChange Del = string "DELETE"
 
 
-    renderChildren path c = UI.ul #+ fmap (renderChild path) (Map.toList c)
+    renderChildren path c = fmap (renderChild path) (Map.toList c)
 
-    renderChild :: [Path] -> (Path, WIPT UI 'FileTree `Either` ([Path] -> UI Element)) -> UI Element
+    renderChild :: [Path] -> (Path, WIPT UI 'FileTree `Either` (Fix (MergeTrie UI), [Path] -> UI Element)) -> UI Element
     renderChild path (pathSegment, Left wipt) = do
-      -- TODO: code tag for path segment?
-      UI.li #+ [ focusButton focusHandler wipt
-               , UI.code # set text pathSegment # set UI.class_ "path-segment"
-               , string ": "
-               , renderWIPTFileTree path pathSegment wipt
-               ]
-
-    renderChild path (pathSegment, Right next) = do
-      UI.li #+ [next (path ++ [pathSegment])]
+          faLi focusHandler wipt [] (UI.code # set text pathSegment # set UI.class_ "path-segment")
+                                 (renderWIPTFileTree path pathSegment wipt)
 
 
-    -- returns fieldset
+    renderChild path (pathSegment, Right (mt, next)) = do
+      let toFocusOn = case ipcOrC of
+            Left ipc -> resolveMergeTrie (asWIPTCommit ipc) mt
+            Right c  -> resolveMergeTrie (unmodifiedWIP c) mt
+      let toFocusOn' = either undefined id toFocusOn
+      faLi focusHandler toFocusOn' [] (string "path") (next (path ++ [pathSegment]))
+
+
     renderWIPTBlob :: [Path] -> WIPT UI 'BlobT -> UI Element
     renderWIPTBlob path wipt = do
       (HC (Tagged h blob)) <- fetchWIPT wipt
       case blob of
         Blob b -> do
-          string b
+          string $ "\"" ++ b ++ "\""
 
-    -- returns fieldset
     renderWIPTFileTree :: [Path] -> Path -> WIPT UI 'FileTree -> UI Element
     renderWIPTFileTree path pathSegment wipt = do
       (HC (Tagged h ft)) <- fetchWIPT wipt
       case ft of
         Dir cs -> do
           let cs' = (uncurry (renderWIPTFileTree $ path ++ [pathSegment]) <$> Map.toList cs)
-              cs'' = UI.ul #+ (f <$> Map.toList cs)
-              f (p,c) = UI.li #+ [ focusButton focusHandler c
-                                 , UI.code # set text p # set UI.class_ "path-segment"
-                                 , string ": "
-                                 , renderWIPTFileTree (path ++ [pathSegment]) p c
-                                 ]
+              cs'' = faUl #+ (f <$> Map.toList cs)
+              f (p,c) = faLi focusHandler c [] (UI.code # set text p # set UI.class_ "path-segment")
+                                        (renderWIPTFileTree (path ++ [pathSegment]) p c)
+
           cs''
         File blob commit prev -> do
-          -- TODO: focus button for prev version(s)
-          UI.div #+ [ UI.ul #+ ( [ UI.li #+ [ string "from commit: "
-                                           , focusButton focusHandler commit
-                                           ]
-                                 ] ++
-                                 (fmap (\x -> UI.li #+ [string "prev iteration: ", focusButton focusHandler x]) prev) ++
-                                 [UI.li #+ [string "blob: "
-                                           , focusButton focusHandler blob
-                                           , renderWIPTBlob (path ++ [pathSegment]) blob
-                                           ]
-                                 ]
-                               )
+          faUl #+ ( [ faLi focusHandler commit [] (string "src commit") UI.div
+                    ] ++
+                     (fmap (\x -> faLi focusHandler x [] (string "prev iteration") UI.div) prev
+                     ) ++
+                    [ faLi focusHandler blob [] (string "file blob")
+                                             (renderWIPTBlob (path ++ [pathSegment]) blob)
                     ]
+                  )
+
+faUl :: UI Element
+faUl = UI.ul # withClass ["fa-ul"]
+
+withClass :: [String] -> UI Element -> UI Element
+withClass = set UI.class_ . unwords
+
+
+faLi'
+  :: forall (i :: MTag)
+   . SingI i
+  => UI () -- focus action
+  -> [UI Element] -- onHover
+  -> UI Element -- tag
+  -> UI Element -- sub-elems (content holder)
+  -> UI Element
+faLi' focusAction onHoverButtons tag content = do
+  icon' <- UI.span # withClass ["fa-li", "clickable-bullet", typeTagName (sing @i)]
+                  #+ [ UI.italics # withClass ["fas", typeTagFAIcon (sing @i)]
+                     , UI.div # withClass ["dropdown"] #+ onHoverButtons
+                     ]
+  on UI.click icon' $ \() -> focusAction
+
+  li <- UI.li
+
+  hdr <- UI.span # withClass [] #+ [element icon', tag]
+
+  element li # withClass ["fa-li-wrapper"] #+ [element hdr, content]
+
+faLi
+  :: forall (i :: MTag)
+   . SingI i
+  => Handler (FocusWIPT UI)
+  -> WIPT UI i
+  -> [UI Element] -- onHover
+  -> UI Element
+  -> UI Element
+  -> UI Element
+faLi focusHandler wipt = faLi' @i action
+    where
+      action = liftIO $ focusHandler $ wrapFocus (sing @i) wipt
 
 drawCommitEditor
   :: BranchState UI
@@ -376,24 +393,26 @@ parsePath s = do
 
 browseWIPT
   :: Handler (FocusWIPT UI)
+  -> TVar Minimizations
   -> FocusWIPT UI
   -> UI Element
-browseWIPT focusHandler focus = case focus of
-    SnapshotF root -> (getConst $ hpara (uiWIPAlg focusHandler) root)
-    FileTreeF root -> (getConst $ hpara (uiWIPAlg focusHandler) root)
-    CommitF   root -> (getConst $ hpara (uiWIPAlg focusHandler) root)
-    BlobF     root -> (getConst $ hpara (uiWIPAlg focusHandler) root)
+browseWIPT focusHandler minimizations focus = case focus of
+    SnapshotF root -> (getConst $ hpara (uiWIPAlg focusHandler minimizations) root)
+    FileTreeF root -> (getConst $ hpara (uiWIPAlg focusHandler minimizations) root)
+    CommitF   root -> (getConst $ hpara (uiWIPAlg focusHandler minimizations) root)
+    BlobF     root -> (getConst $ hpara (uiWIPAlg focusHandler minimizations) root)
 
 
 browseLMMT
   :: Handler (FocusWIPT UI)
+  -> TVar Minimizations
   -> FocusLMMT UI
   -> UI Element
-browseLMMT focusHandler focus = case focus of
-    SnapshotF root -> (getConst $ hpara (uiLMMAlg focusHandler) root)
-    FileTreeF root -> (getConst $ hpara (uiLMMAlg focusHandler) root)
-    CommitF   root -> (getConst $ hpara (uiLMMAlg focusHandler) root)
-    BlobF     root -> (getConst $ hpara (uiLMMAlg focusHandler) root)
+browseLMMT focusHandler minimizations focus = case focus of
+    SnapshotF root -> (getConst $ hpara (uiLMMAlg focusHandler minimizations) root)
+    FileTreeF root -> (getConst $ hpara (uiLMMAlg focusHandler minimizations) root)
+    CommitF   root -> (getConst $ hpara (uiLMMAlg focusHandler minimizations) root)
+    BlobF     root -> (getConst $ hpara (uiLMMAlg focusHandler minimizations) root)
 
 
 focusButton
@@ -413,33 +432,63 @@ focusButton focusHandler wipt = do
 
 uiWIPAlg
   :: Handler (FocusWIPT UI)
+  -> TVar Minimizations
   -> RAlg (WIP UI) (Const (UI Element))
-uiWIPAlg focusHandler (HC (L lmmt)) = Const $ do
-      browseLMMT focusHandler (wrapFocus sing $ lmmt)
-uiWIPAlg focusHandler wipt@(HC (R m)) = Const $ do
-      let focus = focusButton focusHandler $ Term $ hfmap _tag wipt
-      getConst $ browseMononoke focus ["wip"] $ hfmap _elem m
+uiWIPAlg focusHandler minimizations (HC (L lmmt)) = Const $ do
+      browseLMMT focusHandler minimizations (wrapFocus sing $ lmmt)
+uiWIPAlg focusHandler minimizations wipt@(HC (R m)) = Const $ do
+      let action = liftIO $ focusHandler $ wrapFocus sing $ Term $ hfmap _tag wipt
+      getConst $ browseMononoke minimizations action ["wip"] $ hfmap _elem m
 
 
 uiLMMAlg
   :: Handler (FocusWIPT UI)
+  -> TVar Minimizations
   -> RAlg (LMM UI) (Const (UI Element))
-uiLMMAlg focusHandler lmm = Const $ do
+uiLMMAlg focusHandler minimizations lmm = Const $ do
       m <-  fetchLMM lmm
-      let focus = focusButton focusHandler $ unmodifiedWIP $ Term $ hfmap _tag lmm
-      getConst $ browseMononoke focus ["persisted"] $ hfmap _elem m
+      let action = liftIO $ focusHandler $ wrapFocus sing $ unmodifiedWIP $ Term $ hfmap _tag lmm
+      getConst $ browseMononoke minimizations action ["persisted"] $ hfmap _elem m
 
 
-browseMononoke :: UI Element -> [String] -> Alg (Tagged Hash `HCompose` M) (Const (UI Element))
-browseMononoke focus extraTags (HC (Tagged h m)) = Const $ do
-      wrapper <- UI.fieldset # set UI.class_ (mconcat $ intersperse " " $ extraTags ++ [typeTagName' m, "node"])
-
-      hdr <- UI.legend # set text (typeTagName' m)
-                       #+ [ focus ]
-      element wrapper #+ ([element hdr] ++ browseMononoke' m)
-
+browseMononoke
+  :: forall (i :: MTag)
+   . SingI i
+  => TVar Minimizations
+  -> UI ()
+  -> [String]
+  -> (Tagged Hash `HCompose` M) (Const (UI Element)) i
+  -> (Const (UI Element)) i
+browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ do
+      content <- UI.div #+ [faUl #+ browseMononoke' m]
+      faLi' @i focusAction [ toggleNodeButton (getConst h) content
+                           , toggleNodeButton (getConst h) content
+                           , toggleNodeButton (getConst h) content
+                           ]
+        (string $ typeTagName' m) (pure content)
 
   where
+
+    -- TODO: persist between redraws via tvar (minimizations)
+    toggleNodeButton :: RawBlakeHash -> Element -> UI Element
+    toggleNodeButton k elem = do
+      b <- UI.button # set text "+/-"
+      on UI.click b $ \() -> void $ do
+        liftIO $ print "FOOOOOOOOOOOOOLSSS!"
+        isMinimized <- liftIO $ atomically $ do
+          wasMinimized <- Set.member k <$> readTVar minimizations
+          if wasMinimized
+            then do
+              modifyTVar minimizations (Set.delete k)
+            else do
+              modifyTVar minimizations (Set.insert k)
+          pure $ not wasMinimized
+
+        if isMinimized
+          then element elem # set UI.class_ "hidden"
+          else element elem # set UI.class_ ""
+      element b
+
     renderChange :: Change (Const (UI Element)) -> UI Element
     renderChange Change{..} =
         let renderPath = mconcat . intersperse "/" . toList
@@ -464,22 +513,17 @@ browseMononoke focus extraTags (HC (Tagged h m)) = Const $ do
       ]
 
     browseMononoke' (Dir cs) =
-      [ do
-          let renderChild (k, Const v) = UI.li #+ [string (k ++ ":"), v]
-          nestedUL #+ (renderChild <$> Map.toList cs)
-      ]
+          let renderChild (k, Const v) = [string (k ++ ":"), v]
+           in mconcat $ renderChild <$> Map.toList cs
 
     browseMononoke' NullCommit =
       [ string "NullCommit"
       ]
 
     browseMononoke' (Commit m cs ps) =
-      [ UI.string $ "msg: " ++ m
-      , labelDiv "CHANGES" [nestedUL #+ (renderChange <$> cs)]
-      , do
-          parentList <- nestedUL #+ ((UI.li #+) . pure . getConst <$> toList ps)
-          labelDiv "PARENTS" [element parentList]
-      ]
+      [ UI.string $ "msg: " ++ m ] ++
+      (renderChange <$> cs) ++
+      (getConst <$> toList ps)
 
     browseMononoke' (Blob c) =
       [ UI.string c
@@ -494,15 +538,6 @@ nestedUL = UI.ul # set (attr "style") "margin-left:1em"
 nestedDiv :: UI Element
 nestedDiv = UI.div # set (attr "style") "margin-left:1em"
 
-fileTreeEntity :: [UI Element] -> [UI Element] -> UI Element
-fileTreeEntity s x = UI.fieldset
-                   # set UI.class_ "filetree-viewer"
-                   #+ ([UI.legend #+ s # set UI.class_ "filetree-viewer-legend"] ++ x)
-
-
-labelDiv :: String -> [UI Element] -> UI Element
-labelDiv s x = UI.fieldset # set UI.class_ "vertical-legend"
-                           #+ [UI.legend # set text s # set UI.class_ "vertical-legend", nestedDiv #+ x]
 
 
 main :: IO ()
@@ -542,6 +577,8 @@ data InProgressCommit
   , ipcParentCommits :: NonEmpty (WIPT UI 'CommitT)
   }
 
+asWIPTCommit :: InProgressCommit -> WIPT UI 'CommitT
+asWIPTCommit InProgressCommit{..} = modifiedWIP $ Commit ipcMsg ipcChanges ipcParentCommits
 
 setup :: Window -> UI ()
 setup root = void $ do
@@ -561,7 +598,7 @@ setup root = void $ do
   let blobStore = stmIOStore blobStoreTvar
 
 
-  initCommitHash <- uploadM (sWrite blobStore) $ Term NullCommit
+  initCommitHash <- uploadM (sWrite blobStore) $ commit3
   let innitCommit = expandHash (sRead blobStore) initCommitHash
 
   let initialBranchState = BranchState
@@ -572,7 +609,7 @@ setup root = void $ do
 
 
   branchState <- liftIO . atomically $ newTVar initialBranchState
-  expansions <- liftIO . atomically $ newTVar (Set.empty)
+  minimizations <- liftIO . atomically $ newTVar (Set.empty)
 
   -- errors on key not found - not sure how to handle this, need
   -- generic 'shit broke' error channel, eg popup/alert
@@ -602,9 +639,9 @@ setup root = void $ do
 
 
   -- empty root nodes for various UI elements
-  branchBrowserRoot <- simpleDiv
-  mergeTrieRoot <- simpleDiv
-  commitEditorRoot <- simpleDiv
+  branchBrowserRoot <- UI.div
+  mergeTrieRoot <- UI.div
+  commitEditorRoot <- UI.div
 
   let extractFT :: M x 'SnapshotT -> x 'FileTree
       extractFT (Snapshot ft _ _) = ft
@@ -619,8 +656,15 @@ setup root = void $ do
 
 
   let redrawMergeTrie mt = void $ do
+        ipcOrC <- liftIO $ atomically $ do
+          mipc <- readTVar inProgressCommitTVar
+          case mipc of
+            Just ipc -> pure $ Left ipc
+            Nothing ->  do
+              Right . snd <$> getCurrentBranch
+
         _ <- element mergeTrieRoot # set children []
-        element mergeTrieRoot #+ [browseMergeTrie modifyMergeTrieHandler focusChangeHandler expansions mt]
+        element mergeTrieRoot #+ [browseMergeTrie modifyMergeTrieHandler focusChangeHandler minimizations ipcOrC mt]
 
   let handleMMTE msg = do
         _ <- element mergeTrieRoot # set children []
@@ -713,11 +757,11 @@ setup root = void $ do
 
   liftIO $ modifyMergeTrieHandler $ Reset
 
-  browserRoot <- simpleDiv
+  browserRoot <- faUl
   -- discarded return value deregisters handler
   _ <- onEvent focusChangeEvent $ \focus -> do
     _ <- element browserRoot # set children []
-    element browserRoot #+ [browseWIPT focusChangeHandler focus]
+    element browserRoot #+ [browseWIPT focusChangeHandler minimizations focus]
     pure ()
 
 
@@ -772,11 +816,3 @@ setup root = void $ do
                         , (element mergeTrieRoot, flexGrow 2)
                         , (element browserRoot, flexGrow 2)
                         ]
-
--- TODO: use clay directly, would greatly simplify CSS work here
--- | Simple coloured 'div'
-simpleDiv :: UI Element
-simpleDiv = UI.div # set UI.style
-          [ ("background-color", "#F89406")
-          , ("margin", "8px")
-          ]
