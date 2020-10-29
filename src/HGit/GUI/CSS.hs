@@ -19,7 +19,7 @@ css = do
 
 
     span ? do
-      ":hover" |> ".vis-on-hover" ? do
+      ":hover" |> ".dropdown" ? do
         display block
 
     div ? do
@@ -31,7 +31,6 @@ css = do
         position absolute
         zIndex 999
         padding (em 0) (em 0) (em 0) (em 1)
-        left (em (-4))
 
         button ? do
           backgroundColor linen

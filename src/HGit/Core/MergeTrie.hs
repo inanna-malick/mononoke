@@ -55,6 +55,7 @@ data MergeError
   | DeleteAtNodeWithNoFile        -- [Path]
   | AddChangeAtNodeWithChildren   -- [Path]
   | OneOrMoreFilesButWithChildren -- [Path]
+  deriving (Show)
 
 -- can then use other function to add commit to get snapshot
 resolveMergeTrie
@@ -176,6 +177,36 @@ makeSnapshot
   -> StoreRead m -- for expanding index reads
   -> ExceptT MergeError m (M (WIPT m) 'SnapshotT)
 makeSnapshot commit index storeRead = do
+    (snapshots, mt') <- makeMT commit index storeRead
+
+    -- liftIO $ do
+    --   print "mergetrie:"
+    --   let lines = renderMergeTrie mt'
+    --   traverse (\s -> putStr "  " >> putStrLn s) lines
+
+    ft <- ExceptT $ pure $ resolveMergeTrie (modifiedWIP commit) mt'
+    let snap = Snapshot ft (modifiedWIP commit) snapshots
+
+    -- liftIO $ do
+    --   print $ "done processing commit: " ++ msg
+    --   print "built snapshot with ft:"
+    --   let lines = renderWIPT ft
+    --   traverse (\s -> putStr "  " >> putStrLn s) lines
+
+    pure snap
+
+
+
+-- | build a snapshot for a commit, recursively descending
+--   into parent commits to build snapshots if neccessary
+makeMT
+  :: Monad m
+  => MonadIO m
+  => M (WIPT m) 'CommitT -- can provide LMMT via 'unmodifiedWIP'
+  -> IndexRead m -- index, will be always Nothing for initial WIP
+  -> StoreRead m -- for expanding index reads
+  -> ExceptT MergeError m ([WIPT m 'SnapshotT], Fix (MergeTrie m))
+makeMT commit index storeRead = do
   case commit of
     Commit msg changes parents -> do
       -- lines <- renderLMMT commit
@@ -211,30 +242,13 @@ makeSnapshot commit index storeRead = do
 
       mt' <- lift $ applyChanges mt changes
 
-      -- liftIO $ do
-      --   print "mergetrie:"
-      --   let lines = renderMergeTrie mt'
-      --   traverse (\s -> putStr "  " >> putStrLn s) lines
-
-      -- TODO: error handling here
-      ft <- ExceptT $ pure $ resolveMergeTrie (modifiedWIP commit) mt'
-      let snap = Snapshot ft (modifiedWIP commit) snapshots
-
-      -- liftIO $ do
-      --   print $ "done processing commit: " ++ msg
-      --   print "built snapshot with ft:"
-      --   let lines = renderWIPT ft
-      --   traverse (\s -> putStr "  " >> putStrLn s) lines
-
-      pure snap
+      pure (snapshots, mt')
     NullCommit -> do
-      let ft = modifiedWIP $ Dir Map.empty
-          snap = Snapshot ft (modifiedWIP commit) []
+      pure ([], emptyMergeTrie)
 
-      -- liftIO $ do
-      --   print "built snapshot for nullcommit"
 
-      pure snap
+
+
 
 -- | fold a snapshot into a mergetrie
 -- TODO: use to write diff, maybe - resulting mergetrie only expands as far as diff boundary

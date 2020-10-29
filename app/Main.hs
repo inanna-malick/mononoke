@@ -174,8 +174,14 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
           mkChange c = [UI.div #+ [string "change: ", renderChange c]]
           mchange  = maybe [] mkChange $ mtChange mt
 
-      faUl #+ (children ++ files ++ mchange)
+      faUl #+ (children ++ [string "files:"] ++ files ++ [string "mchange:"] ++ mchange)
 
+
+    delChange :: NonEmpty Path -> UI ()
+    delChange path = do
+      liftIO $ print $ "send del to:"
+      liftIO $ print path
+      liftIO $ modifyMergeTrieHandler $ ApplyChange $ Change path Del
 
     renderFiles fs = fmap renderFile fs
 
@@ -200,8 +206,10 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
 
     renderChild :: [Path] -> (Path, WIPT UI 'FileTree `Either` (Fix (MergeTrie UI), [Path] -> UI Element)) -> UI Element
     renderChild path (pathSegment, Left wipt) = do
-          faLi focusHandler wipt [] (UI.code # set text pathSegment # set UI.class_ "path-segment")
-                                 (renderWIPTFileTree path pathSegment wipt)
+      let pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
+      faLi focusHandler wipt [("fa-trash-alt", delChange pathNEL)]
+                              (UI.code # set text ("rcl-" ++ pathSegment) # set UI.class_ "path-segment")
+                              (renderWIPTFileTree path pathSegment wipt)
 
 
     renderChild path (pathSegment, Right (mt, next)) = do
@@ -209,7 +217,10 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
             Left ipc -> resolveMergeTrie (asWIPTCommit ipc) mt
             Right c  -> resolveMergeTrie (unmodifiedWIP c) mt
       let toFocusOn' = either undefined id toFocusOn
-      faLi focusHandler toFocusOn' [] (string "path") (next (path ++ [pathSegment]))
+          pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
+      faLi focusHandler toFocusOn' [("fa-trash-alt", delChange pathNEL)]
+                                   (string ("rcr-" ++ pathSegment) # set UI.class_ "path-segment")
+                                   (next (path ++ [pathSegment]))
 
 
     renderWIPTBlob :: [Path] -> WIPT UI 'BlobT -> UI Element
@@ -224,12 +235,14 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
       (HC (Tagged h ft)) <- fetchWIPT wipt
       case ft of
         Dir cs -> do
-          let cs' = (uncurry (renderWIPTFileTree $ path ++ [pathSegment]) <$> Map.toList cs)
-              cs'' = faUl #+ (f <$> Map.toList cs)
-              f (p,c) = faLi focusHandler c [] (UI.code # set text p # set UI.class_ "path-segment")
+          let cs' = faUl #+ (f <$> Map.toList cs)
+              f (p,c) =
+                let pathNEL = NEL.reverse $ p :| reverse (path ++ [pathSegment]) -- append to path while preserving NEL by construction
+                 in faLi focusHandler c [("fa-trash-alt", delChange pathNEL)]
+                                        (UI.code # set text ("rwipt-dir-" ++ p) # set UI.class_ "path-segment")
                                         (renderWIPTFileTree (path ++ [pathSegment]) p c)
 
-          cs''
+          cs'
         File blob commit prev -> do
           faUl #+ ( [ faLi focusHandler commit [] (string "src commit") UI.div
                     ] ++
@@ -251,16 +264,21 @@ faLi'
   :: forall (i :: MTag)
    . SingI i
   => UI () -- focus action
-  -> [UI Element] -- onHover
+  -> [(String, UI ())] -- onHover actions
   -> UI Element -- tag
   -> UI Element -- sub-elems (content holder)
   -> UI Element
 faLi' focusAction onHoverButtons tag content = do
+  let mkButton (fa, a) = do
+        b <- UI.button #+ [UI.italics # withClass ["fas", fa]]
+        on UI.click b $ \() -> a
+        pure b
+
+
   icon' <- UI.span # withClass ["fa-li", "clickable-bullet", typeTagName (sing @i)]
                   #+ [ UI.italics # withClass ["fas", typeTagFAIcon (sing @i)]
-                     , UI.div # withClass ["dropdown"] #+ onHoverButtons
+                     , UI.div # withClass ["dropdown"] #+ (fmap mkButton $ [("fa-search", focusAction)] ++ onHoverButtons)
                      ]
-  on UI.click icon' $ \() -> focusAction
 
   li <- UI.li
 
@@ -273,7 +291,7 @@ faLi
    . SingI i
   => Handler (FocusWIPT UI)
   -> WIPT UI i
-  -> [UI Element] -- onHover
+  -> [(String, UI ())] -- onHover
   -> UI Element
   -> UI Element
   -> UI Element
@@ -461,33 +479,27 @@ browseMononoke
   -> (Const (UI Element)) i
 browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ do
       content <- UI.div #+ [faUl #+ browseMononoke' m]
-      faLi' @i focusAction [ toggleNodeButton (getConst h) content
-                           , toggleNodeButton (getConst h) content
-                           , toggleNodeButton (getConst h) content
+      faLi' @i focusAction [ ("fa-eye", toggleNode (getConst h) content)
                            ]
-        (string $ typeTagName' m) (pure content)
+                          (string $ typeTagName' m) (pure content)
 
   where
 
     -- TODO: persist between redraws via tvar (minimizations)
-    toggleNodeButton :: RawBlakeHash -> Element -> UI Element
-    toggleNodeButton k elem = do
-      b <- UI.button # set text "+/-"
-      on UI.click b $ \() -> void $ do
-        liftIO $ print "FOOOOOOOOOOOOOLSSS!"
-        isMinimized <- liftIO $ atomically $ do
-          wasMinimized <- Set.member k <$> readTVar minimizations
-          if wasMinimized
-            then do
-              modifyTVar minimizations (Set.delete k)
-            else do
-              modifyTVar minimizations (Set.insert k)
-          pure $ not wasMinimized
+    toggleNode :: RawBlakeHash -> Element -> UI ()
+    toggleNode k elem = void $ do
+      isMinimized <- liftIO $ atomically $ do
+        wasMinimized <- Set.member k <$> readTVar minimizations
+        if wasMinimized
+          then do
+            modifyTVar minimizations (Set.delete k)
+          else do
+            modifyTVar minimizations (Set.insert k)
+        pure $ not wasMinimized
 
-        if isMinimized
-          then element elem # set UI.class_ "hidden"
-          else element elem # set UI.class_ ""
-      element b
+      if isMinimized
+        then element elem # set UI.class_ "hidden"
+        else element elem # set UI.class_ ""
 
     renderChange :: Change (Const (UI Element)) -> UI Element
     renderChange Change{..} =
@@ -672,7 +684,7 @@ setup root = void $ do
         liftIO $ print $ show msg
         mcommit <- handleMMTE' msg
 
-        ft <- case mcommit of
+        mt <- case mcommit of
           Nothing -> do
             -- redraw commit editor
             bs <- liftIO $ atomically $ readTVar branchState
@@ -681,19 +693,24 @@ setup root = void $ do
             commit <-  liftIO $ atomically $ snd <$> getCurrentBranch
             snap' <- updateSnapshotIndexLMMT blobStore commitSnapshotIndex commit
             (HC (Tagged _ snap)) <- fetchLMMT snap'
-            pure $ unmodifiedWIP $ extractFT snap
+            let ft = unmodifiedWIP $ extractFT snap
+            buildMergeTrie emptyMergeTrie ft
+
           Just ipc@InProgressCommit{..} -> do
             -- redraw commit editor
             bs <- liftIO $ atomically $ readTVar branchState
             redrawCommitEditor bs $ Just ipc
 
             let commit = Commit ipcMsg ipcChanges ipcParentCommits
-            -- FIXME
-            esnap <- runExceptT $ makeSnapshot commit (iRead commitSnapshotIndex) (sRead blobStore)
-            snap <- either undefined pure esnap
-            pure $ extractFT snap
 
-        mt <- buildMergeTrie emptyMergeTrie ft
+            eMT <- runExceptT $ fmap snd $ makeMT commit (iRead commitSnapshotIndex) (sRead blobStore)
+            case eMT of
+              Right x -> pure x
+              Left e -> do
+                liftIO $ print "error making snapshot:"
+                liftIO $ print e
+                error "FIXME"
+
         redrawMergeTrie mt
         pure ()
 
