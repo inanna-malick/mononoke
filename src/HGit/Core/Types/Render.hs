@@ -9,20 +9,13 @@ module HGit.Core.Types.Render where
 
 
 --------------------------------------------
-import           Control.Concurrent.STM
-import           Control.Monad.IO.Class
 import           Data.Functor.Const (Const(..))
-import qualified Data.ByteString.Lazy as LB
 import           Data.Functor.Compose
-import           Data.Kind (Type)
 import           Data.List (intersperse)
-import           Data.List.NonEmpty (NonEmpty(..), toList)
-import           Data.Map.Strict (Map)
+import           Data.List.NonEmpty (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Singletons.TH
-import qualified Data.Text as T
 --------------------------------------------
-import           Merkle.Types.BlakeHash
 import           HGit.Render.Utils
 import           HGit.Core.Types
 import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME

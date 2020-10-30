@@ -18,15 +18,13 @@ import           Data.Functor.Const (Const(..))
 import qualified Data.ByteString.Lazy as LB
 import           Data.Functor.Compose
 import           Data.Kind (Type)
-import           Data.List (intersperse)
-import           Data.List.NonEmpty (NonEmpty(..), toList)
+import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Singletons.TH
 import qualified Data.Text as T
 --------------------------------------------
 import           Merkle.Types.BlakeHash
-import           HGit.Render.Utils
 import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
@@ -165,8 +163,8 @@ uploadWIPT
    . Monad m
   => NatM m (M Hash) Hash
   -> NatM m (WIPT m) (LMMT m)
-uploadWIPT upload (Term (HC (L lmmt))) = pure lmmt
-uploadWIPT upload (Term (HC (R (HC (Tagged h m))))) = do
+uploadWIPT _upload (Term (HC (L lmmt))) = pure lmmt
+uploadWIPT upload (Term (HC (R (HC (Tagged _h m))))) = do
   lmmt <- hmapM (uploadWIPT upload) m
   h' <- upload $ hfmap hashOfLMMT lmmt
   -- TODO assert h == h'

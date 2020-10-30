@@ -10,18 +10,14 @@ module HGit.Core.MergeTrie where
 
 --------------------------------------------
 import           Control.Concurrent.STM
-import           Control.Monad
 import           Control.Monad.Trans
 import           Control.Monad.Except
-import           Control.Monad.IO.Class
 import           Data.List.NonEmpty (toList)
-import           Data.Maybe (mapMaybe)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Map.Merge.Strict
 --------------------------------------------
 import           HGit.Core.Types
-import           HGit.Render.Utils
 import           Util.RecursionSchemes as R
 import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
@@ -75,7 +71,7 @@ resolveMergeTrie commit mt = do
       case (snd <$> Map.toList mtFilesAtPath, mtChange, children) of
         ([], Nothing, []) -> pure Nothing -- empty node with no files or changes - delete
         ([], Nothing, _:_) -> -- TODO: more elegant matching statement for 'any nonempty'
-          let children' = Map.fromList children                       -- no file or change but
+          let children' = Map.fromList children          -- no file or change but
             in pure $ Just $ modifiedWIP $ Dir children' -- at least one child, retain
         ([], Just Del, _) -> Left $ DeleteAtNodeWithNoFile
         (fs, Just (Add blob), []) ->
@@ -87,23 +83,10 @@ resolveMergeTrie commit mt = do
         ((file, _, _, _):[], Nothing, []) ->
           pure $ Just file -- single file with no changes, simple, valid
         (_:_, Just Del, []) -> pure Nothing -- any number of files, deleted, valid
-        (xs@(x@(f,_,_,_):_:_), Nothing, []) -> -- > 1 file, TODO check if they're the same
-          -- if all (\(f',_,_,_) -> hashOfWIPT f' == hashOfWIPT f) xs
+        ((_:_:_), Nothing, []) -> -- > 1 file at same path, each w/ different hashes (b/c list converted from map)
           Left $ MoreThanOneFileButNoChange
         (_:_, _, _:_) -> Left $ OneOrMoreFilesButWithChildren
 
-
--- NOTE FROM RAIN:
--- TWO PASSES, deletes first, then adds, then validates
--- NOTE: it's a set of changes on the trie
-
-
--- NOTE: called composite set in mononoke
--- NOTE: basically just multi-way merge
--- Q: how does this evaluate file -> dir or dir -> file merges? idk just represent in DirTree format
--- Q: how does DirTree format keep info needed for reconstruction of full File snapshot
---      specifically - commit last modified in (maybe unchanged for some merge output?)
---                   - last version of file (maybe multiple for multi-way merges)
 
 type IndexRead m  = Hash 'CommitT -> m (Maybe (Hash 'SnapshotT))
 type IndexWrite m = Hash 'CommitT -> Hash 'SnapshotT -> m ()
@@ -182,7 +165,7 @@ makeMT
   -> ExceptT MergeError m ([WIPT m 'SnapshotT], Fix (MergeTrie m))
 makeMT commit index storeRead = do
   case commit of
-    Commit msg changes parents -> do
+    Commit _msg changes parents -> do
       -- lines <- renderLMMT commit
       -- liftIO $ do
       --   print $ "processing commit: " ++ msg
@@ -228,14 +211,14 @@ makeMT commit index storeRead = do
 -- TODO: use to write diff, maybe - resulting mergetrie only expands as far as diff boundary
 -- TODO: compare hashes, short circuit - not yet impl'd, needed to get example working
 buildMergeTrie :: forall m. Monad m => Fix (MergeTrie m) -> WIPT m 'FileTree -> m (Fix (MergeTrie m))
-buildMergeTrie mt = para f mt
+buildMergeTrie original = para f original
   where f :: MergeTrie m ( Fix (MergeTrie m)
                          , WIPT m 'FileTree -> m (Fix (MergeTrie m))
                          )
           -> WIPT m 'FileTree
           -> m (Fix (MergeTrie m))
         f mt wipt = do
-              HC (Tagged hash m') <- fetchWIPT wipt
+              HC (Tagged _hash m') <- fetchWIPT wipt
               case m' of
                 Dir children -> do
                   let wiptOnly = traverseMissing $ \_ ft -> pure $ Left ft
@@ -344,7 +327,7 @@ applyChangeH
   -> ChangeType (WIPT m)
   -> m (Fix (MergeTrie m)) -- TODO: ErrorT or something w/ MergeError
 applyChangeH wipt fullPath ct = do
-  HC (Tagged hash m') <- fetchWIPT wipt
+  HC (Tagged _hash m') <- fetchWIPT wipt
   case m' of
     Dir children -> case fullPath of
       [] -> do
