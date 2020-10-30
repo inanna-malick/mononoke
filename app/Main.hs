@@ -59,6 +59,13 @@ wrapFocus s x = case s of
   SCommitT   -> CommitF   x
   SBlobT     -> BlobF     x
 
+
+data SpawnPopup m
+  = SpawnError String
+  | SpawnRequestText
+      String -- window name
+      (String -> m ()) -- action to run given input (always string via text... could be better there)
+
 data BranchState m
   = BranchState
   { bsMainBranch :: LMMT m 'CommitT
@@ -71,23 +78,15 @@ data BranchState m
 branchBrowser
   :: Index UI
   -> Store UI
+  -> Handler (SpawnPopup UI)
   -> BranchState UI
   -> Handler (FocusWIPT UI)
   -> Handler UpdateBranchState
   -> UI Element
-branchBrowser commitSnapshotIndex store bs focusChangeHandler updateBranchStateHandler = do
+branchBrowser commitSnapshotIndex store popRequest bs focusChangeHandler updateBranchStateHandler = do
     let extraBranches = (\(f,c) -> (OtherBranch f, c)) <$> bsBranches bs
-    branchList <- faUl #+ (fmap drawBranch $ [(MainBranch, bsMainBranch bs)] ++ extraBranches)
+    faUl #+ (fmap drawBranch $ [(MainBranch, bsMainBranch bs)] ++ extraBranches)
 
-    addBranch <- UI.input
-    on UI.sendValue addBranch $ \input -> do
-      liftIO $ updateBranchStateHandler $ AddBranch input
-
-    UI.div # withClass ["branch-browser"]
-           #+ [ element branchList
-              , string "add branch:"
-              , element addBranch
-              ]
   where
     drawBranch (f, commit) = do
       esnap <- runExceptT $ updateSnapshotIndexLMMT store commitSnapshotIndex commit
@@ -98,9 +97,12 @@ branchBrowser commitSnapshotIndex store bs focusChangeHandler updateBranchStateH
             Left e ->     string $ "unable to construct snapshot: " ++ show e
 
       let extraTags = if f == bsFocus bs then ["focus", "branch"] else ["branch"]
+          forkAction f = do
+            liftIO $ popRequest $ SpawnRequestText "branch name" $ \s ->
+              liftIO $ updateBranchStateHandler $ ForkFrom f s
       let extraActions = if f == bsFocus bs
-            then []
-            else [("fa-search", liftIO $ updateBranchStateHandler $ ChangeFocus f)]
+            then [("fa-code-branch", forkAction f)]
+            else [("fa-code-branch", forkAction f), ("fa-search", liftIO $ updateBranchStateHandler $ ChangeFocus f)]
 
       case f of
         MainBranch    -> do
@@ -144,7 +146,7 @@ drawModal hdr content = do
       -- </div>
 
 data UpdateBranchState
-  = AddBranch String -- branch off of current focus
+  = ForkFrom BranchFocus String  -- branch off of current focus
   | DelBranch String
   | ChangeFocus BranchFocus -- blocked if IPC is Just
 
@@ -365,11 +367,10 @@ faLi focusHandler wipt = faLi' @i (Just action)
     where
       action = liftIO $ focusHandler $ wrapFocus (sing @i) wipt
 
-type PopRequest m = (String -> m ()) -> m ()
 
 drawCommitEditor
   :: BranchState UI
-  -> PopRequest UI -- TODO: make this a handler, probably
+  -> Handler (SpawnPopup UI)
   -> Handler (UpdateMergeTrie UI)
   -> Handler (FocusWIPT UI)
   -> Maybe InProgressCommit
@@ -395,6 +396,7 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
             , UI.br
             , string "add parent to commit: "
             , addParent
+            , string "branches:"
             ]
 
   where
@@ -458,7 +460,7 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
 
       on UI.click add $ \() -> void $ runMaybeT $ do
         path <- lift (UI.get UI.value pathInput) >>= MaybeT . pure . parsePath
-        lift $ popRequest $ \s -> liftIO $ do
+        liftIO $ popRequest $ SpawnRequestText "file contents" $ \s -> liftIO $ do
           modifyMergeTrieHandler (ApplyChange path $ Add $ modifiedWIP $ Blob s)
 
       UI.div #+ [ string "path:"
@@ -720,44 +722,47 @@ setup root = void $ do
   (updateBranchStateEvent, updateBranchStateHandler) <- liftIO $ newEvent
   (focusChangeEvent, focusChangeHandler) <- liftIO $ newEvent
   (modifyMergeTrieEvent, modifyMergeTrieHandler) <- liftIO $ newEvent
+  (popupEvent, popupHandler) <- liftIO $ newEvent
 
 
   -- empty root nodes for various UI elements
-  branchBrowserRoot <- infraDiv
   mergeTrieRoot <- infraDiv
-  commitEditorRoot <- infraDiv
+  sidebarRoot <- infraDiv
   modalRoot <- UI.div -- not infra because often invisible, infra controls display
 
 
-  -- FIXME[low]: add logic to allow for parsing/retries (eg 'path must be nel' msg)
-  let popRequest :: (String -> UI ()) -> UI ()
-      popRequest action = void $ do
+
+  let handleSpawnPopup (SpawnError s) = void $ do
+        _ <- element modalRoot # set children []
+        element modalRoot #+ [ drawModal "error!" [string s] ]
+
+      handleSpawnPopup (SpawnRequestText s act) = void $ do
         _ <- element modalRoot # set children []
         inputElem <- UI.input # withClass ["aesthetic-windows-95-text-input"]
         on UI.sendValue inputElem $ \input -> do
-          action input
+          act input
           element modalRoot # set children []
-        element modalRoot #+ [drawModal "request:" [ string "req: "
-                                                   , element inputElem
-                                                   ]
+        element modalRoot #+ [drawModal s [ string "req: "
+                                          , element inputElem
+                                          ]
                              ]
 
+  -- FIXME[low]: add logic to allow for parsing/retries (eg 'path must be nel' msg)
+  let popRequest :: String -> (String -> UI ()) -> UI ()
+      popRequest s action = liftIO $ popupHandler $ SpawnRequestText s action
 
   let popError :: Show e => e -> UI ()
-      popError e = void $ do
-        _ <- element modalRoot # set children []
-        element modalRoot #+ [ drawModal "error!" [string $ show e] ]
+      popError e = liftIO $ popupHandler $ SpawnError (show e)
 
   let extractFT :: M x 'SnapshotT -> x 'FileTree
       extractFT (Snapshot ft _ _) = ft
 
-  let redrawCommitEditor bs mipc = do
-        _ <- element commitEditorRoot # set children []
-        element commitEditorRoot #+ [drawCommitEditor bs popRequest modifyMergeTrieHandler focusChangeHandler mipc]
 
-  let redrawBranchBrowser bs = do
-        _ <- element branchBrowserRoot # set children []
-        element branchBrowserRoot #+ [branchBrowser commitSnapshotIndex blobStore bs focusChangeHandler updateBranchStateHandler]
+  let redrawSidebar bs mipc = do
+        _ <- element sidebarRoot # set children []
+        element sidebarRoot #+ [ drawCommitEditor bs popupHandler modifyMergeTrieHandler focusChangeHandler mipc
+                               , branchBrowser commitSnapshotIndex blobStore popupHandler bs focusChangeHandler updateBranchStateHandler
+                               ]
 
 
   let redrawMergeTrie mt = void $ do
@@ -788,7 +793,7 @@ setup root = void $ do
           Nothing -> do
             -- redraw commit editor
             bs <- liftIO $ atomically $ readTVar branchState
-            lift $ redrawCommitEditor bs Nothing
+            lift $ redrawSidebar bs Nothing
 
             commit <-  liftIO $ atomically $ snd <$> getCurrentBranch
             snap' <- updateSnapshotIndexLMMT blobStore commitSnapshotIndex commit
@@ -799,7 +804,7 @@ setup root = void $ do
           Just ipc@InProgressCommit{..} -> do
             -- redraw commit editor
             bs <- liftIO $ atomically $ readTVar branchState
-            lift $ redrawCommitEditor bs $ Just ipc
+            lift $ redrawSidebar bs $ Just ipc
 
             let changes = uncurry Change <$> Map.toList ipcChanges
                 commit = Commit ipcMsg changes ipcParentCommits
@@ -873,10 +878,15 @@ setup root = void $ do
                 bs <- readTVar branchState
                 pure bs
 
-              lift $ redrawBranchBrowser bs
+              mipc <- liftIO $ atomically $ readTVar inProgressCommitTVar
+              lift $ redrawSidebar bs mipc
 
               pure Nothing
 
+
+
+  -- discarded return value deregisters handler
+  _ <- onEvent popupEvent handleSpawnPopup
 
   -- discarded return value deregisters handler
   _ <- onEvent modifyMergeTrieEvent handleMMTE
@@ -895,13 +905,17 @@ setup root = void $ do
 
   _ <- onEvent updateBranchStateEvent $ \ubs -> do
     bs' <- case ubs of
-      AddBranch s -> do
-        liftIO $ print "add branch"
+      ForkFrom f s -> do
+        liftIO $ print "fork from"
         liftIO $ atomically $ do
           bs <- readTVar branchState
-          currentBranchPersistedCommit <- snd <$> getCurrentBranch
+          commit <- case f of
+            MainBranch -> pure $ bsMainBranch bs
+            OtherBranch b -> pure $ maybe (error "todo") id $ lookup b (bsBranches bs)
 
-          let bs' = bs { bsBranches = bsBranches bs ++ [(s, currentBranchPersistedCommit)] }
+          -- TODO: spawn popup requesting branch name, prepop'd with name of branch being forked from
+
+          let bs' = bs { bsBranches = bsBranches bs ++ [(s, commit)] }
           writeTVar branchState bs'
           pure bs'
       DelBranch s -> do
@@ -927,27 +941,17 @@ setup root = void $ do
       _ -> -- FIXME: just run in all cases b/c that'll trigger redraw of commit editor - could optimize more here
         liftIO $ modifyMergeTrieHandler Reset
 
-    redrawBranchBrowser bs'
+    mipc <- liftIO $ atomically $ readTVar inProgressCommitTVar
+    redrawSidebar bs' mipc
     pure ()
 
   bs <- liftIO $ atomically $ readTVar branchState
-  element branchBrowserRoot #+ [branchBrowser commitSnapshotIndex blobStore bs focusChangeHandler updateBranchStateHandler]
 
-  sidebar <- flex infraDiv (flexDirection CFB.column)
-                [ (element commitEditorRoot, flexGrow 1)
-                , (element branchBrowserRoot, flexGrow 1)
-                ]
+  redrawSidebar bs Nothing
 
-  browserActualRoot <- UI.div # withClass ["browser"]
-                             #+ [ UI.div # withClass ["browser-header"]
-                                        #+ [ UI.italics # withClass ["fas", "fa-search-5x", "browser-badge"]
-                                           ]
-                               , element browserRoot
-                               ]
-
-  flex_p (getBody root) [ (element sidebar, flexGrow 1)
+  flex_p (getBody root) [ (element sidebarRoot, flexGrow 1)
                         , (element mergeTrieRoot, flexGrow 2)
-                        , ( infraDiv #+ [element browserActualRoot]
+                        , ( infraDiv #+ [element browserRoot]
                           , flexGrow 2
                           )
                         ]

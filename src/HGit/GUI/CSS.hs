@@ -95,12 +95,6 @@ css = do
 
     body ? do
       backgroundImage $ url "/static/vaporwave.jpg"
--- body {
---   background-image: url('img_girl.jpg');
--- }
-
-
-
 
     li ? do
       marginTop (em 1)
