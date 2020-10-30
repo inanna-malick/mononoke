@@ -10,6 +10,9 @@ module HGit.GUI.CSS where
 import Prelude hiding (span, div)
 import Clay
 
+
+
+
 css :: Css
 css = do
     ul ? do
@@ -44,6 +47,9 @@ css = do
         borderStyle solid
         backgroundColor paleturquoise
 
+      ".infra" & do
+        borderStyle solid
+        backgroundColor gold
 
     div ? do
       ".modal" & do
@@ -54,17 +60,16 @@ css = do
           width (pct 100)
           height (pct 100)
           overflow auto
-          backgroundColor $ rgba 0 0 0 4
+          backgroundColor $ rgba 0 0 0 0.4
 
     div ? do
       ".modal-content" & do
-          backgroundColor linen
           margin (pct 15) (pct 15) (pct 15) (pct 15)
           padding (px 20) (px 20) (px 20) (px 20)
-          borderWidth (px 1)
-          borderStyle solid
-          borderColor black
-          width (pct 80)
+          width auto
+
+      ".popup-content" & do
+          margin (px 20) (px 20) (px 20) (px 20)
 
     div ? do
       ".dropdown" & do
