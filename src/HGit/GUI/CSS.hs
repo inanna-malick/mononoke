@@ -48,8 +48,7 @@ css = do
         backgroundColor paleturquoise
 
       ".infra" & do
-        borderStyle solid
-        backgroundColor gold
+        margin (px 15) (px 15) (px 15) (px 15)
 
     div ? do
       ".modal" & do

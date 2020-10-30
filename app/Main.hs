@@ -955,4 +955,4 @@ setup root = void $ do
 
 
 infraDiv :: UI Element
-infraDiv = UI.div -- # withClass ["infra"]
+infraDiv = UI.div # withClass ["infra"]
