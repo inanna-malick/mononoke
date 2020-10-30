@@ -62,6 +62,9 @@ library:
     - HGit.Core.MergeTrie
     - HGit.Core.Types
     - HGit.GUI.CSS
+    - HGit.GUI.Messages
+    - HGit.GUI.State
+    - HGit.GUI.Core
 
 executable:
   main: Main.hs

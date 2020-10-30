@@ -93,32 +93,6 @@ resolveMergeTrie commit mt = do
         (_:_, _, _:_) -> Left $ OneOrMoreFilesButWithChildren
 
 
-renderMergeTrie :: Fix (MergeTrie m) -> [String]
-renderMergeTrie = cata f
-  where
-    f :: MergeTrie m [String] -> [String]
-    f MergeTrie{..} =
-      let g :: (Path, ((WIPT m 'FileTree) `Either` [String])) -> [String]
-          g (k, (Left wipt)) = [k ++ ": "] ++ renderWIPT wipt
-          g (k, (Right v)) = [k ++ ": "] ++ v
-          children :: [[String]]
-          children = if Map.null mtChildren
-            then []
-            -- TODO handle either
-            else [["children"] ++ (indent $ fmap g $ Map.toList mtChildren)]
-          change :: [[String]]
-          change = case mtChange of
-            Nothing -> []
-            Just (Add b) -> [["add"]]
-            Just Del -> [["del"]]
-          files :: [[String]]
-          files = if null mtFilesAtPath
-            then []
-            else [["files:"] ++ (indent $ pure . showHash <$> Map.keys mtFilesAtPath)]
-       in "MergeTrie:" : indent
-          ( files ++ change ++ children
-          )
-
 -- NOTE FROM RAIN:
 -- TWO PASSES, deletes first, then adds, then validates
 -- NOTE: it's a set of changes on the trie

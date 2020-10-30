@@ -7,72 +7,38 @@ module Main where
 
 --------------------------------------------
 import qualified Clay as Clay
+import           Control.Concurrent.STM
+import           Control.Monad (void)
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Maybe
-import qualified Data.Char as Char
-import           Data.Functor.Compose
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (toList, nonEmpty, (<|), NonEmpty(..))
 import qualified Data.List.NonEmpty as NEL
 import           Data.List.Split (splitOn)
-import           Data.Text.Lazy (pack, unpack)
+import           Data.Set (Set)
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import           Data.Text.Lazy (unpack)
 import           Data.Singletons.TH (SingI, sing)
+import           Graphics.UI.Threepenny.Core
+import qualified Graphics.UI.Threepenny as UI
+import           Graphics.UI.Threepenny.Ext.Flexbox
 --------------------------------------------
 import           HGit.Core.Types
 import           HGit.Core.MergeTrie
 import           HGit.GUI.CSS
+import           HGit.GUI.Core
+import           HGit.GUI.State
+import           HGit.GUI.Messages
 import           Merkle.Types.BlakeHash
 import           Util.RecursionSchemes
 import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
-import qualified Clay.Flexbox as CFB
-import Control.Monad (void)
-import Control.Concurrent.STM
-import Data.Map (Map)
-import Data.Set (Set)
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-
-import Graphics.UI.Threepenny.Core
-import qualified Graphics.UI.Threepenny as UI
-import Graphics.UI.Threepenny.Ext.Flexbox
 
 
 type Minimizations = Set RawBlakeHash
-
-data Focus x
-  = SnapshotF (x 'SnapshotT)
-  | FileTreeF (x 'FileTree)
-  | CommitF   (x 'CommitT)
-  | BlobF     (x 'BlobT)
-
-type FocusWIPT m = Focus (WIPT m)
-type FocusLMMT m = Focus (LMMT m)
-
--- (sing :: Sing i)
-wrapFocus :: forall (i :: MTag) x. Sing i -> x i -> Focus x
-wrapFocus s x = case s of
-  SSnapshotT -> SnapshotF x
-  SFileTree  -> FileTreeF x
-  SCommitT   -> CommitF   x
-  SBlobT     -> BlobF     x
-
-
-data SpawnPopup m
-  = SpawnError String
-  | SpawnRequestText
-      String -- window name
-      (String -> m ()) -- action to run given input (always string via text... could be better there)
-
-data BranchState m
-  = BranchState
-  { bsMainBranch :: LMMT m 'CommitT
-  , bsBranches :: [(String, LMMT m 'CommitT)]
-  , bsFocus :: BranchFocus
-  }
-
 
 -- TODO: need to figure out how to _update_ branch - maybe just fetch commit from tvar on click instead of baking in value?
 branchBrowser
@@ -97,9 +63,9 @@ branchBrowser commitSnapshotIndex store popRequest bs focusChangeHandler updateB
             Left e ->     string $ "unable to construct snapshot: " ++ show e
 
       let extraTags = if f == bsFocus bs then ["focus", "branch"] else ["branch"]
-          forkAction f = do
-            liftIO $ popRequest $ SpawnRequestText "branch name" $ \s ->
-              liftIO $ updateBranchStateHandler $ ForkFrom f s
+          forkAction focus = do
+            liftIO $ popRequest $ SpawnRequestText "branch name" $ \newBranchName ->
+              liftIO $ updateBranchStateHandler $ ForkFrom focus newBranchName
       let extraActions = if f == bsFocus bs
             then [("fa-code-branch", forkAction f)]
             else [("fa-code-branch", forkAction f), ("fa-search", liftIO $ updateBranchStateHandler $ ChangeFocus f)]
@@ -109,7 +75,7 @@ branchBrowser commitSnapshotIndex store popRequest bs focusChangeHandler updateB
           faLiSimple extraTags "fa-code-branch" extraActions (string "main branch") $ faUl #+ [commit', snap']
         OtherBranch branchName -> do
           let delAction = liftIO $ do
-                print $ "delete branch w/ name " ++ branchName
+                putStrLn $ "delete branch w/ name " ++ branchName
                 updateBranchStateHandler $ DelBranch branchName
           faLiSimple extraTags "fa-code-branch" ([("fa-trash-alt", delAction)] ++ extraActions)
                                          (string branchName) $ faUl #+ [commit', snap']
@@ -145,30 +111,6 @@ drawModal hdr content = do
       --   <textarea class="aesthetic-windows-95-text-input"></textarea>
       -- </div>
 
-data UpdateBranchState
-  = ForkFrom BranchFocus String  -- branch off of current focus
-  | DelBranch String
-  | ChangeFocus BranchFocus -- blocked if IPC is Just
-
-data BranchFocus
-  = MainBranch
-  | OtherBranch String
-  deriving (Eq, Ord, Show)
-
-data UpdateMergeTrie m
-  = ApplyChange (NonEmpty Path) (ChangeType (WIPT m))
-  | RemoveChange (NonEmpty Path)
-  | AddParent (LMMT m 'CommitT)
-  | Reset
-  | Finalize
-
-instance Show (UpdateMergeTrie m) where
-  show (ApplyChange p c) = "ApplyChange: " ++ (unlines $ renderChange $ cmapShim (Const . renderWIPT) $ Change p c)
-  show (RemoveChange p) = "RemoveChange: " ++ show p
-  show (AddParent _) = "AddParent: todo"
-  show Reset = "Reset"
-  show Finalize = "Finalize"
-
 
 
 renderWIPTBlob :: Handler (FocusWIPT UI) -> [(String, UI ())] -> WIPT UI 'BlobT -> UI Element
@@ -177,7 +119,7 @@ renderWIPTBlob focusHandler actions wipt = do
         (Term (HC (L _))) -> ["persisted"]
         (Term (HC (R _))) -> ["wip"]
 
-  (HC (Tagged h blob)) <- fetchWIPT wipt
+  (HC (Tagged _h blob)) <- fetchWIPT wipt
   case blob of
     Blob b -> do
       body <- UI.div # withClass (extraTags ++ [typeTagName $ sing @'BlobT])
@@ -191,31 +133,31 @@ browseMergeTrie
   :: Handler (UpdateMergeTrie UI)
   -> Handler (FocusWIPT UI)
   -> TVar Minimizations
-  -> InProgressCommit `Either` LMMT UI 'CommitT
+  -> InProgressCommit UI `Either` LMMT UI 'CommitT
   -> Fix (MergeTrie UI)
   -> UI Element
-browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = do
+browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC root = do
     (para f root) []
   where
     f :: MergeTrie UI (Fix (MergeTrie UI), [Path] -> UI Element) -> [Path] -> UI Element
     f mt path = do
-      let children = renderChildren path $ mtChildren mt
-          files    = renderFiles path $ Map.toList $ mtFilesAtPath mt
-          mchange  = maybe [] (pure . renderChange path) $ mtChange mt
-
-      faUl #+ (children ++ files ++ mchange)
+      faUl #+ mconcat
+            [ renderChildren path $ mtChildren mt
+            , renderFiles path $ Map.toList $ mtFilesAtPath mt
+            , maybe [] (pure . renderChange path) $ mtChange mt
+            ]
 
 
     delChange :: NonEmpty Path -> UI ()
     delChange path = do
-      liftIO $ print $ "send del to:"
+      liftIO $ putStrLn $ "send del to:"
       liftIO $ print path
       liftIO $ modifyMergeTrieHandler $ ApplyChange path Del
 
     renderFiles path fs = fmap (renderFile path) fs
 
     -- TODO: if multiple files (merge conflict), could have button to accept one as cannonical
-    renderFile path (_, (ft, blob, _lastMod, _prevs)) =
+    renderFile path (_, (_ft, blob, _lastMod, _prevs)) =
       let extraButtons = case nonEmpty path of
             Nothing -> [] -- a file at the root path is an error anyway..
             Just nel -> [("fa-trash-alt", delChange nel)]
@@ -259,15 +201,15 @@ browseMergeTrie modifyMergeTrieHandler focusHandler minimizations ipcOrC root = 
 
     renderWIPTFileTree :: [Path] -> Path -> WIPT UI 'FileTree -> UI Element
     renderWIPTFileTree path pathSegment wipt = do
-      (HC (Tagged h ft)) <- fetchWIPT wipt
+      (HC (Tagged _h ft)) <- fetchWIPT wipt
       let extraTags = case wipt of
             (Term (HC (L _))) -> ["persisted"]
             (Term (HC (R _))) -> ["wip"]
       wrapper <- UI.div # withClass ([typeTagName' ft] ++ extraTags)
       x <- case ft of
         Dir cs -> do
-          let cs' = faUl #+ (f <$> Map.toList cs)
-              f (p,c) =
+          let cs' = faUl #+ (renderDirEntry <$> Map.toList cs)
+              renderDirEntry (p,c) =
                 let pathNEL = NEL.reverse $ p :| reverse (path ++ [pathSegment]) -- append to path while preserving NEL by construction
                  in faLi focusHandler c [("fa-trash-alt", delChange pathNEL)]
                                         (UI.code # set text p # set UI.class_ "path-segment")
@@ -343,15 +285,7 @@ faLi'
   -> UI Element
 faLi' mFocusAction onHoverButtons = faLiSimple [typeTagName $ sing @i] (typeTagFAIcon (sing @i)) buttons
   where
-    mkButton (fa, a) = do
-      b <- UI.button #+ [UI.italics # withClass ["fas", fa]]
-      on UI.click b $ \() -> a
-      pure b
-
     mfocus = maybe [] (\focusAction -> [("fa-search", focusAction)]) mFocusAction
-    dropdown = case (onHoverButtons, mFocusAction) of
-      ([], Nothing) -> []
-      _  -> [UI.div # withClass ["dropdown"] #+ (fmap mkButton $ mfocus ++ onHoverButtons)]
     buttons =  mfocus ++ onHoverButtons
 
 faLi
@@ -373,7 +307,7 @@ drawCommitEditor
   -> Handler (SpawnPopup UI)
   -> Handler (UpdateMergeTrie UI)
   -> Handler (FocusWIPT UI)
-  -> Maybe InProgressCommit
+  -> Maybe (InProgressCommit UI)
   -> UI Element
 drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
 
@@ -445,20 +379,19 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
       faUl #+ (uncurry renderChange <$> (Map.toList cs))
 
     renderPath = mconcat . intersperse "/" . toList
-    renderPath' = mconcat . intersperse "/"
 
 
     addChanges = do
-      add <- UI.button # set text "add"
-      del <- UI.button # set text "del"
+      addButton <- UI.button # set text "add"
+      delButton <- UI.button # set text "del"
 
       pathInput     <- UI.input
 
-      on UI.click del $ \() -> void $ runMaybeT $ do
+      on UI.click delButton $ \() -> void $ runMaybeT $ do
         path <- lift (UI.get UI.value pathInput) >>= MaybeT . pure . parsePath
         liftIO $ modifyMergeTrieHandler (ApplyChange path Del)
 
-      on UI.click add $ \() -> void $ runMaybeT $ do
+      on UI.click addButton $ \() -> void $ runMaybeT $ do
         path <- lift (UI.get UI.value pathInput) >>= MaybeT . pure . parsePath
         liftIO $ popRequest $ SpawnRequestText "file contents" $ \s -> liftIO $ do
           modifyMergeTrieHandler (ApplyChange path $ Add $ modifiedWIP $ Blob s)
@@ -466,8 +399,8 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
       UI.div #+ [ string "path:"
                 , element pathInput
                 , UI.br
-                , element del
-                , element add
+                , element delButton
+                , element addButton
                 ]
 
 
@@ -554,10 +487,8 @@ browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ d
                                   (string $ typeTagName' m) (pure content)
 
   where
-
-    -- TODO: persist between redraws via tvar (minimizations)
     toggleNode :: RawBlakeHash -> Element -> UI ()
-    toggleNode k elem = void $ do
+    toggleNode k node = void $ do
       isMinimized <- liftIO $ atomically $ do
         wasMinimized <- Set.member k <$> readTVar minimizations
         if wasMinimized
@@ -568,8 +499,8 @@ browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ d
         pure $ not wasMinimized
 
       if isMinimized
-        then element elem # set UI.class_ "hidden"
-        else element elem # set UI.class_ ""
+        then element node # set UI.class_ "hidden"
+        else element node # set UI.class_ ""
 
     renderChange :: Change (Const (UI Element)) -> UI Element
     renderChange Change{..} =
@@ -600,8 +531,8 @@ browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ d
 
     browseMononoke' NullCommit = string "NullCommit"
 
-    browseMononoke' (Commit m cs ps) = (faUl #+) $
-      [ faLiSimple' [] "fa-comment-alt" (string $ "msg: " ++ m) UI.div ] ++
+    browseMononoke' (Commit msg cs ps) = (faUl #+) $
+      [ faLiSimple' [] "fa-comment-alt" (string $ "msg: " ++ msg) UI.div ] ++
       (renderChange <$> cs) ++
       ( faLiSimple' [] "fa-chevron-right" (string "parent") . getConst <$> toList ps)
 
@@ -654,22 +585,11 @@ updateSnapshotIndexWIPT store index commit = do
   (HC (Tagged _ commit')) <- lift $ fetchWIPT commit
   makeSnapshot commit' index store
 
-data InProgressCommit
-  = InProgressCommit
-  { ipcMsg           :: String
-  , ipcChanges       :: Map (NonEmpty Path) (ChangeType (WIPT UI))
-  , ipcParentCommits :: NonEmpty (WIPT UI 'CommitT)
-  }
-
-asWIPTCommit :: InProgressCommit -> WIPT UI 'CommitT
-asWIPTCommit InProgressCommit{..} = modifiedWIP $ Commit ipcMsg changes ipcParentCommits
-  where
-   changes = uncurry Change <$> Map.toList ipcChanges
 
 setup :: Window -> UI ()
 setup root = void $ do
-  getHead root #+ [ mkElement "style" # set (UI.text) (unpack (Clay.render css))
-                  ]
+  void $ getHead root #+ [ mkElement "style" # set (UI.text) (unpack (Clay.render css))
+                         ]
   UI.addStyleSheet root "all.css" -- fontawesome
   UI.addStyleSheet root "aesthetic.css" -- vaporwave! https://github.com/torch2424/aesthetic-css/blob/master/aesthetic.css
 
@@ -677,7 +597,7 @@ setup root = void $ do
   commitSnapshotIndexTVar <- liftIO . atomically $ newTVar Map.empty
   let commitSnapshotIndex = stmIOIndex commitSnapshotIndexTVar
 
-  inProgressCommitTVar :: TVar (Maybe InProgressCommit)
+  inProgressCommitTVar :: TVar (Maybe (InProgressCommit UI))
     <- liftIO . atomically $ newTVar $ Nothing
 
   blobStoreTvar <- liftIO . atomically $ newTVar emptyBlobStore
@@ -747,9 +667,6 @@ setup root = void $ do
                                           ]
                              ]
 
-  -- FIXME[low]: add logic to allow for parsing/retries (eg 'path must be nel' msg)
-  let popRequest :: String -> (String -> UI ()) -> UI ()
-      popRequest s action = liftIO $ popupHandler $ SpawnRequestText s action
 
   let popError :: Show e => e -> UI ()
       popError e = liftIO $ popupHandler $ SpawnError (show e)
@@ -758,7 +675,7 @@ setup root = void $ do
       extractFT (Snapshot ft _ _) = ft
 
 
-  let redrawSidebar bs mipc = do
+  let redrawSidebar bs mipc = void $ do
         _ <- element sidebarRoot # set children []
         element sidebarRoot #+ [ drawCommitEditor bs popupHandler modifyMergeTrieHandler focusChangeHandler mipc
                                , branchBrowser commitSnapshotIndex blobStore popupHandler bs focusChangeHandler updateBranchStateHandler
@@ -785,8 +702,8 @@ setup root = void $ do
       -- FIXME[crit]: only commit change to TVar iff not error case
       handleMMTE :: UpdateMergeTrie UI -> UI ()
       handleMMTE msg = handleErr $ do
-        liftIO $ print $ "handle MMTE msg"
-        liftIO $ print $ show msg
+        liftIO $ putStrLn $ "handle MMTE msg"
+        liftIO $ putStrLn $ show msg
         mcommit <- handleMMTE' msg
 
         mt <- case mcommit of
@@ -814,7 +731,7 @@ setup root = void $ do
         lift $ redrawMergeTrie mt
         pure ()
 
-      handleMMTE' :: UpdateMergeTrie UI -> ExceptT MergeError UI (Maybe InProgressCommit)
+      handleMMTE' :: UpdateMergeTrie UI -> ExceptT MergeError UI (Maybe (InProgressCommit UI))
       handleMMTE' (RemoveChange path) = liftIO $ atomically $ do
           c <- readTVar inProgressCommitTVar
           nextCommit <- case c of
@@ -871,15 +788,16 @@ setup root = void $ do
               -- update snapshot index. will error out if this commit is invalid, preventing it from causing tvar updates
               _ <- updateSnapshotIndexLMMT blobStore commitSnapshotIndex uploadedCommit
 
+              let mipc' = Nothing
+
               bs <- liftIO $ atomically $ do
                 -- assertion: IPC and current branch are always intertwined, so this is safe
                 updateCurrentBranch uploadedCommit
-                writeTVar inProgressCommitTVar Nothing
+                writeTVar inProgressCommitTVar mipc'
                 bs <- readTVar branchState
                 pure bs
 
-              mipc <- liftIO $ atomically $ readTVar inProgressCommitTVar
-              lift $ redrawSidebar bs mipc
+              lift $ redrawSidebar bs mipc'
 
               pure Nothing
 
@@ -896,8 +814,8 @@ setup root = void $ do
   browserRoot <- faUl
   -- discarded return value deregisters handler
   _ <- onEvent focusChangeEvent $ \focus -> do
-    _ <- element browserRoot # set children []
-    element browserRoot #+ [browseWIPT focusChangeHandler minimizations focus]
+    void $ element browserRoot # set children []
+    void $ element browserRoot #+ [browseWIPT focusChangeHandler minimizations focus]
     pure ()
 
 
@@ -906,7 +824,7 @@ setup root = void $ do
   _ <- onEvent updateBranchStateEvent $ \ubs -> do
     bs' <- case ubs of
       ForkFrom f s -> do
-        liftIO $ print "fork from"
+        liftIO $ putStrLn "fork from"
         liftIO $ atomically $ do
           bs <- readTVar branchState
           commit <- case f of
@@ -919,15 +837,19 @@ setup root = void $ do
           writeTVar branchState bs'
           pure bs'
       DelBranch s -> do
-        liftIO $ print "del branch: todo"
+        liftIO $ putStrLn "del branch: todo"
         liftIO $ atomically $ do
           bs <- readTVar branchState
-          -- TODO: error if target not found in list of branches
-          -- let bs' = bs { bsFocus = f }
-          -- writeTVar branchState bs'
-          pure bs
+
+          let bs' = bs
+                  { bsBranches = filter (not . (/= s) . fst) $ bsBranches bs
+                  , bsFocus = if bsFocus bs == OtherBranch s then MainBranch else bsFocus bs
+                  }
+
+          writeTVar branchState bs'
+          pure bs'
       ChangeFocus f -> do
-        liftIO $ print "changefocus"
+        liftIO $ putStrLn "changefocus"
         liftIO $ atomically $ do
           -- TODO: check in progress commit, if set -> error
           bs <- readTVar branchState
@@ -949,13 +871,14 @@ setup root = void $ do
 
   redrawSidebar bs Nothing
 
-  flex_p (getBody root) [ (element sidebarRoot, flexGrow 1)
-                        , (element mergeTrieRoot, flexGrow 2)
-                        , ( infraDiv #+ [element browserRoot]
-                          , flexGrow 2
-                          )
-                        ]
-  getBody root #+ [element modalRoot]
+  void $ flex_p (getBody root)
+                [ (element sidebarRoot, flexGrow 1)
+                , (element mergeTrieRoot, flexGrow 2)
+                , ( infraDiv #+ [element browserRoot]
+                  , flexGrow 2
+                  )
+                ]
+  void $ getBody root #+ [element modalRoot]
 
 
 infraDiv :: UI Element

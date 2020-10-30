@@ -16,3 +16,4 @@ indent segments =
          (apply ("└── " ++) ("    " ++))
          (apply ("├── " ++) ("│   " ++))
          (reverse $ removeEmpty segments)
+
