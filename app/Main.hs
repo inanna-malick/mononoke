@@ -559,7 +559,7 @@ updateSnapshotIndexLMMT
   => Store m
   -> Index m
   -> LMMT m 'CommitT
-  -> ExceptT (NonEmpty ([Path], MergeError)) m (LMMT m 'SnapshotT)
+  -> ExceptT (NonEmpty MergeError) m (LMMT m 'SnapshotT)
 updateSnapshotIndexLMMT store index commit = do
   msnap <- lift $ (iRead index) (hashOfLMMT commit)
   (HC (Tagged _ commit')) <- lift $ fetchLMMT commit
@@ -579,7 +579,7 @@ updateSnapshotIndexWIPT
   => StoreRead m
   -> IndexRead m
   -> WIPT m 'CommitT
-  -> ExceptT (NonEmpty ([Path], MergeError)) m (M (WIPT m) 'SnapshotT)
+  -> ExceptT (NonEmpty MergeError) m (M (WIPT m) 'SnapshotT)
 updateSnapshotIndexWIPT store index commit = do
   (HC (Tagged _ commit')) <- lift $ fetchWIPT commit
   makeSnapshot commit' index store
@@ -730,7 +730,7 @@ setup root = void $ do
         lift $ redrawMergeTrie mt
         pure ()
 
-      handleMMTE' :: UpdateMergeTrie UI -> ExceptT (NonEmpty ([Path], MergeError)) UI (Maybe (InProgressCommit UI))
+      handleMMTE' :: UpdateMergeTrie UI -> ExceptT (NonEmpty MergeError) UI (Maybe (InProgressCommit UI))
       handleMMTE' (RemoveChange path) = liftIO $ atomically $ do
           c <- readTVar inProgressCommitTVar
           nextCommit <- case c of

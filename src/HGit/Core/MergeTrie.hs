@@ -22,7 +22,7 @@ import           Data.Map.Merge.Strict
 --------------------------------------------
 import           HGit.Core.Types
 import           Util.RecursionSchemes as R
-import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
+import           Util.HRecursionSchemes
 --------------------------------------------
 
 
@@ -46,15 +46,19 @@ data MergeTrie m a
 
 
 -- will add cases to enum
-data MergeError
+data MergeErrorAtPath
   = MoreThanOneFileButNoChange
   | DeleteAtNodeWithNoFile
   | AddChangeAtNodeWithChildren
   | OneOrMoreFilesButWithChildren
   deriving (Show)
 
+data MergeError
+  = ErrorAtPath [Path] MergeErrorAtPath
+  | InvalidChange ApplyChangeError
+  deriving (Show)
 
-type ErrorAnnotatedMergeTrie m = (,) (Maybe MergeError) `Compose` MergeTrie m
+type ErrorAnnotatedMergeTrie m = (,) (Maybe MergeErrorAtPath) `Compose` MergeTrie m
 
 -- TODO move to some utils module
 type RAlgebra f a = f (Fix f, a) -> a
@@ -65,25 +69,25 @@ resolveMergeTrie
   :: forall m
    . WIPT m 'CommitT
   -> Fix (MergeTrie m)
-  -> (NonEmpty ([Path], MergeError)) `Either` WIPT m 'FileTree
+  -> (NonEmpty MergeError) `Either` WIPT m 'FileTree
 resolveMergeTrie c mt = either (\e -> Left $ convertErrs $ cata f e []) Right x
   where
     x = resolveMergeTrie' c mt
-    convertErrs :: [([Path], MergeError)] -> (NonEmpty ([Path], MergeError))
+    convertErrs :: [MergeError] -> (NonEmpty MergeError)
     convertErrs errs = case nonEmpty errs of
       Just xs -> xs
       Nothing ->
         error "algorithm invariant broken: must be at least one error in ErrorAnnotatedMergeTrie"
 
-    f :: Algebra (ErrorAnnotatedMergeTrie m) ([Path] -> [([Path], MergeError)])
+    f :: Algebra (ErrorAnnotatedMergeTrie m) ([Path] -> [MergeError])
     f (Compose (me, MergeTrie{..})) path =
-      let me' = maybe [] (\e -> [(path, e)]) me
+      let me' = maybe [] (\e -> [ErrorAtPath path e]) me
        in Foldable.fold (g path <$> Map.toList mtChildren) ++ me'
 
     g :: forall x
        . [Path]
-      -> (Path, Either x ([Path] -> [([Path], MergeError)]))
-      -> [([Path], MergeError)]
+      -> (Path, Either x ([Path] -> [MergeError]))
+      -> [MergeError]
     g path (pathSegment, enext) = either (const []) id $ (\h -> h $ path ++ [pathSegment]) <$> enext
 
 
@@ -105,7 +109,7 @@ resolveMergeTrie' commit root = do
 
       let liftMT :: Fix (MergeTrie m) -> Fix (ErrorAnnotatedMergeTrie m)
           liftMT = cata (\m -> Fix $ Compose (Nothing, m))
-          liftErr' :: Maybe MergeError -> Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree)
+          liftErr' :: Maybe MergeErrorAtPath -> Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree)
           liftErr' me = Left $ Fix $ Compose (me, fmap (liftMT . fst) mt)
           liftErr = liftErr' . Just
 
@@ -197,7 +201,7 @@ makeSnapshot
   => M (WIPT m) 'CommitT -- can provide LMMT via 'unmodifiedWIP'
   -> IndexRead m -- index, will be always Nothing for initial WIP
   -> StoreRead m -- for expanding index reads
-  -> ExceptT (NonEmpty ([Path], MergeError)) m (M (WIPT m) 'SnapshotT)
+  -> ExceptT (NonEmpty MergeError) m (M (WIPT m) 'SnapshotT)
 makeSnapshot commit index storeRead = do
     (snapshots, mt') <- makeMT commit index storeRead
 
@@ -227,7 +231,7 @@ makeMT
   => M (WIPT m) 'CommitT -- can provide LMMT via 'unmodifiedWIP'
   -> IndexRead m -- index, will be always Nothing for initial WIP
   -> StoreRead m -- for expanding index reads
-  -> ExceptT (NonEmpty ([Path], MergeError)) m ([WIPT m 'SnapshotT], Fix (MergeTrie m))
+  -> ExceptT (NonEmpty MergeError) m ([WIPT m 'SnapshotT], Fix (MergeTrie m))
 makeMT commit index storeRead = do
   case commit of
     Commit _msg changes parents -> do
@@ -262,7 +266,7 @@ makeMT commit index storeRead = do
                 snapshots' = snapshots ++ [wipt']
             pure (snapshots', mt')
 
-      mt' <- lift $ applyChanges mt changes
+      mt' <- ExceptT $ fmap (either (Left . pure . InvalidChange) Right) $ runExceptT $ applyChanges mt changes
 
       pure (snapshots, mt')
     NullCommit -> do
@@ -273,8 +277,6 @@ makeMT commit index storeRead = do
 
 
 -- | fold a snapshot into a mergetrie
--- TODO: use to write diff, maybe - resulting mergetrie only expands as far as diff boundary
--- TODO: compare hashes, short circuit - not yet impl'd, needed to get example working
 buildMergeTrie :: forall m. Monad m => Fix (MergeTrie m) -> WIPT m 'FileTree -> m (Fix (MergeTrie m))
 buildMergeTrie original = para f original
   where f :: MergeTrie m ( Fix (MergeTrie m)
@@ -328,17 +330,21 @@ emptyMergeTrie :: Fix (MergeTrie m)
 emptyMergeTrie = Fix $ MergeTrie Map.empty Nothing Map.empty
 
 
--- Q: how to handle delete -> create -> delete change seq?
 
+data ApplyChangeError
+  = ChangeAlreadyExistsAtPath
+  deriving (Show)
+
+-- TODO: output error-annotated list of commits? eh, maybe later, not a priority
 applyChanges
   :: forall m
    . Monad m
   => Fix (MergeTrie m)
   -> [Change (WIPT m)] -- could just be 'Change Hash'
-  -> m (Fix (MergeTrie m))
+  -> ExceptT ApplyChangeError m (Fix (MergeTrie m))
 applyChanges mt changes = foldl f (pure mt) changes
   where
-    f :: m (Fix (MergeTrie m)) -> Change (WIPT m) -> m (Fix (MergeTrie m))
+    f :: ExceptT ApplyChangeError m (Fix (MergeTrie m)) -> Change (WIPT m) -> ExceptT ApplyChangeError m (Fix (MergeTrie m))
     f mmt c = do mt' <- mmt
                  applyChange mt' c
 
@@ -349,16 +355,16 @@ applyChange
    . Monad m
   => Fix (MergeTrie m)
   -> Change (WIPT m) -- could just be 'Change Hash'
-  -> m (Fix (MergeTrie m))
+  -> ExceptT ApplyChangeError m (Fix (MergeTrie m))
 applyChange t c = para f t . toList $ _path c
   where f :: MergeTrie m ( Fix (MergeTrie m)
-                         , [Path] -> m (Fix (MergeTrie m))
+                         , [Path] -> ExceptT ApplyChangeError m (Fix (MergeTrie m))
                          )
           -> [Path]
-          -> m (Fix (MergeTrie m))
+          -> ExceptT ApplyChangeError m (Fix (MergeTrie m))
         f m (path:paths) = do
           mt' <- case Map.lookup path (mtChildren m) of
-                  Just (Left lmmt) -> applyChangeH lmmt paths $ _change c
+                  Just (Left lmmt) -> lift $ applyChangeH lmmt paths $ _change c
                   Just (Right (_,next)) -> next paths
                   Nothing -> pure $ constructMT (_change c) paths
           pure $ Fix $ MergeTrie
@@ -367,14 +373,15 @@ applyChange t c = para f t . toList $ _path c
                      , mtChildren    = Map.insert path (Right mt')
                                      $ fmap fst <$> mtChildren m
                      }
-        f m [] = pure . Fix
-                      $ MergeTrie { mtFilesAtPath = mtFilesAtPath m
-                                  , mtChange = case mtChange m of
-                                      Nothing -> Just $ _change c
-                                      Just _x -> -- FIXME: maybe do something else in this case, eg error (needs error channel)
-                                        Just $ _change c -- overwrite previous change at path
-                                  , mtChildren = fmap fst <$> mtChildren m
-                                  }
+        f m [] = do
+          change' <- case mtChange m of
+            Nothing -> pure $ Just $ _change c
+            Just _  -> ExceptT $ pure $ Left $ ChangeAlreadyExistsAtPath
+          pure . Fix
+               $ MergeTrie { mtFilesAtPath = mtFilesAtPath m
+                           , mtChange = change'
+                           , mtChildren = fmap fst <$> mtChildren m
+                           }
 
 -- | helper function, constructs merge trie with change at path
 constructMT :: forall m. ChangeType (WIPT m) -> [Path] -> Fix (MergeTrie m)
@@ -390,7 +397,7 @@ applyChangeH
   => WIPT m 'FileTree
   -> [Path]
   -> ChangeType (WIPT m)
-  -> m (Fix (MergeTrie m)) -- TODO: ErrorT or something w/ MergeError
+  -> m (Fix (MergeTrie m))
 applyChangeH wipt fullPath ct = do
   HC (Tagged _hash m') <- fetchWIPT wipt
   case m' of
