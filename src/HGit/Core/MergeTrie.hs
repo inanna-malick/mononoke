@@ -102,12 +102,6 @@ resolveMergeTrie' commit root = do
   where
     g :: RAlgebra (MergeTrie m) (Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree))
     g mt@MergeTrie{..} = do
-      -- TODO: needs to accum errors instead of just taking first while traversing child branches
-      -- ( (WIPT m 'FileTree) `Either` ( Fix (MergeTrie m)
-      --                               , Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree)
-      --                               )
-      -- ) <- each entry in mtChildren
-
 
       let liftMT :: Fix (MergeTrie m) -> Fix (ErrorAnnotatedMergeTrie m)
           liftMT = cata (\m -> Fix $ Compose (Nothing, m))
@@ -132,15 +126,10 @@ resolveMergeTrie' commit root = do
 
       children <- echildren'
 
-      -- -- TODO: needs to accum errors instead of just taking first while traversing child branches
-      -- let handleChild (Right acc) ex = traverse handleChild' ex
-      --     handleChild (Left acc ) ex = traverse handleChild'' ex
-      --     handleChild' ::
-      --     handleChild' acc (fmt, Left errAnnotated) = foo fmt
-      -- children <- foldl (Right []) handleChild $ Map.toList
-
-
-      case (snd <$> Map.toList mtFilesAtPath, mtChange, children) of
+      case ( snd <$> Map.toList mtFilesAtPath -- files at path       (candidates from different merge commits)
+           , mtChange                         -- optional change     (from currently applied commit)
+           , children                         -- child nodes at path (child nodes)
+           ) of
         ([], Nothing, []) -> pure Nothing -- empty node with no files or changes - delete
         ([], Nothing, _:_) -> -- TODO: more elegant matching statement for 'any nonempty'
           let children' = Map.fromList children          -- no file or change but
@@ -152,13 +141,17 @@ resolveMergeTrie' commit root = do
                                             commit
                                             (fmap (\(fh,_,_,_) -> fh) fs)
         ([], Just (Add _), _:_) -> liftErr AddChangeAtNodeWithChildren
-        ((file, _, _, _):[], Nothing, []) ->
+        ([(file, _, _, _)], Nothing, []) ->
           pure $ Just file -- single file with no changes, simple, valid
         (_:_, Just Del, []) -> pure Nothing -- any number of files, deleted, valid
         ((_:_:_), Nothing, []) -> -- > 1 file at same path, each w/ different hashes (b/c list converted from map)
           liftErr MoreThanOneFileButNoChange
-        (_:_, _, _:_) -> liftErr OneOrMoreFilesButWithChildren
-
+        (_:_, Nothing, _:_)        -> liftErr OneOrMoreFilesButWithChildren
+        (_:_, Just (Add _), _:_)   -> liftErr OneOrMoreFilesButWithChildren
+        -- one or more files, but with children, but files at this path are deleted so it's valid
+        (_:_, Just Del, _:_)       ->
+          let children' = Map.fromList children
+            in pure $ Just $ modifiedWIP $ Dir children'
 
 type IndexRead m  = Hash 'CommitT -> m (Maybe (Hash 'SnapshotT))
 type IndexWrite m = Hash 'CommitT -> Hash 'SnapshotT -> m ()
