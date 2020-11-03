@@ -203,7 +203,9 @@ makeSnapshot
   -> StoreRead m -- for expanding index reads
   -> ExceptT (NonEmpty MergeError) m (M (WIPT m) 'SnapshotT)
 makeSnapshot commit index storeRead = do
-    (snapshots, mt') <- makeMT commit index storeRead
+    (snapshots, mt') <- case commit of
+        Commit _msg changes parents -> makeMT changes parents index storeRead
+        NullCommit -> pure ([], emptyMergeTrie)
 
     -- liftIO $ do
     --   print "mergetrie:"
@@ -228,13 +230,12 @@ makeSnapshot commit index storeRead = do
 makeMT
   :: Monad m
   => MonadIO m
-  => M (WIPT m) 'CommitT -- can provide LMMT via 'unmodifiedWIP'
+  => [Change (WIPT m)]          -- list of inline changes
+  -> NonEmpty (WIPT m 'CommitT) -- parent commits
   -> IndexRead m -- index, will be always Nothing for initial WIP
   -> StoreRead m -- for expanding index reads
   -> ExceptT (NonEmpty MergeError) m ([WIPT m 'SnapshotT], Fix (MergeTrie m))
-makeMT commit index storeRead = do
-  case commit of
-    Commit _msg changes parents -> do
+makeMT changes parents index storeRead = do
       -- lines <- renderLMMT commit
       -- liftIO $ do
       --   print $ "processing commit: " ++ msg
@@ -269,8 +270,6 @@ makeMT commit index storeRead = do
       mt' <- ExceptT $ fmap (either (Left . pure . InvalidChange) Right) $ runExceptT $ applyChanges mt changes
 
       pure (snapshots, mt')
-    NullCommit -> do
-      pure ([], emptyMergeTrie)
 
 
 

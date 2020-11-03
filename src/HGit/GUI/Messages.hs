@@ -21,14 +21,14 @@ data UpdateMergeTrie m
   | RemoveChange (NonEmpty Path)
   | AddParent (LMMT m 'CommitT)
   | Reset
-  | Finalize
+  | Finalize String -- finalize commit w/ message
 
 instance Show (UpdateMergeTrie m) where
   show (ApplyChange p c) = "ApplyChange: " ++ (unlines $ renderChange $ cmapShim (Const . renderWIPT) $ Change p c)
   show (RemoveChange p) = "RemoveChange: " ++ show p
   show (AddParent _) = "AddParent: todo"
   show Reset = "Reset"
-  show Finalize = "Finalize"
+  show (Finalize msg) = "Finalize, msg: " ++ msg
 
 
 

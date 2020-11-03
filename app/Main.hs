@@ -187,7 +187,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC root =
 
     renderChild path (pathSegment, Right (mt, next)) = do
       let toFocusOn = case ipcOrC of
-            Left ipc -> (["wip"], resolveMergeTrie (asWIPTCommit ipc) mt)
+            Left ipc -> (["wip"], resolveMergeTrie (asWIPTCommit "[wip commit placeholder msg]" ipc) mt)
             Right c  -> (["persisted"], resolveMergeTrie (unmodifiedWIP c) mt)
       -- FIXME[err]: this one should result in a UI element denoting an MT error state
       let (extraTags, toFocusOn') = fmap (either undefined id) toFocusOn
@@ -317,8 +317,6 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
                                              , UI.br
                                              , string "parents:"
                                              , viewParents ipcParentCommits
-                                             , viewMessage ipcMsg
-                                             , UI.br
                                              , finalizeCommit
                                              , UI.br
                                              , resetCommit
@@ -347,7 +345,8 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
     finalizeCommit = do
       finalize <- UI.button # set text "finalize commit [!]"
       on UI.click finalize $ \() -> void $ do
-        liftIO $ modifyMergeTrieHandler Finalize
+        liftIO $ popRequest $ SpawnRequestText "commit message" $ \msg -> liftIO $ do
+          liftIO $ modifyMergeTrieHandler $ Finalize msg
       pure finalize
 
     resetCommit = do
@@ -361,9 +360,6 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
       faUl #+ fmap element elems
 
     viewParent wipt = faLi focusHandler wipt [] (string "parent commit") UI.div
-
-    viewMessage msg = string ("msg: \"" ++ msg ++  "\"")
-
 
     renderChange :: NonEmpty Path -> ChangeType (WIPT UI) -> UI Element
     renderChange p (Add wipt) =
@@ -649,16 +645,18 @@ setup root = void $ do
         _ <- element modalRoot # set children []
         inputElem <- UI.input # withClass ["aesthetic-windows-95-text-input"]
         on UI.sendValue inputElem $ \input -> do
+          _ <- element modalRoot # set children []
+          -- NOTE: this must be _after_ the above line, b/c it may spawn subsequent modal dialogs
           act input
-          element modalRoot # set children []
-        element modalRoot #+ [drawModal s [ string "req: "
-                                          , element inputElem
-                                          ]
-                             ]
+        _ <- element modalRoot #+ [drawModal s [ string "req: "
+                                                , element inputElem
+                                                ]
+                                  ]
+        UI.setFocus inputElem
 
 
-  let popError :: Show e => e -> UI ()
-      popError e = liftIO $ popupHandler $ SpawnError (show e)
+  let popError :: NonEmpty MergeError -> UI ()
+      popError e = liftIO $ popupHandler $ SpawnError $ show e
 
   let extractFT :: M x 'SnapshotT -> x 'FileTree
       extractFT (Snapshot ft _ _) = ft
@@ -723,9 +721,8 @@ setup root = void $ do
             lift $ redrawSidebar bs $ Just ipc
 
             let changes = uncurry Change <$> Map.toList ipcChanges
-                commit = Commit ipcMsg changes ipcParentCommits
 
-            fmap snd $ makeMT commit (iRead commitSnapshotIndex) (sRead blobStore)
+            fmap snd $ makeMT changes ipcParentCommits (iRead commitSnapshotIndex) (sRead blobStore)
 
         lift $ redrawMergeTrie mt
         pure ()
@@ -746,9 +743,8 @@ setup root = void $ do
                 Nothing ->    do
                   commit <- snd <$> getCurrentBranch
                   pure $ Just $ InProgressCommit { ipcChanges = Map.singleton path ct
-                                          , ipcParentCommits = unmodifiedWIP commit :| []
-                                          , ipcMsg = "todo"
-                                          }
+                                                 , ipcParentCommits = unmodifiedWIP commit :| []
+                                                 }
           writeTVar inProgressCommitTVar nextCommit
           pure nextCommit
 
@@ -760,7 +756,6 @@ setup root = void $ do
                   commit <- snd <$> getCurrentBranch
                   pure $ Just $ InProgressCommit { ipcChanges = Map.empty
                                                  , ipcParentCommits = fmap unmodifiedWIP $ parentToAdd :| [commit]
-                                                 , ipcMsg = "todo"
                                                  }
           writeTVar inProgressCommitTVar nextCommit
           pure nextCommit
@@ -770,7 +765,7 @@ setup root = void $ do
           writeTVar inProgressCommitTVar nextCommit
           pure nextCommit
 
-      handleMMTE' Finalize = do
+      handleMMTE' (Finalize msg) = do
           -- FIXME: interleaving STM and IO actions here, b/c need to upload commit. janky?
           mipc <- liftIO $ atomically $ do
             readTVar inProgressCommitTVar
@@ -778,7 +773,7 @@ setup root = void $ do
             Nothing  -> pure Nothing -- no-op, nothing to finalize
             Just InProgressCommit{..} -> do
               let changes = uncurry Change <$> Map.toList ipcChanges
-                  commit = modifiedWIP $ Commit ipcMsg changes ipcParentCommits
+                  commit = modifiedWIP $ Commit msg changes ipcParentCommits
 
               uploadedCommit <- lift $ uploadWIPT (sWrite blobStore) commit
 

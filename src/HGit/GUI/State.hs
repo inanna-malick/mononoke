@@ -32,12 +32,11 @@ instance Show (BranchState m) where
 
 data InProgressCommit m
   = InProgressCommit
-  { ipcMsg           :: String
-  , ipcChanges       :: Map (NonEmpty Path) (ChangeType (WIPT m))
+  { ipcChanges       :: Map (NonEmpty Path) (ChangeType (WIPT m))
   , ipcParentCommits :: NonEmpty (WIPT m 'CommitT)
   }
 
-asWIPTCommit :: InProgressCommit m -> WIPT m 'CommitT
-asWIPTCommit InProgressCommit{..} = modifiedWIP $ Commit ipcMsg changes ipcParentCommits
+asWIPTCommit :: String -> InProgressCommit m -> WIPT m 'CommitT
+asWIPTCommit msg InProgressCommit{..} = modifiedWIP $ Commit msg changes ipcParentCommits
   where
    changes = uncurry Change <$> Map.toList ipcChanges
