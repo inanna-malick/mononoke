@@ -25,8 +25,11 @@ css = do
       ":hover" |> ".dropdown" ? do
         display block
 
-
     div ? do
+      ".sidebar" & do
+        backgroundColor gold
+        borderStyle solid
+
       borderColor black
       borderWidth (px 3)
       ".wip" & do

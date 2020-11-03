@@ -40,7 +40,7 @@ import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 
 type Minimizations = Set RawBlakeHash
 
--- TODO: need to figure out how to _update_ branch - maybe just fetch commit from tvar on click instead of baking in value?
+
 branchBrowser
   :: Index UI
   -> Store UI
@@ -404,7 +404,6 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
                 ]
 
 
--- TODO: TEST THIS <- also, make errors (eg change to node with no file) visible via merge trie type (?)
 parsePath :: String -> Maybe (NonEmpty Path)
 parsePath s = do
   case nonEmpty (filter (/= "") $ splitOn "/" s) of
@@ -560,7 +559,7 @@ updateSnapshotIndexLMMT
   => Store m
   -> Index m
   -> LMMT m 'CommitT
-  -> ExceptT MergeError m (LMMT m 'SnapshotT)
+  -> ExceptT (NonEmpty ([Path], MergeError)) m (LMMT m 'SnapshotT)
 updateSnapshotIndexLMMT store index commit = do
   msnap <- lift $ (iRead index) (hashOfLMMT commit)
   (HC (Tagged _ commit')) <- lift $ fetchLMMT commit
@@ -580,7 +579,7 @@ updateSnapshotIndexWIPT
   => StoreRead m
   -> IndexRead m
   -> WIPT m 'CommitT
-  -> ExceptT MergeError m (M (WIPT m) 'SnapshotT)
+  -> ExceptT (NonEmpty ([Path], MergeError)) m (M (WIPT m) 'SnapshotT)
 updateSnapshotIndexWIPT store index commit = do
   (HC (Tagged _ commit')) <- lift $ fetchWIPT commit
   makeSnapshot commit' index store
@@ -617,16 +616,6 @@ setup root = void $ do
   branchState <- liftIO . atomically $ newTVar initialBranchState
   minimizations <- liftIO . atomically $ newTVar (Set.empty)
 
-  -- errors on key not found - not sure how to handle this, need
-  -- generic 'shit broke' error channel, eg popup/alert
-  let getCurrentBranch :: STM (BranchFocus, LMMT UI 'CommitT)
-      getCurrentBranch = do
-        bs <- readTVar branchState
-        let focus = bsFocus bs
-        case focus of
-          MainBranch -> pure $ (focus, bsMainBranch bs)
-          OtherBranch b -> pure $ maybe (error "todo") (focus, ) $ lookup b (bsBranches bs)
-
   let updateCurrentBranch :: LMMT UI 'CommitT -> STM ()
       updateCurrentBranch commit = do
         bs <- readTVar branchState
@@ -647,7 +636,7 @@ setup root = void $ do
 
   -- empty root nodes for various UI elements
   mergeTrieRoot <- infraDiv
-  sidebarRoot <- infraDiv
+  sidebarRoot <- infraDiv # withClass ["sidebar"]
   modalRoot <- UI.div -- not infra because often invisible, infra controls display
 
 
@@ -675,6 +664,17 @@ setup root = void $ do
       extractFT (Snapshot ft _ _) = ft
 
 
+  -- errors on key not found - not sure how to handle this, need
+  -- generic 'shit broke' error channel, eg popup/alert
+  -- TODO: need to run everything in exceptT so I can pop an error when shit like this happens
+  let getCurrentBranch :: STM (BranchFocus, LMMT UI 'CommitT)
+      getCurrentBranch = do
+        bs <- readTVar branchState
+        let focus = bsFocus bs
+        case focus of
+          MainBranch -> pure $ (focus, bsMainBranch bs)
+          OtherBranch b -> maybe undefined (pure . (focus,)) $ lookup b (bsBranches bs)
+
   let redrawSidebar bs mipc = void $ do
         _ <- element sidebarRoot # set children []
         element sidebarRoot #+ [ drawCommitEditor bs popupHandler modifyMergeTrieHandler focusChangeHandler mipc
@@ -699,7 +699,6 @@ setup root = void $ do
           Right () -> pure ()
           Left e   -> popError e
 
-      -- FIXME[crit]: only commit change to TVar iff not error case
       handleMMTE :: UpdateMergeTrie UI -> UI ()
       handleMMTE msg = handleErr $ do
         liftIO $ putStrLn $ "handle MMTE msg"
@@ -731,7 +730,7 @@ setup root = void $ do
         lift $ redrawMergeTrie mt
         pure ()
 
-      handleMMTE' :: UpdateMergeTrie UI -> ExceptT MergeError UI (Maybe (InProgressCommit UI))
+      handleMMTE' :: UpdateMergeTrie UI -> ExceptT (NonEmpty ([Path], MergeError)) UI (Maybe (InProgressCommit UI))
       handleMMTE' (RemoveChange path) = liftIO $ atomically $ do
           c <- readTVar inProgressCommitTVar
           nextCommit <- case c of
@@ -772,7 +771,6 @@ setup root = void $ do
           pure nextCommit
 
       handleMMTE' Finalize = do
-        -- TODO: write commit to store, update bs, redrawBranchBrowser bs'
           -- FIXME: interleaving STM and IO actions here, b/c need to upload commit. janky?
           mipc <- liftIO $ atomically $ do
             readTVar inProgressCommitTVar
@@ -809,6 +807,7 @@ setup root = void $ do
   -- discarded return value deregisters handler
   _ <- onEvent modifyMergeTrieEvent handleMMTE
 
+  -- TODO: only reset on DelBranch if focus changed (current branch deleted == auto-reset)
   liftIO $ modifyMergeTrieHandler $ Reset
 
   browserRoot <- faUl
@@ -842,7 +841,7 @@ setup root = void $ do
           bs <- readTVar branchState
 
           let bs' = bs
-                  { bsBranches = filter (not . (/= s) . fst) $ bsBranches bs
+                  { bsBranches = filter ((/= s) . fst) $ bsBranches bs
                   , bsFocus = if bsFocus bs == OtherBranch s then MainBranch else bsFocus bs
                   }
 

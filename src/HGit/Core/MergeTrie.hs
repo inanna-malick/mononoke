@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
@@ -12,7 +13,9 @@ module HGit.Core.MergeTrie where
 import           Control.Concurrent.STM
 import           Control.Monad.Trans
 import           Control.Monad.Except
-import           Data.List.NonEmpty (toList)
+import qualified Data.Foldable as Foldable
+import           Data.Functor.Compose
+import           Data.List.NonEmpty (NonEmpty, toList, nonEmpty)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Map.Merge.Strict
@@ -22,10 +25,7 @@ import           Util.RecursionSchemes as R
 import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
--- NOTE: delete operations only valid on files, not directories
 
-
--- TODO: need to account for unexpanded directory content
 data MergeTrie m a
   = MergeTrie
   { -- | all files at this path
@@ -47,45 +47,117 @@ data MergeTrie m a
 
 -- will add cases to enum
 data MergeError
-  = MoreThanOneFileButNoChange    -- [Path]
-  | DeleteAtNodeWithNoFile        -- [Path]
-  | AddChangeAtNodeWithChildren   -- [Path]
-  | OneOrMoreFilesButWithChildren -- [Path]
+  = MoreThanOneFileButNoChange
+  | DeleteAtNodeWithNoFile
+  | AddChangeAtNodeWithChildren
+  | OneOrMoreFilesButWithChildren
   deriving (Show)
+
+
+type ErrorAnnotatedMergeTrie m = (,) (Maybe MergeError) `Compose` MergeTrie m
+
+-- TODO move to some utils module
+type RAlgebra f a = f (Fix f, a) -> a
+
 
 -- can then use other function to add commit to get snapshot
 resolveMergeTrie
   :: forall m
    . WIPT m 'CommitT
   -> Fix (MergeTrie m)
-  -> MergeError `Either` WIPT m 'FileTree
-resolveMergeTrie commit mt = do
-    mft <- cata f mt
+  -> (NonEmpty ([Path], MergeError)) `Either` WIPT m 'FileTree
+resolveMergeTrie c mt = either (\e -> Left $ convertErrs $ cata f e []) Right x
+  where
+    x = resolveMergeTrie' c mt
+    convertErrs :: [([Path], MergeError)] -> (NonEmpty ([Path], MergeError))
+    convertErrs errs = case nonEmpty errs of
+      Just xs -> xs
+      Nothing ->
+        error "algorithm invariant broken: must be at least one error in ErrorAnnotatedMergeTrie"
+
+    f :: Algebra (ErrorAnnotatedMergeTrie m) ([Path] -> [([Path], MergeError)])
+    f (Compose (me, MergeTrie{..})) path =
+      let me' = maybe [] (\e -> [(path, e)]) me
+       in Foldable.fold (g path <$> Map.toList mtChildren) ++ me'
+
+    g :: forall x
+       . [Path]
+      -> (Path, Either x ([Path] -> [([Path], MergeError)]))
+      -> [([Path], MergeError)]
+    g path (pathSegment, enext) = either (const []) id $ (\h -> h $ path ++ [pathSegment]) <$> enext
+
+
+
+-- can then use other function to add commit to get snapshot
+resolveMergeTrie'
+  :: forall m
+   . WIPT m 'CommitT
+  -> Fix (MergeTrie m)
+  -> Fix (ErrorAnnotatedMergeTrie m) `Either` WIPT m 'FileTree
+resolveMergeTrie' commit root = do
+    mft <- para g root
     case mft of
       Nothing -> pure $ modifiedWIP $ Dir Map.empty
       Just x  -> pure $ x
   where
-    f :: MergeTrie m (MergeError `Either` Maybe (WIPT m 'FileTree)) -> MergeError `Either` (Maybe (WIPT m 'FileTree))
-    f MergeTrie{..} = do
-      children <- Map.toList . Map.mapMaybe id <$> traverse (either (pure . Just) id) mtChildren
+    g :: RAlgebra (MergeTrie m) (Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree))
+    g mt@MergeTrie{..} = do
+      -- TODO: needs to accum errors instead of just taking first while traversing child branches
+      -- ( (WIPT m 'FileTree) `Either` ( Fix (MergeTrie m)
+      --                               , Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree)
+      --                               )
+      -- ) <- each entry in mtChildren
+
+
+      let liftMT :: Fix (MergeTrie m) -> Fix (ErrorAnnotatedMergeTrie m)
+          liftMT = cata (\m -> Fix $ Compose (Nothing, m))
+          liftErr' :: Maybe MergeError -> Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree)
+          liftErr' me = Left $ Fix $ Compose (me, fmap (liftMT . fst) mt)
+          liftErr = liftErr' . Just
+
+
+      let echildren = Map.toList . Map.mapMaybe id <$> traverse (either (pure . Just) snd) mtChildren
+          echildren' = case echildren of
+            Right x -> Right x
+            -- if we hit an error in a child node, we can't just return that error annotated subtree
+            -- so reconstruct the current tree with all children lifted to error annotated subtrees
+            Left  _ ->
+              let f :: forall x
+                     . ( Fix (MergeTrie m)
+                       , Either (Fix (ErrorAnnotatedMergeTrie m)) x
+                       )
+                    -> Fix (ErrorAnnotatedMergeTrie m)
+                  f (t,e) = either id (const $ liftMT t) e
+               in Left $ Fix $ Compose (Nothing, fmap f mt)
+
+      children <- echildren'
+
+      -- -- TODO: needs to accum errors instead of just taking first while traversing child branches
+      -- let handleChild (Right acc) ex = traverse handleChild' ex
+      --     handleChild (Left acc ) ex = traverse handleChild'' ex
+      --     handleChild' ::
+      --     handleChild' acc (fmt, Left errAnnotated) = foo fmt
+      -- children <- foldl (Right []) handleChild $ Map.toList
+
+
       case (snd <$> Map.toList mtFilesAtPath, mtChange, children) of
         ([], Nothing, []) -> pure Nothing -- empty node with no files or changes - delete
         ([], Nothing, _:_) -> -- TODO: more elegant matching statement for 'any nonempty'
           let children' = Map.fromList children          -- no file or change but
             in pure $ Just $ modifiedWIP $ Dir children' -- at least one child, retain
-        ([], Just Del, _) -> Left $ DeleteAtNodeWithNoFile
+        ([], Just Del, _) -> liftErr DeleteAtNodeWithNoFile
         (fs, Just (Add blob), []) ->
           -- an add addressed to a node with any number of files - simple good state
           pure $ Just $ modifiedWIP $ File blob
                                             commit
                                             (fmap (\(fh,_,_,_) -> fh) fs)
-        ([], Just (Add _), _:_) -> Left $ AddChangeAtNodeWithChildren
+        ([], Just (Add _), _:_) -> liftErr AddChangeAtNodeWithChildren
         ((file, _, _, _):[], Nothing, []) ->
           pure $ Just file -- single file with no changes, simple, valid
         (_:_, Just Del, []) -> pure Nothing -- any number of files, deleted, valid
         ((_:_:_), Nothing, []) -> -- > 1 file at same path, each w/ different hashes (b/c list converted from map)
-          Left $ MoreThanOneFileButNoChange
-        (_:_, _, _:_) -> Left $ OneOrMoreFilesButWithChildren
+          liftErr MoreThanOneFileButNoChange
+        (_:_, _, _:_) -> liftErr OneOrMoreFilesButWithChildren
 
 
 type IndexRead m  = Hash 'CommitT -> m (Maybe (Hash 'SnapshotT))
@@ -132,7 +204,7 @@ makeSnapshot
   => M (WIPT m) 'CommitT -- can provide LMMT via 'unmodifiedWIP'
   -> IndexRead m -- index, will be always Nothing for initial WIP
   -> StoreRead m -- for expanding index reads
-  -> ExceptT MergeError m (M (WIPT m) 'SnapshotT)
+  -> ExceptT (NonEmpty ([Path], MergeError)) m (M (WIPT m) 'SnapshotT)
 makeSnapshot commit index storeRead = do
     (snapshots, mt') <- makeMT commit index storeRead
 
@@ -162,7 +234,7 @@ makeMT
   => M (WIPT m) 'CommitT -- can provide LMMT via 'unmodifiedWIP'
   -> IndexRead m -- index, will be always Nothing for initial WIP
   -> StoreRead m -- for expanding index reads
-  -> ExceptT MergeError m ([WIPT m 'SnapshotT], Fix (MergeTrie m))
+  -> ExceptT (NonEmpty ([Path], MergeError)) m ([WIPT m 'SnapshotT], Fix (MergeTrie m))
 makeMT commit index storeRead = do
   case commit of
     Commit _msg changes parents -> do

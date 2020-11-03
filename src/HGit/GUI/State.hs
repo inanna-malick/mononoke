@@ -19,6 +19,17 @@ data BranchState m
   , bsFocus :: BranchFocus
   }
 
+
+instance Show (BranchState m) where
+  show BranchState{..} = mconcat
+    [ "BranchState { main: \n"
+    , show $ hashOfLMMT bsMainBranch
+    , "\n, branches: \n"
+    , show $ fmap (fmap hashOfLMMT) bsBranches
+    , "\n, focus: \n"
+    , show bsFocus
+    ]
+
 data InProgressCommit m
   = InProgressCommit
   { ipcMsg           :: String
