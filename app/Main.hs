@@ -19,6 +19,7 @@ import           Data.List.Split (splitOn)
 import           Data.Set (Set)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import           Data.Functor.Compose
 import           Data.Text.Lazy (unpack)
 import           Data.Singletons.TH (SingI, sing)
 import           Graphics.UI.Threepenny.Core
@@ -134,12 +135,27 @@ browseMergeTrie
   -> Handler (FocusWIPT UI)
   -> TVar Minimizations
   -> InProgressCommit UI `Either` LMMT UI 'CommitT
-  -> Fix (MergeTrie UI)
+  -> Fix (ErrorAnnotatedMergeTrie UI) `Either` Fix (MergeTrie UI)
   -> UI Element
-browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC root = do
-    (para f root) []
+browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
+  = case eroot of
+      Left  e -> cata g e []
+      Right x -> cata f x []
+
   where
-    f :: MergeTrie UI (Fix (MergeTrie UI), [Path] -> UI Element) -> [Path] -> UI Element
+
+    g :: ErrorAnnotatedMergeTrie UI ([Path] -> UI Element) -> [Path] -> UI Element
+    g (Compose (me, mt)) path = do
+      faUl #+ mconcat
+            [ case me of
+                Nothing -> []
+                Just e  -> [string $ "error at this node: " ++ show e, UI.br]
+            , renderChildren path $ mtChildren mt
+            , renderFiles path $ Map.toList $ mtFilesAtPath mt
+            , maybe [] (pure . renderChange path) $ mtChange mt
+            ]
+
+    f :: MergeTrie UI ([Path] -> UI Element) -> [Path] -> UI Element
     f mt path = do
       faUl #+ mconcat
             [ renderChildren path $ mtChildren mt
@@ -177,7 +193,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC root =
 
     renderChildren path c = fmap (renderChild path) (Map.toList c)
 
-    renderChild :: [Path] -> (Path, WIPT UI 'FileTree `Either` (Fix (MergeTrie UI), [Path] -> UI Element)) -> UI Element
+    renderChild :: [Path] -> (Path, WIPT UI 'FileTree `Either` ([Path] -> UI Element)) -> UI Element
     renderChild path (pathSegment, Left wipt) = do
       let pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
       faLi focusHandler wipt [("fa-trash-alt", delChange pathNEL)]
@@ -185,18 +201,16 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC root =
                               (renderWIPTFileTree path pathSegment wipt)
 
 
-    renderChild path (pathSegment, Right (mt, next)) = do
-      let toFocusOn = case ipcOrC of
-            Left ipc -> (["wip"], resolveMergeTrie (asWIPTCommit "[wip commit placeholder msg]" ipc) mt)
-            Right c  -> (["persisted"], resolveMergeTrie (unmodifiedWIP c) mt)
-      -- FIXME[err]: this one should result in a UI element denoting an MT error state
-      let (extraTags, toFocusOn') = fmap (either undefined id) toFocusOn
-          pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
+    renderChild path (pathSegment, Right next) = do
+      let extraTags = case ipcOrC of
+            Left _  -> ["wip"]
+            Right _ -> ["persisted"]
+      let pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
       x <- UI.div # withClass (extraTags ++ [typeTagName $ sing @'FileTree])
                  #+ [next (path ++ [pathSegment])]
-      faLi focusHandler toFocusOn' [("fa-trash-alt", delChange pathNEL)]
-                                   (string pathSegment # set UI.class_ "path-segment")
-                                   (element x)
+      faLiSimple [] "fa-folder-open" [("fa-trash-alt", delChange pathNEL)]
+                                     (string pathSegment # set UI.class_ "path-segment")
+                                     (element x)
 
 
     renderWIPTFileTree :: [Path] -> Path -> WIPT UI 'FileTree -> UI Element
@@ -583,6 +597,7 @@ updateSnapshotIndexWIPT store index commit = do
 
 setup :: Window -> UI ()
 setup root = void $ do
+  _ <- set UI.title "chibi mononoke!" (pure root)
   void $ getHead root #+ [ mkElement "style" # set (UI.text) (unpack (Clay.render css))
                          ]
   UI.addStyleSheet root "all.css" -- fontawesome
@@ -649,8 +664,8 @@ setup root = void $ do
           -- NOTE: this must be _after_ the above line, b/c it may spawn subsequent modal dialogs
           act input
         _ <- element modalRoot #+ [drawModal s [ string "req: "
-                                                , element inputElem
-                                                ]
+                                               , element inputElem
+                                               ]
                                   ]
         UI.setFocus inputElem
 
@@ -703,7 +718,7 @@ setup root = void $ do
         liftIO $ putStrLn $ show msg
         mcommit <- handleMMTE' msg
 
-        mt <- case mcommit of
+        emt <- case mcommit of
           Nothing -> do
             -- redraw commit editor
             bs <- liftIO $ atomically $ readTVar branchState
@@ -713,7 +728,8 @@ setup root = void $ do
             snap' <- updateSnapshotIndexLMMT blobStore commitSnapshotIndex commit
             (HC (Tagged _ snap)) <- lift $ fetchLMMT snap'
             let ft = unmodifiedWIP $ extractFT snap
-            lift $ buildMergeTrie emptyMergeTrie ft
+            mt <- lift $ buildMergeTrie emptyMergeTrie ft
+            pure $ Right mt -- no merge errors to render, if no in progress commit
 
           Just ipc@InProgressCommit{..} -> do
             -- redraw commit editor
@@ -722,9 +738,13 @@ setup root = void $ do
 
             let changes = uncurry Change <$> Map.toList ipcChanges
 
-            fmap snd $ makeMT changes ipcParentCommits (iRead commitSnapshotIndex) (sRead blobStore)
+            mt <- fmap snd $ makeMT changes ipcParentCommits (iRead commitSnapshotIndex) (sRead blobStore)
 
-        lift $ redrawMergeTrie mt
+            case resolveMergeTrie' (modifiedWIP $ Commit "[wip placeholder]" changes ipcParentCommits) mt of
+              Left e  -> pure $ Left e
+              Right _ -> pure $ Right mt
+
+        lift $ redrawMergeTrie emt
         pure ()
 
       handleMMTE' :: UpdateMergeTrie UI -> ExceptT (NonEmpty MergeError) UI (Maybe (InProgressCommit UI))

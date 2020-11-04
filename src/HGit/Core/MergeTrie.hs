@@ -272,9 +272,6 @@ makeMT changes parents index storeRead = do
       pure (snapshots, mt')
 
 
-
-
-
 -- | fold a snapshot into a mergetrie
 buildMergeTrie :: forall m. Monad m => Fix (MergeTrie m) -> WIPT m 'FileTree -> m (Fix (MergeTrie m))
 buildMergeTrie original = para f original
