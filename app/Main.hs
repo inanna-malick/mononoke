@@ -14,7 +14,6 @@ import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Maybe
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (toList, nonEmpty, (<|), NonEmpty(..))
-import qualified Data.List.NonEmpty as NEL
 import           Data.List.Split (splitOn)
 import           Data.Set (Set)
 import qualified Data.Map as Map
@@ -195,7 +194,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
 
     renderChild :: [Path] -> (Path, WIPT UI 'FileTree `Either` ([Path] -> UI Element)) -> UI Element
     renderChild path (pathSegment, Left wipt) = do
-      let pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
+      let pathNEL = appendNEL path pathSegment
       faLi focusHandler wipt [("fa-trash-alt", delChange pathNEL)]
                               (UI.code # set text pathSegment # set UI.class_ "path-segment")
                               (renderWIPTFileTree path pathSegment wipt)
@@ -205,7 +204,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
       let extraTags = case ipcOrC of
             Left _  -> ["wip"]
             Right _ -> ["persisted"]
-      let pathNEL = NEL.reverse $ pathSegment :| reverse path -- append to path while preserving NEL by construction
+      let pathNEL = appendNEL path pathSegment
       x <- UI.div # withClass (extraTags ++ [typeTagName $ sing @'FileTree])
                  #+ [next (path ++ [pathSegment])]
       faLiSimple [] "fa-folder-open" [("fa-trash-alt", delChange pathNEL)]
@@ -224,7 +223,8 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
         Dir cs -> do
           let cs' = faUl #+ (renderDirEntry <$> Map.toList cs)
               renderDirEntry (p,c) =
-                let pathNEL = NEL.reverse $ p :| reverse (path ++ [pathSegment]) -- append to path while preserving NEL by construction
+                -- append to path while preserving NEL by construction
+                let pathNEL = appendNEL path pathSegment
                  in faLi focusHandler c [("fa-trash-alt", delChange pathNEL)]
                                         (UI.code # set text p # set UI.class_ "path-segment")
                                         (renderWIPTFileTree (path ++ [pathSegment]) p c)
@@ -239,6 +239,11 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
                     ]
                   )
       element wrapper #+ [element x]
+
+-- construct a NEL from a list and an element,
+-- but with the element appended to the list instead of prepended
+appendNEL :: [a] -> a -> NonEmpty a
+appendNEL xs x = maybe (pure x) (<> pure x) $ nonEmpty xs
 
 faUl :: UI Element
 faUl = UI.ul # withClass ["fa-ul"]
@@ -370,7 +375,7 @@ drawCommitEditor bs popRequest modifyMergeTrieHandler focusHandler ipc = do
       pure reset
 
     viewParents ps = do
-      elems <- NEL.toList <$> traverse viewParent ps
+      elems <- toList <$> traverse viewParent ps
       faUl #+ fmap element elems
 
     viewParent wipt = faLi focusHandler wipt [] (string "parent commit") UI.div
