@@ -55,6 +55,8 @@ dependencies:
   - text
   - transformers
   - warp
+  - threepenny-gui
+  - threepenny-gui-flexbox
 
 library:
   source-dirs: src
@@ -62,6 +64,7 @@ library:
     - HGit.Core.MergeTrie
     - HGit.Core.Types
     - HGit.GUI.CSS
+    - HGit.GUI.Elements
     - HGit.GUI.Messages
     - HGit.GUI.State
     - HGit.GUI.Core
@@ -71,8 +74,6 @@ executable:
   source-dirs: app
   dependencies:
     - hgit
-    - threepenny-gui
-    - threepenny-gui-flexbox
 
 tests:
   spec:
