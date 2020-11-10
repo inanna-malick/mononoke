@@ -34,7 +34,7 @@ import           HGit.GUI.State
 import           HGit.GUI.Messages
 import           Merkle.Types.BlakeHash
 import           Util.RecursionSchemes
-import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
+import           Util.HRecursionSchemes
 --------------------------------------------
 
 
@@ -114,7 +114,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
   where
 
     g :: ErrorAnnotatedMergeTrie UI ([Path] -> UI Element) -> [Path] -> UI Element
-    g (Compose (me, mt)) path = do
+    g (Compose (Right (Compose (me, mt)))) path = do
       faUl #+ mconcat
             [ case me of
                 Nothing -> []
@@ -123,6 +123,8 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
             , renderFiles path $ Map.toList $ mtFilesAtPath mt
             , maybe [] (pure . renderChange path) $ mtChange mt
             ]
+    g (Compose (Left fmt)) path = cata f fmt path
+
 
     f :: MergeTrie UI ([Path] -> UI Element) -> [Path] -> UI Element
     f mt path = do
@@ -139,11 +141,20 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
       liftIO $ print path
       liftIO $ modifyMergeTrieHandler $ ApplyChange path Del
 
-    renderFiles path fs = fmap (renderFile path) fs
+    renderFiles path fs =
+      let resolveMergeConflict nel b = liftIO $ modifyMergeTrieHandler (ApplyChange nel $ Add b)
+          -- button to accept one file in a merge conflict as the canonical version
+          mkExtraButtons b = if length fs >= 2
+            then case nonEmpty path of
+              -- TODO: more appropriate button icon, mb
+              Just nel -> [("fa-code", resolveMergeConflict nel b)]
+              Nothing -> [] -- files at '/' root path are invalid anyway
+            else []
 
-    -- TODO: if multiple files (merge conflict), could have button to accept one as cannonical
-    renderFile path (_, (_ft, blob, _lastMod, _prevs)) =
-      let extraButtons = case nonEmpty path of
+       in fmap (renderFile mkExtraButtons path) fs
+
+    renderFile mkExtraButtons path (_, (_ft, blob, _lastMod, _prevs)) =
+      let extraButtons = mkExtraButtons blob ++ case nonEmpty path of
             Nothing -> [] -- a file at the root path is an error anyway..
             Just nel -> [("fa-trash-alt", delChange nel)]
 
@@ -177,6 +188,8 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
       let pathNEL = appendNEL path pathSegment
       x <- UI.div # withClass (extraTags ++ [typeTagName $ sing @'FileTree])
                  #+ [next (path ++ [pathSegment])]
+      -- TODO: attempt to resolve, show resulting node if possible, if empty 'path deleted', if error idk but something for that case too
+      -- TODO: will require para instead of cata, I think
       faLiSimple [] "fa-folder-open" [("fa-trash-alt", delChange pathNEL)]
                                      (string pathSegment # set UI.class_ "path-segment")
                                      (element x)
@@ -489,13 +502,12 @@ setup root = void $ do
   blobStoreTvar <- liftIO . atomically $ newTVar emptyBlobStore
   let blobStore = stmIOStore blobStoreTvar
 
-
-  initCommitHash <- uploadM (sWrite blobStore) $ commit3
-  let innitCommit = expandHash (sRead blobStore) initCommitHash
+  initCommit <- expandHash (sRead blobStore) <$> uploadM (sWrite blobStore) commit1
+  branchCommit <- expandHash (sRead blobStore) <$> uploadM (sWrite blobStore) commit2
 
   let initialBranchState = BranchState
-                         { bsMainBranch = innitCommit
-                         , bsBranches = []
+                         { bsMainBranch = initCommit
+                         , bsBranches = [("branch", branchCommit)]
                          , bsFocus = MainBranch
                          }
 
@@ -709,7 +721,7 @@ setup root = void $ do
     pure ()
 
 
-  liftIO $ focusChangeHandler $ wrapFocus sing $ unmodifiedWIP innitCommit
+  liftIO $ focusChangeHandler $ wrapFocus sing $ unmodifiedWIP initCommit
 
   _ <- onEvent updateBranchStateEvent $ \ubs -> do
     bs' <- case ubs of

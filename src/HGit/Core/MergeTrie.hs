@@ -58,7 +58,10 @@ data MergeError
   | InvalidChange ApplyChangeError
   deriving (Show)
 
-type ErrorAnnotatedMergeTrie m = (,) (Maybe MergeErrorAtPath) `Compose` MergeTrie m
+-- single layer of error annotated merge trie
+type ErrorAnnotatedMergeTrie m = Either (Fix (MergeTrie m)) -- potentially a subtrie with no errors
+                       `Compose` (,) (Maybe MergeErrorAtPath) -- each node potentially error tagged
+                       `Compose` MergeTrie m -- the actual merge trie structure
 
 -- TODO move to some utils module
 type RAlgebra f a = f (Fix f, a) -> a
@@ -80,7 +83,8 @@ resolveMergeTrie c mt = either (\e -> Left $ convertErrs $ cata f e []) Right x
         error "algorithm invariant broken: must be at least one error in ErrorAnnotatedMergeTrie"
 
     f :: Algebra (ErrorAnnotatedMergeTrie m) ([Path] -> [MergeError])
-    f (Compose (me, MergeTrie{..})) path =
+    f (Compose (Left _)) _ = []
+    f (Compose (Right (Compose (me, MergeTrie{..})))) path =
       let me' = maybe [] (\e -> [ErrorAtPath path e]) me
        in Foldable.fold (g path <$> Map.toList mtChildren) ++ me'
 
@@ -107,10 +111,14 @@ resolveMergeTrie' commit root = do
     g :: RAlgebra (MergeTrie m) (Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree))
     g mt@MergeTrie{..} = do
 
-      let liftMT :: Fix (MergeTrie m) -> Fix (ErrorAnnotatedMergeTrie m)
-          liftMT = cata (\m -> Fix $ Compose (Nothing, m))
+      let liftMT :: ( Fix (MergeTrie m)
+                    , Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree)
+                    )
+                 -> Fix (ErrorAnnotatedMergeTrie m)
+          -- this assumes no nested further errors, I think I need to recurse here, or at least look at the snd arg of the input
+          liftMT = Fix . Compose . Left . fst
           liftErr' :: Maybe MergeErrorAtPath -> Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree)
-          liftErr' me = Left $ Fix $ Compose (me, fmap (liftMT . fst) mt)
+          liftErr' me = Left $ Fix $ Compose $ Right $ Compose (me, fmap (liftMT) mt)
           liftErr = liftErr' . Just
 
 
@@ -119,14 +127,17 @@ resolveMergeTrie' commit root = do
             Right x -> Right x
             -- if we hit an error in a child node, we can't just return that error annotated subtree
             -- so reconstruct the current tree with all children lifted to error annotated subtrees
+
+            -- NOTE: UI tests show only most-nested error being displayed
             Left  _ ->
-              let f :: forall x
-                     . ( Fix (MergeTrie m)
-                       , Either (Fix (ErrorAnnotatedMergeTrie m)) x
+              let f :: ( Fix (MergeTrie m)
+                       , Fix (ErrorAnnotatedMergeTrie m) `Either` Maybe (WIPT m 'FileTree)
                        )
                     -> Fix (ErrorAnnotatedMergeTrie m)
-                  f (t,e) = either id (const $ liftMT t) e
-               in Left $ Fix $ Compose (Nothing, fmap f mt)
+                  f (t,e) = either id (const $ liftMT (t,e)) e
+                  -- aha, Nothing - this is preventing errors from being seen if a nested child has an error
+                  -- but how could this be fixed? do I really want to run that case match block below if children are errored out?
+               in Left $ Fix $ Compose $ Right $ Compose (Nothing, fmap f mt)
 
       children <- echildren'
 

@@ -255,9 +255,10 @@ commit0 = Term $ Commit "c0: first commit" changes parents
 commit1 :: Term M 'CommitT
 commit1 = Term $ Commit "c1: askdfj" changes parents
   where
-    changes = [c1, c2]
-    c1 = add (".DS_Store" :| []) . Term $ Blob "jk"
+    changes = [c1, c2, c3]
+    c1 = add (".DS_Store" :| []) . Term $ Blob "..."
     c2 = del ("a" :| ["bar"])
+    c3 = add ("baz" :| []) . Term $ Blob "baz with new content"
     parents = commit0 :| []
 
 -- ++ /README todo
@@ -275,6 +276,9 @@ commit3 = Term $ Commit "c3: merge" [resolvingChange] parents
   where
     parents = commit1 :| [commit2]
     resolvingChange = add ("baz" :| []) . Term $ Blob "baz3"
+
+
+
 
 
 -- instance ExtractKeys M where
