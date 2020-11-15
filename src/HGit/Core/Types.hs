@@ -82,6 +82,17 @@ instance ToJSON (a 'BlobT) => ToJSON (ChangeType a) where
     toEncoding = genericToEncoding defaultOptions
 instance FromJSON (a 'BlobT) => FromJSON (ChangeType a)
 
+data SnapshotFile a
+  = SnapshotFile
+  { sfBlob                 ::  a 'BlobT
+  , sfLastModifiedCommit   ::  a 'CommitT
+  , sfPreviousIncarnations :: [a 'FileTree]
+  } deriving (Generic)
+
+instance (ToJSON (a 'BlobT), ToJSON (a 'CommitT), ToJSON (a 'FileTree)) => ToJSON (SnapshotFile a) where
+    toEncoding = genericToEncoding defaultOptions
+instance (FromJSON (a 'BlobT), FromJSON (a 'CommitT), FromJSON (a 'FileTree)) => FromJSON (SnapshotFile a)
+
 data M a i where
   -- snapshots:
   Snapshot
@@ -94,9 +105,7 @@ data M a i where
 
   -- file tree entries:
   File
-    :: a 'BlobT    -- file blob
-    -> a 'CommitT  -- last modified in this commit
-    -> [a 'FileTree] -- previous incarnation(s)
+    :: SnapshotFile a
     -> M a 'FileTree
 
   Dir
@@ -298,7 +307,7 @@ commit3 = Term $ Commit "c3: merge" [resolvingChange] parents
 
 instance HFunctor M where
   hfmap f (Snapshot tree orig parents) = Snapshot (f tree) (f orig) (fmap f parents)
-  hfmap f (File blob lastMod prev) = File (f blob) (f lastMod) (fmap f prev)
+  hfmap f (File (SnapshotFile blob lastMod prev)) = File $ SnapshotFile (f blob) (f lastMod) (fmap f prev)
   hfmap f (Dir children) = Dir (fmap f children)
   hfmap _ NullCommit = NullCommit
   hfmap f (Commit msg changes parents) =
@@ -314,11 +323,11 @@ instance HTraversable M where
     orig' <- f orig
     parents' <- traverse f parents
     pure $ Snapshot tree' orig' parents'
-  hmapM f (File blob lastMod prev) = do
+  hmapM f (File (SnapshotFile blob lastMod prev)) = do
     blob' <- f blob
     lastMod' <- f lastMod
     prev' <- traverse f prev
-    pure $ File blob' lastMod' prev'
+    pure $ File $ SnapshotFile blob' lastMod' prev'
   hmapM f (Dir children) = do
     children' <- traverse f children
     pure $ Dir children'

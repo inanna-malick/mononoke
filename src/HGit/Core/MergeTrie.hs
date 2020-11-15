@@ -31,11 +31,7 @@ data SnapshotTrie m a
   { -- | all files at this path
     --   using map to enforce only one entry per hash - good idea?
     stFilesAtPath :: Map (Hash 'FileTree)
-                         (  WIPT m 'FileTree  -- hash of file
-                         ,  WIPT m 'BlobT     -- file blob
-                         ,  WIPT m 'CommitT   -- last modified in this commit
-                         , [WIPT m 'FileTree] -- previous incarnation(s)
-                         )
+                         (WIPT m 'FileTree, SnapshotFile (WIPT m))
   -- | a map of child entities, if any, each either a recursion
   --   or a pointer to some uncontested extant file tree entity
   , stChildren :: Map Path ((WIPT m 'FileTree) `Either` a)
@@ -53,6 +49,18 @@ data MergeTrie m a
   }
   deriving (Functor, Foldable, Traversable)
 
+-- NOTE/FIXME: this needs to operate on git-style trees - can I parameterize the whole trie infra over the underlying file type (eg Mononoke FT w/ commit pointers vs git-style)
+-- | represents assertions from N parent snapshots and child snapshot
+--   used to generate change lists from git-style trees
+-- data MergeTrie m a
+--   = MergeTrie
+--   { -- | Trie layer containing all assertions from snapshots
+--     mtSnapshotTrie :: SnapshotTrie m a
+--     -- | all changes at this path
+--   , mtChange  :: Maybe (ChangeType (WIPT m)) -- only one change per path is valid (only LMMT-only field)
+--   }
+--   deriving (Functor, Foldable, Traversable)
+
 
 
 mtChildren
@@ -62,12 +70,7 @@ mtChildren = stChildren . mtSnapshotTrie
 
 mtFilesAtPath
   :: MergeTrie m a
-  -> Map (Hash 'FileTree)
-                        (  WIPT m 'FileTree  -- hash of file
-                        ,  WIPT m 'BlobT     -- file blob
-                        ,  WIPT m 'CommitT   -- last modified in this commit
-                        , [WIPT m 'FileTree] -- previous incarnation(s)
-                        )
+  -> Map (Hash 'FileTree) (WIPT m 'FileTree, SnapshotFile (WIPT m))
 mtFilesAtPath = stFilesAtPath . mtSnapshotTrie
 
 -- will add cases to enum
@@ -167,7 +170,7 @@ resolveMergeTrie' commit root = do
 
       children <- echildren'
 
-      case ( snd <$> Map.toList (mtFilesAtPath mt) -- files at path       (candidates from different merge commits)
+      case ( fst . snd <$> Map.toList (mtFilesAtPath mt) -- files at path       (candidates from different merge commits)
            , mtChange                         -- optional change     (from currently applied commit)
            , children                         -- child nodes at path (child nodes)
            ) of
@@ -178,11 +181,11 @@ resolveMergeTrie' commit root = do
         ([], Just Del, _) -> liftErr DeleteAtNodeWithNoFile
         (fs, Just (Add blob), []) ->
           -- an add addressed to a node with any number of files - simple good state
-          pure $ Just $ modifiedWIP $ File blob
-                                            commit
-                                            (fmap (\(fh,_,_,_) -> fh) fs)
+          pure $ Just $ modifiedWIP $ File $ SnapshotFile blob
+                                                          commit
+                                                         (fmap (\fh -> fh) fs)
         ([], Just (Add _), _:_) -> liftErr AddChangeAtNodeWithChildren
-        ([(file, _, _, _)], Nothing, []) ->
+        ([file], Nothing, []) ->
           pure $ Just file -- single file with no changes, simple, valid
         (_:_, Just Del, []) -> pure Nothing -- any number of files, deleted, valid
         ((_:_:_), Nothing, []) -> -- > 1 file at same path, each w/ different hashes (b/c list converted from map)
@@ -349,14 +352,12 @@ buildMergeTrie original = para f original
                           }
 
                   pure $ Fix mt'
-                File blob lastMod prev -> do
-                  let filesAtPath = Map.insert (hashOfWIPT wipt)
-                                               (wipt, blob, lastMod, prev)
-                                               (mtFilesAtPath mt)
+                File sf -> do
+                  let filesAtPath = Map.insert (hashOfWIPT wipt) (wipt, sf) (mtFilesAtPath mt)
                       mt' = MergeTrie
                           { mtChange = mtChange mt
                           , mtSnapshotTrie = SnapshotTrie
-                                           { stChildren = fmap fst <$> mtChildren mt
+                                           { stChildren    = fmap fst <$> mtChildren mt
                                            , stFilesAtPath = filesAtPath
                                            }
                           }
@@ -496,9 +497,9 @@ applyChangeH wipt fullPath ct = do
 
         pure $ Fix mt
 
-    File blob lastMod prev -> case fullPath of
+    File sf -> case fullPath of
       [] -> do
-        let files = Map.singleton (hashOfWIPT wipt) (wipt, blob, lastMod, prev)
+        let files = Map.singleton (hashOfWIPT wipt) (wipt, sf)
             mt = MergeTrie
                { mtChange = Just ct
                , mtSnapshotTrie = SnapshotTrie
@@ -509,7 +510,7 @@ applyChangeH wipt fullPath ct = do
         pure $ Fix mt
       (path:paths) -> do
         let children = Map.singleton path . Right $ constructMT ct paths
-            files = Map.singleton (hashOfWIPT wipt) (wipt, blob, lastMod, prev)
+            files = Map.singleton (hashOfWIPT wipt) (wipt, sf)
             mt = MergeTrie
                { mtChange = Nothing
                , mtSnapshotTrie = SnapshotTrie

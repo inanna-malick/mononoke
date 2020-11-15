@@ -153,7 +153,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
 
        in fmap (renderFile mkExtraButtons path) fs
 
-    renderFile mkExtraButtons path (_, (_ft, blob, _lastMod, _prevs)) =
+    renderFile mkExtraButtons path (_, (_ft, SnapshotFile blob _lastMod _prevs)) =
       let extraButtons = mkExtraButtons blob ++ case nonEmpty path of
             Nothing -> [] -- a file at the root path is an error anyway..
             Just nel -> [("fa-trash-alt", delChange nel)]
@@ -213,7 +213,7 @@ browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
                                         (renderWIPTFileTree (path ++ [pathSegment]) p c)
 
           cs'
-        File blob commit prev -> do
+        File (SnapshotFile blob commit prev) -> do
           faUl #+ ( [ faLi focusHandler commit [] (string "src commit") UI.div
                     ] ++
                      (fmap (\x -> faLi focusHandler x [] (string "prev iteration") UI.div) prev
@@ -428,7 +428,7 @@ browseMononoke minimizations focusAction extraTags (HC (Tagged h m)) = Const $ d
       ] ++
       ( faLiSimple' [] "fa-chevron-right" (string "parent snapshot") . getConst <$> ps)
 
-    browseMononoke' (File b l p) = (faUl #+) $
+    browseMononoke' (File (SnapshotFile b l p)) = (faUl #+) $
       [ faLiSimple' [] "fa-chevron-right" (string "blob") $ getConst b
       , faLiSimple' [] "fa-chevron-right" (string "last modified") $ getConst l
       ] ++ (faLiSimple' [] "fa-chevron-right" (string "previous incarnation") . getConst <$>  p)

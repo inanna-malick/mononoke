@@ -32,7 +32,7 @@ renderM (Snapshot tree orig parents)
            , ["parents:"] ++ (indent $ (getConst <$> parents))
            ]
   )
-renderM (File blob lastMod prev)
+renderM (File (SnapshotFile blob lastMod prev))
   = Const $ mconcat [["File:"]] ++
   ( indent $
            [ getConst blob
