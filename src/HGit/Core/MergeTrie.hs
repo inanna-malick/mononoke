@@ -25,25 +25,50 @@ import           Util.RecursionSchemes as R
 import           Util.HRecursionSchemes
 --------------------------------------------
 
-
-data MergeTrie m a
-  = MergeTrie
+-- | represents assertions from N snapshots
+data SnapshotTrie m a
+  = SnapshotTrie
   { -- | all files at this path
     --   using map to enforce only one entry per hash - good idea?
-    mtFilesAtPath :: Map (Hash 'FileTree)
+    stFilesAtPath :: Map (Hash 'FileTree)
                          (  WIPT m 'FileTree  -- hash of file
                          ,  WIPT m 'BlobT     -- file blob
                          ,  WIPT m 'CommitT   -- last modified in this commit
                          , [WIPT m 'FileTree] -- previous incarnation(s)
                          )
-  -- | all changes at this path
-  , mtChange  :: Maybe (ChangeType (WIPT m)) -- only one change per path is valid (only LMMT-only field)
   -- | a map of child entities, if any, each either a recursion
   --   or a pointer to some uncontested extant file tree entity
-  , mtChildren :: Map Path ((WIPT m 'FileTree) `Either` a)
+  , stChildren :: Map Path ((WIPT m 'FileTree) `Either` a)
   }
   deriving (Functor, Foldable, Traversable)
 
+-- | represents assertions from N snapshots and a commit
+--   used to resolve merges
+data MergeTrie m a
+  = MergeTrie
+  { -- | Trie layer containing all assertions from snapshots
+    mtSnapshotTrie :: SnapshotTrie m a
+    -- | all changes at this path
+  , mtChange  :: Maybe (ChangeType (WIPT m)) -- only one change per path is valid (only LMMT-only field)
+  }
+  deriving (Functor, Foldable, Traversable)
+
+
+
+mtChildren
+  :: MergeTrie m a
+  -> Map Path ((WIPT m 'FileTree) `Either` a)
+mtChildren = stChildren . mtSnapshotTrie
+
+mtFilesAtPath
+  :: MergeTrie m a
+  -> Map (Hash 'FileTree)
+                        (  WIPT m 'FileTree  -- hash of file
+                        ,  WIPT m 'BlobT     -- file blob
+                        ,  WIPT m 'CommitT   -- last modified in this commit
+                        , [WIPT m 'FileTree] -- previous incarnation(s)
+                        )
+mtFilesAtPath = stFilesAtPath . mtSnapshotTrie
 
 -- will add cases to enum
 data MergeErrorAtPath
@@ -84,9 +109,9 @@ resolveMergeTrie c mt = either (\e -> Left $ convertErrs $ cata f e []) Right x
 
     f :: Algebra (ErrorAnnotatedMergeTrie m) ([Path] -> [MergeError])
     f (Compose (Left _)) _ = []
-    f (Compose (Right (Compose (me, MergeTrie{..})))) path =
+    f (Compose (Right (Compose (me, mt'@MergeTrie{..})))) path =
       let me' = maybe [] (\e -> [ErrorAtPath path e]) me
-       in Foldable.fold (g path <$> Map.toList mtChildren) ++ me'
+       in Foldable.fold (g path <$> Map.toList (mtChildren mt')) ++ me'
 
     g :: forall x
        . [Path]
@@ -122,7 +147,7 @@ resolveMergeTrie' commit root = do
           liftErr = liftErr' . Just
 
 
-      let echildren = Map.toList . Map.mapMaybe id <$> traverse (either (pure . Just) snd) mtChildren
+      let echildren = Map.toList . Map.mapMaybe id <$> traverse (either (pure . Just) snd) (mtChildren mt)
           echildren' = case echildren of
             Right x -> Right x
             -- if we hit an error in a child node, we can't just return that error annotated subtree
@@ -137,11 +162,12 @@ resolveMergeTrie' commit root = do
                   f (t,e) = either id (const $ liftMT (t,e)) e
                   -- aha, Nothing - this is preventing errors from being seen if a nested child has an error
                   -- but how could this be fixed? do I really want to run that case match block below if children are errored out?
+                  -- FIXME/TODO ^^ figure this out
                in Left $ Fix $ Compose $ Right $ Compose (Nothing, fmap f mt)
 
       children <- echildren'
 
-      case ( snd <$> Map.toList mtFilesAtPath -- files at path       (candidates from different merge commits)
+      case ( snd <$> Map.toList (mtFilesAtPath mt) -- files at path       (candidates from different merge commits)
            , mtChange                         -- optional change     (from currently applied commit)
            , children                         -- child nodes at path (child nodes)
            ) of
@@ -315,26 +341,37 @@ buildMergeTrie original = para f original
                     <- mergeA wiptOnly mtOnly presentInBoth children (mtChildren mt)
 
                   let mt' = MergeTrie
-                          { mtFilesAtPath = mtFilesAtPath mt
-                          , mtChange = mtChange mt
-                          , mtChildren = mtChildren'
+                          { mtChange = mtChange mt
+                          , mtSnapshotTrie = SnapshotTrie
+                                           { stChildren = mtChildren'
+                                           , stFilesAtPath = mtFilesAtPath mt
+                                           }
                           }
 
                   pure $ Fix mt'
                 File blob lastMod prev -> do
-                  let mt' = MergeTrie
-                          { mtFilesAtPath = Map.insert
-                              (hashOfWIPT wipt)
-                              (wipt, blob, lastMod, prev)
-                              (mtFilesAtPath mt)
-                          , mtChange = mtChange mt
-                          , mtChildren = fmap fst <$> mtChildren mt
+                  let filesAtPath = Map.insert (hashOfWIPT wipt)
+                                               (wipt, blob, lastMod, prev)
+                                               (mtFilesAtPath mt)
+                      mt' = MergeTrie
+                          { mtChange = mtChange mt
+                          , mtSnapshotTrie = SnapshotTrie
+                                           { stChildren = fmap fst <$> mtChildren mt
+                                           , stFilesAtPath = filesAtPath
+                                           }
                           }
                   pure $ Fix mt'
 
 -- empty mergetrie
 emptyMergeTrie :: Fix (MergeTrie m)
-emptyMergeTrie = Fix $ MergeTrie Map.empty Nothing Map.empty
+emptyMergeTrie = Fix
+               $ MergeTrie
+               { mtChange = Nothing
+               , mtSnapshotTrie = SnapshotTrie
+                               { stChildren = Map.empty
+                               , stFilesAtPath = Map.empty
+                               }
+               }
 
 
 
@@ -374,28 +411,48 @@ applyChange t c = para f t . toList $ _path c
                   Just (Left lmmt) -> lift $ applyChangeH lmmt paths $ _change c
                   Just (Right (_,next)) -> next paths
                   Nothing -> pure $ constructMT (_change c) paths
-          pure $ Fix $ MergeTrie
-                     { mtFilesAtPath = mtFilesAtPath m
-                     , mtChange      = mtChange m
-                     , mtChildren    = Map.insert path (Right mt')
-                                     $ fmap fst <$> mtChildren m
-                     }
+          pure $ Fix
+               $ MergeTrie
+               { mtChange = mtChange m
+               , mtSnapshotTrie = SnapshotTrie
+                               { stChildren = Map.insert path (Right mt')
+                                            $ fmap fst <$> mtChildren m
+
+                               , stFilesAtPath = mtFilesAtPath m
+                               }
+               }
         f m [] = do
           change' <- case mtChange m of
             Nothing -> pure $ Just $ _change c
             Just _  -> ExceptT $ pure $ Left $ ChangeAlreadyExistsAtPath
           pure . Fix
-               $ MergeTrie { mtFilesAtPath = mtFilesAtPath m
-                           , mtChange = change'
-                           , mtChildren = fmap fst <$> mtChildren m
-                           }
+               $ MergeTrie
+               { mtChange = change'
+               , mtSnapshotTrie = SnapshotTrie
+                               { stChildren = fmap fst <$> mtChildren m
+                               , stFilesAtPath = mtFilesAtPath m
+                               }
+               }
 
 -- | helper function, constructs merge trie with change at path
 constructMT :: forall m. ChangeType (WIPT m) -> [Path] -> Fix (MergeTrie m)
 constructMT change = R.ana f
   where f :: [Path] -> MergeTrie m [Path]
-        f [] = MergeTrie Map.empty (Just change) Map.empty
-        f (x:xs) = MergeTrie Map.empty Nothing (Map.singleton x (Right xs))
+        f []     = MergeTrie
+                 { mtChange = Just change
+                 , mtSnapshotTrie = SnapshotTrie
+                                  { stChildren = Map.empty
+                                  , stFilesAtPath = Map.empty
+                                  }
+                 }
+        f (x:xs) = MergeTrie
+                 { mtChange = Nothing
+                 , mtSnapshotTrie = SnapshotTrie
+                                  { stChildren = Map.singleton x (Right xs)
+                                  , stFilesAtPath = Map.empty
+                                  }
+                 }
+
 
 -- | results in 'm' because it may need to expand the provided tree (which could just be a hash)
 applyChangeH
@@ -412,7 +469,14 @@ applyChangeH wipt fullPath ct = do
       [] -> do
         -- port over dir structure
         let children' = fmap Left children
-            mt = MergeTrie Map.empty (Just ct) children'
+            mt = MergeTrie
+               { mtChange = Just ct
+               , mtSnapshotTrie = SnapshotTrie
+                                { stChildren = children'
+                                , stFilesAtPath = Map.empty
+                                }
+               }
+
         pure $ Fix mt
 
       (path:paths) -> do
@@ -422,16 +486,35 @@ applyChangeH wipt fullPath ct = do
             child <- applyChangeH c paths ct
             pure $ Map.insert path (Right child) $ fmap Left children
           Nothing -> pure $ Map.insert path (Right $ constructMT ct paths) $ fmap Left children
-        let mt = MergeTrie Map.empty Nothing children'
+        let mt = MergeTrie
+               { mtChange = Nothing
+               , mtSnapshotTrie = SnapshotTrie
+                                { stChildren = children'
+                                , stFilesAtPath = Map.empty
+                                }
+               }
+
         pure $ Fix mt
 
     File blob lastMod prev -> case fullPath of
       [] -> do
         let files = Map.singleton (hashOfWIPT wipt) (wipt, blob, lastMod, prev)
-            mt = MergeTrie files (Just ct) Map.empty
+            mt = MergeTrie
+               { mtChange = Just ct
+               , mtSnapshotTrie = SnapshotTrie
+                                { stChildren = Map.empty
+                                , stFilesAtPath = files
+                                }
+               }
         pure $ Fix mt
       (path:paths) -> do
         let children = Map.singleton path . Right $ constructMT ct paths
             files = Map.singleton (hashOfWIPT wipt) (wipt, blob, lastMod, prev)
-            mt = MergeTrie files Nothing children
+            mt = MergeTrie
+               { mtChange = Nothing
+               , mtSnapshotTrie = SnapshotTrie
+                                { stChildren = children
+                                , stFilesAtPath = files
+                                }
+               }
         pure $ Fix mt

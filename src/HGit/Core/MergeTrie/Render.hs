@@ -24,24 +24,24 @@ renderMergeTrie :: Fix (MergeTrie m) -> [String]
 renderMergeTrie = cata f
   where
     f :: MergeTrie m [String] -> [String]
-    f MergeTrie{..} =
+    f mt =
       let g :: (Path, ((WIPT m 'FileTree) `Either` [String])) -> [String]
           g (k, (Left wipt)) = [k ++ ": "] ++ renderWIPT wipt
           g (k, (Right v)) = [k ++ ": "] ++ v
           children :: [[String]]
-          children = if Map.null mtChildren
+          children = if Map.null (mtChildren mt)
             then []
             -- TODO handle either
-            else [["children"] ++ (indent $ fmap g $ Map.toList mtChildren)]
+            else [["children"] ++ (indent $ fmap g $ Map.toList $ mtChildren mt)]
           change :: [[String]]
-          change = case mtChange of
+          change = case (mtChange mt) of
             Nothing -> []
             Just (Add _) -> [["add"]]
             Just Del -> [["del"]]
           files :: [[String]]
-          files = if null mtFilesAtPath
+          files = if null (mtFilesAtPath mt)
             then []
-            else [["files:"] ++ (indent $ pure . showHash <$> Map.keys mtFilesAtPath)]
+            else [["files:"] ++ (indent $ pure . showHash <$> Map.keys (mtFilesAtPath mt))]
        in "MergeTrie:" : indent
           ( files ++ change ++ children
           )
