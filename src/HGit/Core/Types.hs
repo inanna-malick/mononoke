@@ -25,6 +25,7 @@ import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Singletons.TH
+import           Data.Singletons.Decide
 import qualified Data.Text as T
 --------------------------------------------
 import           HGit.Generic.BlakeHash
@@ -34,6 +35,10 @@ import           HGit.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHRO
 $(singletons [d|
   data MTag = SnapshotT | FileTree | CommitT | BlobT
  |])
+
+
+
+
 
 type Path = String -- TODO use Text
 
@@ -221,6 +226,45 @@ typeTagName s = case s of
   SFileTree  -> "filetree"
   SCommitT   -> "commit"
   SBlobT     -> "blob"
+
+
+data Hash2 k (a :: k)
+  = Hash2
+  { getHash :: () -- stub
+  -- NOTE: this works, but generic hash doesn't... weird (note: no ~= i)
+  -- NOTE: that's fine, consequence of carrying around type tag is it may not match expected
+  -- NOTE: actually idk if absolutely req'd in that way but probably can't get around for now
+  -- FIXME: nope, seems not to work - can write fn that collapses hash to type-directed string
+  -- FIXME: in ana Coalg context, but it fails when required to output an 'M i', which makes sense,
+  -- FIXME: because 'a' and the type the proxy == are not guaranteed to ==
+  -- NOTE: you know what? fuck holding on to extra runtime state - this sucks, just use the
+  -- NOTE: hacked version of compdata higher kinded recursion schemes
+  -- NOTE: could use decideEquality to compare the two, but once again that requires Sing for i!
+  -- NOTE: so it's not even possible to check for singleton equality vs the expected type! fuck this.
+  -- DECISION: just use my hacked version, it's straight up better b/c it req's no runtime overhead
+  , getProxy :: Demote k
+  }
+
+
+mtagToString
+  :: -- forall (x :: MTag).
+     Hash2 MTag x
+  -> String
+mtagToString h =
+  case (toSing $ getProxy h) of
+        (SomeSing sb) -> typeTagName sb
+
+
+magicParse :: forall (i :: MTag). Sing i -> M (Hash2 MTag) i
+magicParse = undefined
+
+test :: Hash2 MTag :-> Term M
+test = ana f
+  where
+    f :: forall i. Hash2 MTag i -> M (Hash2 MTag) i
+    f h = let foo = demote @i in case (toSing $ getProxy h) of
+            (SomeSing sb) -> magicParse sb
+
 
 
 -- | hash and lift (TODO: THIS IS NEEDED - dip into merkle lib for refs)
