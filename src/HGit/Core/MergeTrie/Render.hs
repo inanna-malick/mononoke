@@ -9,13 +9,13 @@
 module HGit.Core.MergeTrie.Render where
 
 --------------------------------------------
+import           Data.Functor.Foldable (Fix(..), cata)
 import qualified Data.Map.Strict as Map
 --------------------------------------------
 import           HGit.Core.Types
 import           HGit.Core.Types.Render (renderWIPT)
 import           HGit.Core.MergeTrie
 import           HGit.Render.Utils
-import           HGit.Generic.RecursionSchemes as R
 --------------------------------------------
 
 

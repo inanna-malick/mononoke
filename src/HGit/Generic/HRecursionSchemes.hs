@@ -15,9 +15,8 @@ import           Data.Singletons.TH
 --------------------------------------------
 
 
-
+-- | NOTE: the below 3 functions are the only significant divergence from compdata
 type NatM m f g = forall i. SingI i => f i -> m (g i)
-
 type f :-> g = forall (i :: k) . SingI i => f i -> g i
 type f :=> a = forall (i :: k) . SingI i => f i -> a
 
@@ -135,13 +134,3 @@ instance HFunctor (HEither f) where
 -- incomplete instance, yolo, etc
 instance (HTraversable f, HTraversable g) => HTraversable (f `HCompose` g) where
     hmapM nat (HC x) = HC <$> hmapM (hmapM nat) x
-
-annotate
-  :: forall f x
-   . HFunctor f
-  => Alg f x
-  -> Term f :-> Term (Tagged x `HCompose` f)
-annotate alg = hcata alg'
-  where
-    alg' :: Alg f (Term (Tagged x `HCompose` f))
-    alg' f = Term . HC $ Tagged (alg $ hfmap (_tag . getHC . unTerm) f) f

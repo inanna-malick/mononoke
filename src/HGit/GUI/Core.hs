@@ -4,8 +4,19 @@ module HGit.GUI.Core where
 
 --------------------------------------------
 import           Data.Singletons
+-- import           Reactive.Threepenny (Event, Handler)
+--------------------------------------------
 import           HGit.Core.Types
 --------------------------------------------
+
+
+-- class CanRegisterHandler e m where
+--   register :: Handler e -> m ()
+
+
+-- class CanDispatchEvent e m where
+--   dispatch :: e -> m ()
+
 
 data Focus x
   = SnapshotF (x 'SnapshotT)

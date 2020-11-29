@@ -12,6 +12,7 @@ import           Control.Monad (void)
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Maybe
+import           Data.Functor.Foldable (Fix(..), cata)
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (toList, nonEmpty, (<|), NonEmpty(..))
 import           Data.List.Split (splitOn)
@@ -33,7 +34,6 @@ import           HGit.GUI.Elements
 import           HGit.GUI.State
 import           HGit.GUI.Messages
 import           HGit.Generic.BlakeHash
-import           HGit.Generic.RecursionSchemes
 import           HGit.Generic.HRecursionSchemes
 --------------------------------------------
 

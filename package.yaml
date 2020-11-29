@@ -72,7 +72,6 @@ library:
     - HGit.GUI.Core
     - HGit.Generic.BlakeHash
     - HGit.Generic.HRecursionSchemes
-    - HGit.Generic.RecursionSchemes
 
 executable:
   main: Main.hs

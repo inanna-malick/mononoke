@@ -9,19 +9,21 @@
 
 module HGit.Core.MergeTrie where
 
+
 --------------------------------------------
 import           Control.Concurrent.STM
 import           Control.Monad.Trans
 import           Control.Monad.Except
 import qualified Data.Foldable as Foldable
 import           Data.Functor.Compose
+import qualified Data.Functor.Foldable as FF
+import           Data.Functor.Foldable (Fix(..), para, cata)
 import           Data.List.NonEmpty (NonEmpty, toList, nonEmpty)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Map.Merge.Strict
 --------------------------------------------
 import           HGit.Core.Types
-import           HGit.Generic.RecursionSchemes as R
 import           HGit.Generic.HRecursionSchemes
 --------------------------------------------
 
@@ -110,7 +112,9 @@ resolveMergeTrie c mt = either (\e -> Left $ convertErrs $ cata f e []) Right x
       Nothing ->
         error "algorithm invariant broken: must be at least one error in ErrorAnnotatedMergeTrie"
 
-    f :: Algebra (ErrorAnnotatedMergeTrie m) ([Path] -> [MergeError])
+    f :: (ErrorAnnotatedMergeTrie m) ([Path] -> [MergeError])
+      -> [Path]
+      -> [MergeError]
     f (Compose (Left _)) _ = []
     f (Compose (Right (Compose (me, mt'@MergeTrie{..})))) path =
       let me' = maybe [] (\e -> [ErrorAtPath path e]) me
@@ -437,7 +441,7 @@ applyChange t c = para f t . toList $ _path c
 
 -- | helper function, constructs merge trie with change at path
 constructMT :: forall m. ChangeType (WIPT m) -> [Path] -> Fix (MergeTrie m)
-constructMT change = R.ana f
+constructMT change = FF.ana f
   where f :: [Path] -> MergeTrie m [Path]
         f []     = MergeTrie
                  { mtChange = Just change

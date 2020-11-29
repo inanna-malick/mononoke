@@ -1,6 +1,6 @@
+{-# LANGUAGE RecordWildCards #-}
 
 module HGit.GUI.Messages where
-
 
 --------------------------------------------
 import           Data.Functor.Const
@@ -24,7 +24,13 @@ data UpdateMergeTrie m
   | Finalize String -- finalize commit w/ message
 
 instance Show (UpdateMergeTrie m) where
-  show (ApplyChange p c) = "ApplyChange: " ++ (unlines $ renderChange $ cmapShim (Const . renderWIPT) $ Change p c)
+  show (ApplyChange p c) =
+    let ctmapShim f (Add a) = Add (f a)
+        ctmapShim _ Del = Del
+        cmapShim f Change{..} = Change _path $ ctmapShim f _change
+     in mconcat [ "ApplyChange: "
+                , unlines $ renderChange $ cmapShim (Const . renderWIPT) $ Change p c
+                ]
   show (RemoveChange p) = "RemoveChange: " ++ show p
   show (AddParent _) = "AddParent: todo"
   show Reset = "Reset"

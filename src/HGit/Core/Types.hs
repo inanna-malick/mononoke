@@ -50,23 +50,6 @@ data Change a
   } deriving (Generic)
 
 
--- ugh, shim
-ctmapShim
-  :: forall (a :: MTag -> Type) (b :: MTag -> Type)
-   . (a 'BlobT -> b 'BlobT)
-  -> ChangeType a
-  -> ChangeType b
-ctmapShim f (Add a) = Add (f a)
-ctmapShim _ Del = Del
-
-cmapShim
-  :: forall (a :: MTag -> Type) (b :: MTag -> Type)
-   . (a 'BlobT -> b 'BlobT)
-  -> Change a
-  -> Change b
-cmapShim f Change{..} = Change _path $ ctmapShim f _change
-
-
 
 instance ToJSON (a 'BlobT) => ToJSON (Change a) where
     toEncoding = genericToEncoding defaultOptions
