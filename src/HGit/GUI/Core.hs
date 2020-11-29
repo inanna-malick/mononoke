@@ -3,6 +3,7 @@
 module HGit.GUI.Core where
 
 --------------------------------------------
+import           Data.Singletons
 import           HGit.Core.Types
 --------------------------------------------
 

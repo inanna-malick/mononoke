@@ -32,16 +32,18 @@ dependencies:
   - base >=4.8
   - aeson
   - aeson-gadt-th
+  - base16-bytestring # NOTE: why base16? revisit.
+  - base64-bytestring
   - clay
   - containers
+  - cryptonite
   - bytestring
   - directory
   - deriving-compat
+  - free
   - http-client
   - hedgehog
-  - merkle-schemes
-  - merkle-schemes-ext
-  - merkle-schemes-higher
+  - memory
   - mtl
   - optparse-applicative
   - recursion-schemes
@@ -68,6 +70,9 @@ library:
     - HGit.GUI.Messages
     - HGit.GUI.State
     - HGit.GUI.Core
+    - HGit.Generic.BlakeHash
+    - HGit.Generic.HRecursionSchemes
+    - HGit.Generic.RecursionSchemes
 
 executable:
   main: Main.hs

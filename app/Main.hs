@@ -32,9 +32,9 @@ import           HGit.GUI.Core
 import           HGit.GUI.Elements
 import           HGit.GUI.State
 import           HGit.GUI.Messages
-import           Merkle.Types.BlakeHash
-import           Util.RecursionSchemes
-import           Util.HRecursionSchemes
+import           HGit.Generic.BlakeHash
+import           HGit.Generic.RecursionSchemes
+import           HGit.Generic.HRecursionSchemes
 --------------------------------------------
 
 

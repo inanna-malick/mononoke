@@ -18,7 +18,7 @@ import           Data.Singletons.TH
 --------------------------------------------
 import           HGit.Render.Utils
 import           HGit.Core.Types
-import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
+import           HGit.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
 

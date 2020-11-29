@@ -15,7 +15,7 @@ import           HGit.Core.Types
 import           HGit.Core.Types.Render (renderWIPT)
 import           HGit.Core.MergeTrie
 import           HGit.Render.Utils
-import           Util.RecursionSchemes as R
+import           HGit.Generic.RecursionSchemes as R
 --------------------------------------------
 
 

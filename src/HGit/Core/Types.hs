@@ -5,7 +5,10 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module HGit.Core.Types where
+module HGit.Core.Types
+  ( module HGit.Core.Types
+  , Hash
+  ) where
 
 
 import Data.Aeson.GADT.TH
@@ -24,13 +27,9 @@ import qualified Data.Map.Strict as Map
 import           Data.Singletons.TH
 import qualified Data.Text as T
 --------------------------------------------
-import           Merkle.Types.BlakeHash
-import           Util.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
+import           HGit.Generic.BlakeHash
+import           HGit.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
-
-
--- TODO refactor/rewrite hrecrusion schemes framework stuff - this is from other pkg
-type Hash = Const RawBlakeHash
 
 $(singletons [d|
   data MTag = SnapshotT | FileTree | CommitT | BlobT

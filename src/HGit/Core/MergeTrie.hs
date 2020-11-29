@@ -21,8 +21,8 @@ import qualified Data.Map.Strict as Map
 import           Data.Map.Merge.Strict
 --------------------------------------------
 import           HGit.Core.Types
-import           Util.RecursionSchemes as R
-import           Util.HRecursionSchemes
+import           HGit.Generic.RecursionSchemes as R
+import           HGit.Generic.HRecursionSchemes
 --------------------------------------------
 
 -- | represents assertions from N snapshots
