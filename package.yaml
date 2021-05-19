@@ -1,8 +1,8 @@
 name: hgit
 version: 0.1.0.0
 synopsis: merkle all the things
-github: pkinsky/hgit
-author: Paul Kinsky
+github: inanna-malick/hgit
+author: Inanna Malick
 category: Development
 
 ghc-options: -Wall -Werror

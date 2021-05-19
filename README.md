@@ -12,8 +12,8 @@ indirection, eg merkle lists (blockchains), merkle trees (git, mercurial), merkl
 Demo using the provided dockerfile:
 
 ```bash
-> docker build -t pkinsky/hgit:demo .
-> docker run -it pkinsky/hgit:demo bash
+> docker build -t inanna/hgit:demo .
+> docker run -it inanna/hgit:demo bash
 ```
 
 

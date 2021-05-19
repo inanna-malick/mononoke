@@ -4,6 +4,6 @@ packages:
 - .
 
 extra-deps:
-- github: pkinsky/merkle-schemes
+- github: inanna-malick/merkle-schemes
   commit: c94cf98320afde5e08f03dfc64bbfa17a9529727
 
