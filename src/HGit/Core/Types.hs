@@ -20,7 +20,6 @@ import           Control.Monad.IO.Class
 import           Data.Functor.Const (Const(..))
 import qualified Data.ByteString.Lazy as LB
 import           Data.Functor.Compose
-import           Data.Kind (Type)
 import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -401,6 +400,3 @@ stmStore tvar
         putBlobStore sing h mh bs
       pure h
   }
-
-
-

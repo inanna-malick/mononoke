@@ -88,29 +88,6 @@ faLi focusHandler wipt = faLi' @i (Just action)
     where
       action = liftIO $ focusHandler $ wrapFocus (sing @i) wipt
 
--- can handle completing popup (eg it requests text)
-drawModal :: String -> [UI Element] -> UI Element
-drawModal hdr content = do
-  root <- UI.div # withClass ["modal"]
-  closeButton <- UI.button # set text "X"
-  on UI.click closeButton $ \() -> delete root
-
-  let titleBar = UI.div # withClass ["aesthetic-windows-95-modal-title-bar"]
-                       #+ [ UI.div # withClass ["aesthetic-windows-95-modal-title-bar-text"]
-                                   # set text hdr
-                           , UI.div # withClass ["aesthetic-windows-95-modal-title-bar-controls"]
-                                   #+ [UI.div # withClass ["aesthetic-windows-95-button-title-bar"]
-                                             #+ [ element closeButton ]
-                                       ]
-                           ]
-
-      w = UI.div # withClass ["aesthetic-windows-95-modal", "modal-popup"]
-                #+ [ titleBar
-                   , UI.div # withClass ["aesthetic-windows-95-modal-content", "popup-content"]
-                           #+ content
-                   ]
-  element root #+ [UI.div # withClass ["modal-content"] #+ [w]]
-
 
 infraDiv :: UI Element
 infraDiv = UI.div # withClass ["infra"]

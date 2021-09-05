@@ -32,7 +32,7 @@ dependencies:
   - base >=4.8
   - aeson
   - aeson-gadt-th
-  - base16-bytestring # NOTE: why base16? revisit.
+  - base16-bytestring # used for hashes
   - base64-bytestring
   - clay
   - containers
@@ -65,9 +65,12 @@ library:
   exposed-modules:
     - HGit.Core.MergeTrie
     - HGit.Core.Types
+    - HGit.GUI.BrowseWIPT
     - HGit.GUI.CSS
     - HGit.GUI.Elements
     - HGit.GUI.Messages
+    - HGit.GUI.Modal
+    - HGit.GUI.WorkingMergeTrie
     - HGit.GUI.State
     - HGit.GUI.Core
     - HGit.Generic.BlakeHash

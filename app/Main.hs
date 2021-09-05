@@ -12,14 +12,12 @@ import           Control.Monad (void)
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Maybe
-import           Data.Functor.Foldable (Fix(..), cata)
 import           Data.List (intersperse)
 import           Data.List.NonEmpty (toList, nonEmpty, (<|), NonEmpty(..))
 import           Data.List.Split (splitOn)
 import           Data.Set (Set)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Functor.Compose
 import           Data.Text.Lazy (unpack)
 import           Data.Singletons.TH (SingI, sing)
 import           Graphics.UI.Threepenny.Core
@@ -32,6 +30,8 @@ import           HGit.GUI.CSS
 import           HGit.GUI.Core
 import           HGit.GUI.Elements
 import           HGit.GUI.State
+import qualified HGit.GUI.Modal as Modal
+import qualified HGit.GUI.WorkingMergeTrie as WorkingMergeTrie
 import           HGit.GUI.Messages
 import           HGit.Generic.BlakeHash
 import           HGit.Generic.HRecursionSchemes
@@ -99,129 +99,6 @@ renderWIPTBlob focusHandler actions wipt = do
 
 
 
-browseMergeTrie
-  :: Handler (UpdateMergeTrie UI)
-  -> Handler (FocusWIPT UI)
-  -> TVar Minimizations
-  -> InProgressCommit UI `Either` LMMT UI 'CommitT
-  -> Fix (ErrorAnnotatedMergeTrie UI) `Either` Fix (MergeTrie UI)
-  -> UI Element
-browseMergeTrie modifyMergeTrieHandler focusHandler _minimizations ipcOrC eroot
-  = case eroot of
-      Left  e -> cata g e []
-      Right x -> cata f x []
-
-  where
-
-    g :: ErrorAnnotatedMergeTrie UI ([Path] -> UI Element) -> [Path] -> UI Element
-    g (Compose (Right (Compose (me, mt)))) path = do
-      faUl #+ mconcat
-            [ case me of
-                Nothing -> []
-                Just e  -> [string $ "error at this node: " ++ show e, UI.br]
-            , renderChildren path $ mtChildren mt
-            , renderFiles path $ Map.toList $ mtFilesAtPath mt
-            , maybe [] (pure . renderChange path) $ mtChange mt
-            ]
-    g (Compose (Left fmt)) path = cata f fmt path
-
-
-    f :: MergeTrie UI ([Path] -> UI Element) -> [Path] -> UI Element
-    f mt path = do
-      faUl #+ mconcat
-            [ renderChildren path $ mtChildren mt
-            , renderFiles path $ Map.toList $ mtFilesAtPath mt
-            , maybe [] (pure . renderChange path) $ mtChange mt
-            ]
-
-
-    delChange :: NonEmpty Path -> UI ()
-    delChange path = do
-      liftIO $ putStrLn $ "send del to:"
-      liftIO $ print path
-      liftIO $ modifyMergeTrieHandler $ ApplyChange path Del
-
-    renderFiles path fs =
-      let resolveMergeConflict nel b = liftIO $ modifyMergeTrieHandler (ApplyChange nel $ Add b)
-          -- button to accept one file in a merge conflict as the canonical version
-          mkExtraButtons b = if length fs >= 2
-            then case nonEmpty path of
-              -- TODO: more appropriate button icon, mb
-              Just nel -> [("fa-code", resolveMergeConflict nel b)]
-              Nothing -> [] -- files at '/' root path are invalid anyway
-            else []
-
-       in fmap (renderFile mkExtraButtons path) fs
-
-    renderFile mkExtraButtons path (_, (_ft, SnapshotFile blob _lastMod _prevs)) =
-      let extraButtons = mkExtraButtons blob ++ case nonEmpty path of
-            Nothing -> [] -- a file at the root path is an error anyway..
-            Just nel -> [("fa-trash-alt", delChange nel)]
-
-       in faLiSimple' [] "fa-chevron-right" (string "file candidate")
-                                            (faUl #+ [renderWIPTBlob focusHandler extraButtons blob])
-
-    renderChange :: [Path] -> ChangeType (WIPT UI) -> UI Element
-    renderChange p (Add wipt) =
-      faLiSimple ["add"] "fa-plus-circle" (removeChange p) (string "Add") $ faUl #+ [renderWIPTBlob focusHandler [] wipt]
-    renderChange p Del =
-      faLiSimple ["del"] "fa-minus-circle" (removeChange p) (string "Del") UI.div
-
-    removeChange p = case nonEmpty p of
-      Nothing -> []
-      Just nel -> [("fa-trash-alt", liftIO $ modifyMergeTrieHandler $ RemoveChange nel)]
-
-    renderChildren path c = fmap (renderChild path) (Map.toList c)
-
-    renderChild :: [Path] -> (Path, WIPT UI 'FileTree `Either` ([Path] -> UI Element)) -> UI Element
-    renderChild path (pathSegment, Left wipt) = do
-      let pathNEL = appendNEL path pathSegment
-      faLi focusHandler wipt [("fa-trash-alt", delChange pathNEL)]
-                              (UI.code # set text pathSegment # set UI.class_ "path-segment")
-                              (renderWIPTFileTree path pathSegment wipt)
-
-
-    renderChild path (pathSegment, Right next) = do
-      let extraTags = case ipcOrC of
-            Left _  -> ["wip"]
-            Right _ -> ["persisted"]
-      let pathNEL = appendNEL path pathSegment
-      x <- UI.div # withClass (extraTags ++ [typeTagName $ sing @'FileTree])
-                 #+ [next (path ++ [pathSegment])]
-      -- TODO: attempt to resolve, show resulting node if possible, if empty 'path deleted', if error idk but something for that case too
-      -- TODO: will require para instead of cata, I think
-      faLiSimple [] "fa-folder-open" [("fa-trash-alt", delChange pathNEL)]
-                                     (string pathSegment # set UI.class_ "path-segment")
-                                     (element x)
-
-
-    renderWIPTFileTree :: [Path] -> Path -> WIPT UI 'FileTree -> UI Element
-    renderWIPTFileTree path pathSegment wipt = do
-      (HC (Tagged _h ft)) <- fetchWIPT wipt
-      let extraTags = case wipt of
-            (Term (HC (L _))) -> ["persisted"]
-            (Term (HC (R _))) -> ["wip"]
-      wrapper <- UI.div # withClass ([typeTagName' ft] ++ extraTags)
-      x <- case ft of
-        Dir cs -> do
-          let cs' = faUl #+ (renderDirEntry <$> Map.toList cs)
-              renderDirEntry (p,c) =
-                -- append to path while preserving NEL by construction
-                let pathNEL = appendNEL path pathSegment
-                 in faLi focusHandler c [("fa-trash-alt", delChange pathNEL)]
-                                        (UI.code # set text p # set UI.class_ "path-segment")
-                                        (renderWIPTFileTree (path ++ [pathSegment]) p c)
-
-          cs'
-        File (SnapshotFile blob commit prev) -> do
-          faUl #+ ( [ faLi focusHandler commit [] (string "src commit") UI.div
-                    ] ++
-                     (fmap (\x -> faLi focusHandler x [] (string "prev iteration") UI.div) prev
-                     ) ++
-                    [ renderWIPTBlob focusHandler [] blob
-                    ]
-                  )
-      element wrapper #+ [element x]
 
 -- construct a NEL from a list and an element,
 -- but with the element appended to the list instead of prepended
@@ -539,25 +416,6 @@ setup root = void $ do
   modalRoot <- UI.div -- not infra because often invisible, infra controls display
 
 
-
-  let handleSpawnPopup (SpawnError s) = void $ do
-        _ <- element modalRoot # set children []
-        element modalRoot #+ [ drawModal "error!" [string s] ]
-
-      handleSpawnPopup (SpawnRequestText s act) = void $ do
-        _ <- element modalRoot # set children []
-        inputElem <- UI.input # withClass ["aesthetic-windows-95-text-input"]
-        on UI.sendValue inputElem $ \input -> do
-          _ <- element modalRoot # set children []
-          -- NOTE: this must be _after_ the above line, b/c it may spawn subsequent modal dialogs
-          act input
-        _ <- element modalRoot #+ [drawModal s [ string "req: "
-                                               , element inputElem
-                                               ]
-                                  ]
-        UI.setFocus inputElem
-
-
   let popError :: NonEmpty MergeError -> UI ()
       popError e = liftIO $ popupHandler $ SpawnError $ show e
 
@@ -582,7 +440,6 @@ setup root = void $ do
                                , branchBrowser commitSnapshotIndex blobStore popupHandler bs focusChangeHandler updateBranchStateHandler
                                ]
 
-
   let redrawMergeTrie mt = void $ do
         ipcOrC <- liftIO $ atomically $ do
           mipc <- readTVar inProgressCommitTVar
@@ -592,7 +449,7 @@ setup root = void $ do
               Right . snd <$> getCurrentBranch
 
         _ <- element mergeTrieRoot # set children []
-        element mergeTrieRoot #+ [browseMergeTrie modifyMergeTrieHandler focusChangeHandler minimizations ipcOrC mt]
+        element mergeTrieRoot #+ [WorkingMergeTrie.browseMergeTrie modifyMergeTrieHandler focusChangeHandler minimizations ipcOrC mt]
 
   let handleErr m = do
         x <- runExceptT m
@@ -705,7 +562,7 @@ setup root = void $ do
 
 
   -- discarded return value deregisters handler
-  _ <- onEvent popupEvent handleSpawnPopup
+  _ <- onEvent popupEvent (Modal.handleSpawnPopup modalRoot)
 
   -- discarded return value deregisters handler
   _ <- onEvent modifyMergeTrieEvent handleMMTE
