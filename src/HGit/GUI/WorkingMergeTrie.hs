@@ -8,7 +8,8 @@ module HGit.GUI.WorkingMergeTrie where
 import           Control.Concurrent.STM
 import           Data.Functor.Compose
 import           Data.Functor.Const
-import           Data.Functor.Foldable (Fix(..), cata)
+import           Data.Functor.Foldable (cata)
+import           Data.Fix (Fix(..))
 import           Data.List.NonEmpty (NonEmpty, nonEmpty)
 import           Data.Singletons.TH (sing)
 import qualified Data.Map as Map

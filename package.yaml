@@ -38,6 +38,7 @@ dependencies:
   - containers
   - cryptonite
   - bytestring
+  - data-fix
   - directory
   - deriving-compat
   - free
@@ -45,6 +46,9 @@ dependencies:
   - hedgehog
   - memory
   - mtl
+  - mu-grpc-client
+  - mu-protobuf
+  - mu-schema
   - optparse-applicative
   - recursion-schemes
   - safe-exceptions

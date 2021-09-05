@@ -4,6 +4,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
+
 
 module HGit.Core.Types
   ( module HGit.Core.Types
@@ -266,7 +268,6 @@ commit3 = Term $ Commit "c3: merge" [resolvingChange] parents
   where
     parents = commit1 :| [commit2]
     resolvingChange = add ("baz" :| []) . Term $ Blob "baz3"
-
 
 
 

@@ -17,7 +17,8 @@ import           Control.Monad.Except
 import qualified Data.Foldable as Foldable
 import           Data.Functor.Compose
 import qualified Data.Functor.Foldable as FF
-import           Data.Functor.Foldable (Fix(..), para, cata)
+import           Data.Functor.Foldable (para, cata)
+import           Data.Fix (Fix(..))
 import           Data.List.NonEmpty (NonEmpty, toList, nonEmpty)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -116,7 +117,7 @@ resolveMergeTrie c mt = either (\e -> Left $ convertErrs $ cata f e []) Right x
       -> [Path]
       -> [MergeError]
     f (Compose (Left _)) _ = []
-    f (Compose (Right (Compose (me, mt'@MergeTrie{..})))) path =
+    f (Compose (Right (Compose (me, mt'@MergeTrie{})))) path =
       let me' = maybe [] (\e -> [ErrorAtPath path e]) me
        in Foldable.fold (g path <$> Map.toList (mtChildren mt')) ++ me'
 

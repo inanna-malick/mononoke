@@ -1,8 +1,40 @@
-resolver: lts-13.8
+resolver: lts-17.8
+allow-newer: true
 packages:
 - .
 
 extra-deps:
-- github: obsidiansystems/aeson-gadt-th
-  commit: 0f8263aa5fb59d296874bd505551c81fedb115d1
-- ../threepenny-gui-flexbox
+# - github: obsidiansystems/aeson-gadt-th
+#   commit: 0f8263aa5fb59d296874bd505551c81fedb115d1
+- github:  higherkindness/mu-haskell
+  commit: fcdb5d4215d7c4dee777d588c0e74f74e5d19476
+  subdirs:
+    - grpc/client
+    - grpc/common
+    - grpc/server
+    - core/optics
+    - core/schema
+    - core/rpc
+    - adapter/avro
+    - adapter/protobuf
+    - compendium-client
+
+- ../threepenny-gui-flexbox # FIXME - should NOT be against local fs
+# - mu-grpc-client-0.4.0.1@sha256:b09dcf69f0650e0cfd86d6f67544a6350590574f4757f5ee459c57828c3a41ff,2079
+
+- http2-client-0.9.0.0
+- http2-client-grpc-0.8.0.0
+- http2-grpc-proto3-wire-0.1.0.0
+- http2-grpc-types-0.5.0.0
+- proto3-wire-1.2.0
+- warp-grpc-0.4.0.1
+- hw-kafka-conduit-2.7.0
+- wai-middleware-prometheus-1.0.0
+- graphql-0.11.0.0
+
+- aeson-gadt-th-0.2.5.0@sha256:58e433e1648237c951f8c1aa78640082ca10ff7b5c2554e6db0c5fec72862514,2009
+
+- dependent-map-0.4.0.0@sha256:ca2b131046f4340a1c35d138c5a003fe4a5be96b14efc26291ed35fd08c62221,1657
+- dependent-sum-0.7.1.0@sha256:0e419237f5b86da3659772afff9cab355c0f8d5b3fdb15a5b30e673d8dc83941,2147
+- dependent-sum-template-0.1.0.3@sha256:0bbbacdfbd3abf2a15aaf0cf2c27e5bdd159b519441fec39e1e6f2f54424adde,1682
+- constraints-extras-0.3.1.0@sha256:c70fcf437e1d640cfd50a8eda1db47a64e49c96857e08fd0d8c438327d908ac1,1846

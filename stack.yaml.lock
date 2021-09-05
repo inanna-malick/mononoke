@@ -5,22 +5,223 @@
 
 packages:
 - completed:
-    size: 8928
-    url: https://github.com/obsidiansystems/aeson-gadt-th/archive/0f8263aa5fb59d296874bd505551c81fedb115d1.tar.gz
-    cabal-file:
-      size: 1545
-      sha256: 8310b291138560dee01f3a5497ee196b9b93abb44955d43f1df5c1669ed336fe
-    name: aeson-gadt-th
-    version: 0.2.1.1
-    sha256: d9a23022643858d6ef6444ab019e1a8a5d76759440a1d094116aed1f6b1ce485
+    size: 291942
+    subdir: grpc/client
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: mu-grpc-client
+    version: 0.4.0.1
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
     pantry-tree:
-      size: 548
-      sha256: 081d2371acea86eee317e796f01eca6c33f780c78e7e5ac70fdfbe9aa3eaf47d
+      size: 608
+      sha256: 66519f3bae9de2e4905dea8db62fe77f5226a60250eeaaf6d1990a7a93f5e0d6
   original:
-    url: https://github.com/obsidiansystems/aeson-gadt-th/archive/0f8263aa5fb59d296874bd505551c81fedb115d1.tar.gz
+    subdir: grpc/client
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    size: 291942
+    subdir: grpc/common
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: mu-grpc-common
+    version: 0.4.0.0
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
+    pantry-tree:
+      size: 327
+      sha256: db0f4ccc2e187935304eab1a93b17b123cc9388d6423e8a1b4b27c511f5b342f
+  original:
+    subdir: grpc/common
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    size: 291942
+    subdir: grpc/server
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: mu-grpc-server
+    version: 0.5.0.0
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
+    pantry-tree:
+      size: 381
+      sha256: 97294a13561da557a9cb76039f1880e7924cf823b1fea05e37aa7a876581e0e8
+  original:
+    subdir: grpc/server
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    size: 291942
+    subdir: core/optics
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: mu-optics
+    version: 0.3.0.1
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
+    pantry-tree:
+      size: 218
+      sha256: afb1401c1501f64984dc9f9126acb6558c2d4e6bc16fe53f42df4d16af2ba61e
+  original:
+    subdir: core/optics
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    size: 291942
+    subdir: core/schema
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: mu-schema
+    version: 0.3.1.1
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
+    pantry-tree:
+      size: 1107
+      sha256: 8a724c6dc4738c60af661a2a82cc47bd1b6d44c4d25bba3a27ee5f5cd1f2c225
+  original:
+    subdir: core/schema
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    size: 291942
+    subdir: core/rpc
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: mu-rpc
+    version: 0.5.0.0
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
+    pantry-tree:
+      size: 491
+      sha256: 6cb0576fbe608e4c0661632fd39a726d728de8518aa2b968e1f9f096454fa34e
+  original:
+    subdir: core/rpc
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    size: 291942
+    subdir: adapter/avro
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: mu-avro
+    version: 0.4.0.3
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
+    pantry-tree:
+      size: 709
+      sha256: 723e1aaaf1a681fcd5836192f52cc741759402f038d39110a1708ae9b4f3e9c0
+  original:
+    subdir: adapter/avro
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    size: 291942
+    subdir: adapter/protobuf
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: mu-protobuf
+    version: 0.4.1.0
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
+    pantry-tree:
+      size: 885
+      sha256: 9952506019c5237e474db3021280b80478716c38941b13a88de090c011703c34
+  original:
+    subdir: adapter/protobuf
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    size: 291942
+    subdir: compendium-client
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+    name: compendium-client
+    version: 0.2.1.1
+    sha256: 1081b82951289d6d10b4c67cb2ccc8e791eea1883d77a89445039256bfd3b153
+    pantry-tree:
+      size: 227
+      sha256: ee844329c1d1e176384c911f77d025aa064609867ec16f7d4606b89120d95c0e
+  original:
+    subdir: compendium-client
+    url: https://github.com/higherkindness/mu-haskell/archive/fcdb5d4215d7c4dee777d588c0e74f74e5d19476.tar.gz
+- completed:
+    hackage: http2-client-0.9.0.0@sha256:b8885c89adcc8b9d4ebb9abf6ae0ac6336e3fdf947a2b1f2b95c4e2c8c4acf01,2685
+    pantry-tree:
+      size: 853
+      sha256: d7a1be66eb14e84cfedd87e8363e406abb244bb74b742e8f0141efce27545008
+  original:
+    hackage: http2-client-0.9.0.0
+- completed:
+    hackage: http2-client-grpc-0.8.0.0@sha256:5bea1edf5fa3572155f55c5b38cfab7063cbde613702898986c26d70bc9f3f9e,1861
+    pantry-tree:
+      size: 454
+      sha256: 234f9a5e2c117c615b63b657af6b331df0533e173d09f0c91b279ac90c54d4de
+  original:
+    hackage: http2-client-grpc-0.8.0.0
+- completed:
+    hackage: http2-grpc-proto3-wire-0.1.0.0@sha256:4f6c0d27048756155b82ebf7385a20cc8241c7bd854e96d1dd6a1827e75fa410,1504
+    pantry-tree:
+      size: 341
+      sha256: d07d5bb883860e3bf928c00312df133a4c195c99bb397865bd67f433f75387b8
+  original:
+    hackage: http2-grpc-proto3-wire-0.1.0.0
+- completed:
+    hackage: http2-grpc-types-0.5.0.0@sha256:4d34edc06a48496130f19245817a7cd7ea15c78ac8815570c3795ffc4503cf27,1445
+    pantry-tree:
+      size: 405
+      sha256: 3a1a94b87acd230b2f750f0077dc47177f37e46a2984b5764390207a83c4d5e4
+  original:
+    hackage: http2-grpc-types-0.5.0.0
+- completed:
+    hackage: proto3-wire-1.2.0@sha256:898c88614ef328fe74d6abc153387a30855af7ccfcebf3b419681133e0fb9291,2837
+    pantry-tree:
+      size: 1009
+      sha256: 43009bc2c01725358b40f590bc899f0edbece516090944b6015d40178781759c
+  original:
+    hackage: proto3-wire-1.2.0
+- completed:
+    hackage: warp-grpc-0.4.0.1@sha256:3859190e4fa23b944cf93ac691b3cec78c2adf4eaff6a4e8070c89fd17915add,1759
+    pantry-tree:
+      size: 709
+      sha256: f542ef3e7e03b9cd0b2c0e0c436ce4e68ab37f56195740639034cc3cd28a6b9f
+  original:
+    hackage: warp-grpc-0.4.0.1
+- completed:
+    hackage: hw-kafka-conduit-2.7.0@sha256:5fb44171a222fb2d6bfdf41537d778643d74eb32c640fed2edb082e8cb87f149,2871
+    pantry-tree:
+      size: 552
+      sha256: 29fcfc03b8f818f12c52973cd488504d39be616c4e9c456a240f1252683fcd12
+  original:
+    hackage: hw-kafka-conduit-2.7.0
+- completed:
+    hackage: wai-middleware-prometheus-1.0.0@sha256:1625792914fb2139f005685be8ce519111451cfb854816e430fbf54af46238b4,1314
+    pantry-tree:
+      size: 307
+      sha256: 6d64803c639ed4c7204ea6fab0536b97d3ee16cdecb9b4a883cd8e56d3c61402
+  original:
+    hackage: wai-middleware-prometheus-1.0.0
+- completed:
+    hackage: graphql-0.11.0.0@sha256:64afbf2bd709307a14ddb837089d9024effd02e7ad9006fcdc421e7f62261c16,3435
+    pantry-tree:
+      size: 2947
+      sha256: 71602e7cd8d7ea1f41d4889673fc2fd9489a3027e2b0c5f6ccdf1d7e4278f7e9
+  original:
+    hackage: graphql-0.11.0.0
+- completed:
+    hackage: aeson-gadt-th-0.2.5.0@sha256:58e433e1648237c951f8c1aa78640082ca10ff7b5c2554e6db0c5fec72862514,2009
+    pantry-tree:
+      size: 445
+      sha256: ce2063ed4c314d74cee9122edf59b7400c54d4c1ae1a04be183a7c2b7adf0de8
+  original:
+    hackage: aeson-gadt-th-0.2.5.0@sha256:58e433e1648237c951f8c1aa78640082ca10ff7b5c2554e6db0c5fec72862514,2009
+- completed:
+    hackage: dependent-map-0.4.0.0@sha256:ca2b131046f4340a1c35d138c5a003fe4a5be96b14efc26291ed35fd08c62221,1657
+    pantry-tree:
+      size: 551
+      sha256: 5defa30010904d2ad05a036f3eaf83793506717c93cbeb599f40db1a3632cfc5
+  original:
+    hackage: dependent-map-0.4.0.0@sha256:ca2b131046f4340a1c35d138c5a003fe4a5be96b14efc26291ed35fd08c62221,1657
+- completed:
+    hackage: dependent-sum-0.7.1.0@sha256:0e419237f5b86da3659772afff9cab355c0f8d5b3fdb15a5b30e673d8dc83941,2147
+    pantry-tree:
+      size: 290
+      sha256: 009601e5d33e835c7a384e240c5c6ad12643bce9c54b2a0b07201daee3380e51
+  original:
+    hackage: dependent-sum-0.7.1.0@sha256:0e419237f5b86da3659772afff9cab355c0f8d5b3fdb15a5b30e673d8dc83941,2147
+- completed:
+    hackage: dependent-sum-template-0.1.0.3@sha256:0bbbacdfbd3abf2a15aaf0cf2c27e5bdd159b519441fec39e1e6f2f54424adde,1682
+    pantry-tree:
+      size: 436
+      sha256: 32eeadeb991a290a1da41ce7e995dee7d38ebba3bd3e53ea8074c32c086701fd
+  original:
+    hackage: dependent-sum-template-0.1.0.3@sha256:0bbbacdfbd3abf2a15aaf0cf2c27e5bdd159b519441fec39e1e6f2f54424adde,1682
+- completed:
+    hackage: constraints-extras-0.3.1.0@sha256:c70fcf437e1d640cfd50a8eda1db47a64e49c96857e08fd0d8c438327d908ac1,1846
+    pantry-tree:
+      size: 595
+      sha256: f29920355b21ef7a7218573591aa740b01b3d1fb3b0bbd66e2f726d091d56fb2
+  original:
+    hackage: constraints-extras-0.3.1.0@sha256:c70fcf437e1d640cfd50a8eda1db47a64e49c96857e08fd0d8c438327d908ac1,1846
 snapshots:
 - completed:
-    size: 495203
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/8.yaml
-    sha256: 91139b0de6b320b13e27d5e6e6c368e239974b06fb9dc86d8d96da08697972ac
-  original: lts-13.8
+    size: 565720
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/8.yaml
+    sha256: 76bf8992ff8dfe6eda9c02f81866138c2369344d5011ab39ae403457c4448b03
+  original: lts-17.8

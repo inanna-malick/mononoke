@@ -9,7 +9,8 @@
 module HGit.Core.MergeTrie.Render where
 
 --------------------------------------------
-import           Data.Functor.Foldable (Fix(..), cata)
+import           Data.Functor.Foldable (cata)
+import           Data.Fix (Fix(..))
 import qualified Data.Map.Strict as Map
 --------------------------------------------
 import           HGit.Core.Types

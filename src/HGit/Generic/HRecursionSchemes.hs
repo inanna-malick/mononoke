@@ -3,6 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE StandaloneKindSignatures #-}
 
 -- | mostly sourced from COMPDATA, with added POLYKINDS/SING stuff from me, TODO UPSTREAM or use original
 module HGit.Generic.HRecursionSchemes where
@@ -17,8 +18,8 @@ import           Data.Singletons.TH
 
 -- | NOTE: the below 3 functions are the only significant divergence from compdata
 type NatM m f g = forall i. SingI i => f i -> m (g i)
-type f :-> g = forall (i :: k) . SingI i => f i -> g i
-type f :=> a = forall (i :: k) . SingI i => f i -> a
+type f :-> g = forall i . SingI i => f i -> g i
+type f :=> a = forall i . SingI i => f i -> a
 
 class HFunctor (h :: (k -> Type) -> k -> Type) where
     hfmap :: (f :-> g) -> h f :-> h g
