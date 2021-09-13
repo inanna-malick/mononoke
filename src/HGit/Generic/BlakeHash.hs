@@ -22,8 +22,9 @@ emptyHash = doHash [mempty]
 
 -- | Hash pointer (points to value from which hash was derived)
 -- , digests tagged with hash alg (blake2b_256) at type level
-newtype RawBlakeHash = RawBlakeHash { unRawBlakeHash :: CH.Digest CHA.Blake2b_256 }
+newtype RawBlakeHash = RawBlakeHash { unRawBlakeHash :: CH.Digest CHA.Blake2s_256 }
   deriving (Eq, Ord)
+
 
 hashToText :: RawBlakeHash -> Text
 hashToText = decodeUtf8 . B16.encode . BA.pack . BA.unpack . unRawBlakeHash
@@ -70,4 +71,4 @@ doHash = Const . doHash'
 
 doHash' :: [ByteString] -> RawBlakeHash
 doHash' = RawBlakeHash . CH.hashFinalize
-       . CH.hashUpdates (CH.hashInit :: CH.Context CHA.Blake2b_256)
+       . CH.hashUpdates (CH.hashInit :: CH.Context CHA.Blake2s_256)

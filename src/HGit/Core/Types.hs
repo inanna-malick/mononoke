@@ -31,6 +31,10 @@ import qualified Data.Text as T
 import           HGit.Generic.BlakeHash
 import           HGit.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
+-- import qualified HGit.Client as Client
+--------------------------------------------
+
+
 
 $(singletons [d|
   data MTag = SnapshotT | FileTree | CommitT | BlobT
@@ -119,10 +123,16 @@ deriveJSONGADT ''M
 
 
 
+
+
 -- CANNONICAL HASH FN, i guess (TODO: better?)
+-- 1. convert to blake3
+-- 2. convert to nodeP format
+-- 3. convert to proto format
+-- 4. then hash
 hashM :: M Hash :-> Hash
 hashM = Const . doHash' . pure . LB.toStrict . encode
-
+  -- where canonical = $ Client.toProtoM m
 
 
 
@@ -270,21 +280,6 @@ commit3 = Term $ Commit "c3: merge" [resolvingChange] parents
     resolvingChange = add ("baz" :| []) . Term $ Blob "baz3"
 
 
-
-
--- instance ExtractKeys M where
---   extractHashKeys (Snapshot tree orig parents) = [unHash tree, unHash orig] ++ fmap unHash parents
---   extractHashKeys (File blob lastMod prev) =
---     let prev' = fmap unHash prev
---      in [unHash blob, unHash lastMod] ++ prev'
-
---   extractHashKeys (Dir children) = unHash . snd <$> Map.toList children
---   extractHashKeys NullCommit = []
---   extractHashKeys (Commit _ changes parents) =
---     let unChangeHash (Add h) = [unHash h]
---         unChangeHash  Del    = []
---      in (changes >>= (unChangeHash . _change)) ++ toList (fmap unHash parents)
---   extractHashKeys (Blob _) = []
 
 
 instance HFunctor M where
