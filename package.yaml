@@ -31,7 +31,6 @@ default-extensions:
 dependencies:
   - base >=4.8
   - aeson
-  - aeson-gadt-th
   - base16-bytestring # used for hashes
   - base64-bytestring
   - clay
@@ -52,9 +51,6 @@ dependencies:
   - optparse-applicative
   - recursion-schemes
   - safe-exceptions
-  - servant
-  - servant-client
-  - servant-server
   - singletons
   - split
   - stm
@@ -87,13 +83,13 @@ executable:
   dependencies:
     - hgit
 
-tests:
-  spec:
-    main: Spec.hs
-    source-dirs:
-      - test
-    dependencies:
-      - hspec
-      - hgit
-      - temporary
-    build-tools: hspec-discover
+# tests:
+#   spec:
+#     main: Spec.hs
+#     source-dirs:
+#       - test
+#     dependencies:
+#       - hspec
+#       - hgit
+#       - temporary
+#     build-tools: hspec-discover

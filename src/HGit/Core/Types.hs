@@ -5,6 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 
 
 module HGit.Core.Types
@@ -13,8 +14,8 @@ module HGit.Core.Types
   ) where
 
 
-import Data.Aeson.GADT.TH
 import Data.Aeson as AE
+import Data.Aeson.Types as AE
 import GHC.Generics
 --------------------------------------------
 import           Control.Concurrent.STM
@@ -31,9 +32,6 @@ import qualified Data.Text as T
 import           HGit.Generic.BlakeHash
 import           HGit.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
--- import qualified HGit.Client as Client
---------------------------------------------
-
 
 
 $(singletons [d|
@@ -118,23 +116,89 @@ data M a i where
     :: String -- TODO: use bytestring, currently string to simplify experimentations
     -> M a 'BlobT
 
-deriveJSONGADT ''M
 
 
-
-
-
-
--- CANNONICAL HASH FN, i guess (TODO: better?)
--- 1. convert to blake3
--- 2. convert to nodeP format
--- 3. convert to proto format
--- 4. then hash
+-- -- CANNONICAL HASH FN, i guess (TODO: better?)
+-- -- 1. convert to blake3
+-- -- 2. convert to nodeP format
+-- -- 3. convert to proto format
+-- -- 4. then hash
 hashM :: M Hash :-> Hash
-hashM = Const . doHash' . pure . LB.toStrict . encode
+hashM = Const . doHash' . pure . LB.toStrict . AE.encode
   -- where canonical = $ Client.toProtoM m
 
+instance ToJSON x => ToJSON (M (Const x) i) where
+  toJSON (Snapshot ft oc ps) =
+    object [ "file_tree" .= ft
+           , "orig_commit" .= oc
+           , "parent_snapshots" .= ps
+           ]
+  toJSON (File sf) =
+    object [ "tag" .= ("file" :: T.Text)
+           , "contents" .= sf
+           ]
+  toJSON (Dir fs) =
+    object [ "tag" .= ("dir" :: T.Text)
+           , "contents" .= fs
+           ]
+  toJSON NullCommit = AE.Null
+  toJSON (Commit m cs ps) =
+    object [ "msg" .= m
+           , "changes" .= cs
+           , "parent_commits" .= ps
+           ]
+  toJSON (Blob s) = AE.String $ T.pack s
 
+
+instance FromJSON x => FromJSON (M (Const x) 'FileTree) where
+    parseJSON (AE.Object v) = do
+      typ :: T.Text <- v .: "type"
+      case typ of
+        "dir"  -> Dir  <$> v .: "contents"
+        "file" -> File <$> v .: "contents"
+        t -> fail $ "unexpected FileTree type: " ++ T.unpack t
+    parseJSON invalid    =
+        prependFailure "parsing FileTree failed, "
+            (typeMismatch "Object" invalid)
+
+instance FromJSON x => FromJSON (M (Const x) 'SnapshotT) where
+    parseJSON (AE.Object v) = Snapshot
+        <$> v .: "file_tree"
+        <*> v .: "orig_commit"
+        <*> v .: "parent_snapshots"
+    parseJSON invalid    =
+        prependFailure "parsing Snapshot failed, "
+            (typeMismatch "Object" invalid)
+
+instance FromJSON x => FromJSON (M (Const x) 'CommitT) where
+    parseJSON (AE.Null) = pure NullCommit
+    parseJSON (AE.Object v) = Commit
+        <$> v .: "msg"
+        <*> v .: "changes"
+        <*> v .: "parent_commits"
+    parseJSON invalid    =
+        prependFailure "parsing blob failed, "
+            (typeMismatch "Null or Object" invalid)
+
+
+instance FromJSON x => FromJSON (M (Const x) 'BlobT) where
+    parseJSON (AE.String v) = pure $ Blob $ T.unpack v
+
+    parseJSON invalid    =
+        AE.prependFailure "parsing blob failed, "
+            (AE.typeMismatch "String" invalid)
+
+decodeM
+  :: forall (i :: MTag) x
+   . FromJSON x
+  => Sing i
+  -> LB.ByteString
+  -> String `Either` (M (Const x) i)
+decodeM s = case s of
+  SSnapshotT -> AE.eitherDecode
+  SFileTree  -> AE.eitherDecode
+  SCommitT   -> AE.eitherDecode
+  SBlobT     -> AE.eitherDecode
 
 
 
@@ -396,3 +460,6 @@ stmStore tvar
         putBlobStore sing h mh bs
       pure h
   }
+
+
+

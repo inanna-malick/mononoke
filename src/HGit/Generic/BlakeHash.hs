@@ -11,7 +11,6 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Base16 as B16
 import           Data.Text (Text, unpack, pack)
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
-import           Servant.API
 --------------------------------------------
 
 
@@ -37,16 +36,12 @@ textToHash = fmap RawBlakeHash . f . B16.decode . encodeUtf8
       | remainder == B.empty = CH.digestFromByteString x
       | otherwise = Nothing
 
--- no instance is defined for ToHttpApiData a => Const a x
-instance ToHttpApiData (Const RawBlakeHash x) where
-  toUrlPiece = hashToText . getConst
-
--- no instance is defined for FromHttpApiData a => Const a x
-instance FromHttpApiData (Const RawBlakeHash x) where
-  parseUrlPiece = maybe (Left "unable to parse hash as base16") (Right . Const) . textToHash
+bytesToHash :: ByteString -> Maybe RawBlakeHash
+bytesToHash = fmap RawBlakeHash . CH.digestFromByteString
 
 instance Show RawBlakeHash where
   show x = "#[" ++ unpack (hashToText x) ++ "]"
+
 
 instance AE.ToJSON RawBlakeHash where
   toJSON = AE.String . hashToText

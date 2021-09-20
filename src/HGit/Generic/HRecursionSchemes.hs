@@ -49,6 +49,14 @@ unCxt :: f (Cxt h f a) :-> x
 unCxt f _ (Term x) = f x
 unCxt _ f (Hole x) = f x
 
+unCxtM :: NatM m (f (Cxt h f a)) x
+      -> NatM m a x
+      -> NatM m (Cxt h f a) x
+unCxtM f _ (Term x) = f x
+unCxtM _ f (Hole x) = f x
+
+
+
 type Context = Cxt 'WithHole
 
 type Term f = Cxt 'WithNoHole f (K () ())
@@ -88,6 +96,19 @@ type Coalg f a = a :-> f a
 ana :: forall f a. HFunctor f => Coalg f a -> (a :-> Term f)
 ana f = Term . hfmap (ana f) . f
 
+
+type CoalgPartial f a = a :-> HEither (f a) a
+
+anaPartial
+  :: forall f a
+   . HFunctor f
+  => CoalgPartial f a
+  -> (a :-> Context f a)
+anaPartial f = helper . f
+  where
+    helper (L fi) = Term $ hfmap (anaPartial f) fi
+    helper (R gi) = Hole gi
+
 type CoalgM m f a = NatM m a (f a)
 
 anaM
@@ -97,10 +118,41 @@ anaM
   -> NatM m a (Term f)
 anaM f = fmap Term . (>>= hmapM (anaM f)) . f
 
-type CVCoalg f a = a :-> f (Context f a)
+
+type CoalgPartialM m f a = NatM m a (HEither (f a) a)
+
+anaPartialM
+  :: forall m f a
+   . (HTraversable f, Monad m)
+  => CoalgPartialM m f a
+  -> NatM m a (Context f a)
+anaPartialM f a = f a >>= helper
+   where
+    helper :: NatM m (HEither (f a) a) (Context f a)
+    helper (L fi) = Term <$> hmapM (anaPartialM f) fi
+    helper (R gi) = pure $ Hole gi
+
+
+
+-- | Computation yielding partial Term with Hole
+type CVCoalg f a = a :-> (f (Context f a))
 
 futu :: forall f a . HFunctor f => CVCoalg f a -> a :-> Term f
 futu coa = ana (unCxt id coa) . Hole
+
+
+-- | Monadic computation yielding partial Term with Hole
+type CVCoalgM m f a = NatM m a (f (Context f a))
+
+
+-- | Higher Order Monadic Futumorphism
+futuM
+  :: forall m f a
+   . (HTraversable f, Monad m)
+  => CVCoalgM m f a
+  -> NatM m a (Term f)
+futuM coa = anaM (unCxtM pure coa) . Hole
+
 
 -- | ETC:
 
