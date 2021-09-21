@@ -12,7 +12,7 @@ module HGit.Generic.HRecursionSchemes where
 import           Data.Functor.Compose
 import           Data.Kind (Type)
 import           Data.Singletons
-import           Data.Singletons.TH
+import qualified Data.Singletons.TH
 --------------------------------------------
 
 
@@ -24,8 +24,8 @@ type f :=> a = forall i . SingI i => f i -> a
 class HFunctor (h :: (k -> Type) -> k -> Type) where
     hfmap :: (f :-> g) -> h f :-> h g
 
-newtype K a h i = K { getK :: a}
-  deriving (Eq, Ord, Show)
+
+data Uninhabited a
 
 instance (Functor f) => HFunctor (Compose f) where
   hfmap f (Compose xs) = Compose (fmap f xs)
@@ -33,33 +33,24 @@ instance (Functor f) => HFunctor (Compose f) where
 -- note: just the bit I need for hcataM/anaM
 class HTraversable t where
     hmapM :: (Monad m) => NatM m f g -> NatM m (t f) (t g)
+    htraverse :: Applicative f => NatM f a b -> NatM f (t a) (t b)
 
 instance (Traversable f) => HTraversable (Compose f) where
   hmapM nat (Compose xs) = Compose <$> traverse nat xs
+  htraverse nat (Compose xs)= Compose <$> traverse nat xs
 
-$(singletons [d| data CxtType = WithHole | WithNoHole |])
+$(Data.Singletons.TH.singletons [d| data CxtType = WithHole | WithNoHole |])
 
-data Cxt h f a i where
+data Cxt (h :: CxtType)
+         (f :: (k -> Type) -> k -> Type)
+         (a :: k -> Type)
+         (i :: k) where
     Term ::  f (Cxt h f a) i -> Cxt h f a i
     Hole :: a i -> Cxt 'WithHole f a i
 
-unCxt :: f (Cxt h f a) :-> x
-      -> a :-> x
-      -> Cxt h f a :-> x
-unCxt f _ (Term x) = f x
-unCxt _ f (Hole x) = f x
-
-unCxtM :: NatM m (f (Cxt h f a)) x
-      -> NatM m a x
-      -> NatM m (Cxt h f a) x
-unCxtM f _ (Term x) = f x
-unCxtM _ f (Hole x) = f x
-
-
 
 type Context = Cxt 'WithHole
-
-type Term f = Cxt 'WithNoHole f (K () ())
+type Term f = Cxt 'WithNoHole f Uninhabited
 
 unTerm :: Term f t -> f (Term f) t
 unTerm (Term t) = t
@@ -133,6 +124,18 @@ anaPartialM f a = f a >>= helper
     helper (R gi) = pure $ Hole gi
 
 
+unCxt :: f (Cxt h f a) :-> x
+      -> a :-> x
+      -> Cxt h f a :-> x
+unCxt f _ (Term x) = f x
+unCxt _ f (Hole x) = f x
+
+unCxtM :: NatM m (f (Cxt h f a)) x
+      -> NatM m a x
+      -> NatM m (Cxt h f a) x
+unCxtM f _ (Term x) = f x
+unCxtM _ f (Hole x) = f x
+
 
 -- | Computation yielding partial Term with Hole
 type CVCoalg f a = a :-> (f (Context f a))
@@ -163,7 +166,7 @@ instance HFunctor (Tagged x) where
 
 instance HTraversable (Tagged x) where
   hmapM nat (Tagged x y) = Tagged x <$> nat y
-
+  htraverse nat (Tagged x y)= Tagged x <$> nat y
 
 data HCompose f g e t = HC { getHC :: (f (g e) t) }
 infixr 7 `HCompose`
@@ -180,10 +183,7 @@ instance HFunctor (HEither f) where
   hfmap _ (L x) = L x
   hfmap f (R x) = R $ f x
 
-
-
--- TODO: investigate
--- NOTE: I have no idea why I left this comment here
--- incomplete instance, yolo, etc
 instance (HTraversable f, HTraversable g) => HTraversable (f `HCompose` g) where
-    hmapM nat (HC x) = HC <$> hmapM (hmapM nat) x
+  hmapM nat (HC x) = HC <$> hmapM (hmapM nat) x
+  htraverse nat (HC x)= HC <$> htraverse (htraverse nat) x
+

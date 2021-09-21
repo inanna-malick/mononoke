@@ -386,6 +386,20 @@ instance HTraversable M where
   hmapM _ (Blob x) = pure $ Blob x
 
 
+  htraverse f (Snapshot tree orig parents) =
+    Snapshot <$> f tree <*> f orig <*> traverse f parents
+  htraverse f (File (SnapshotFile blob lastMod prev)) =
+    File <$> (SnapshotFile <$> f blob <*> f lastMod <*> traverse f prev)
+  htraverse f (Dir children) =
+    Dir <$> traverse f children
+  htraverse _ NullCommit = pure NullCommit
+  htraverse f (Commit msg changes parents) =
+    let f' Change{..} = case _change of
+          Add blob -> Change _path <$> (fmap Add . f) blob
+          Del -> pure $ Change { _path = _path, _change = Del}
+     in Commit msg <$> traverse f' changes <*> traverse f parents
+  htraverse _ (Blob x) = pure $ Blob x
+
 
 
 
