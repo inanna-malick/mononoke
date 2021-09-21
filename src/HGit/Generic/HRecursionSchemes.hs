@@ -137,21 +137,21 @@ anaPartialM f a = f a >>= helper
 -- | Computation yielding partial Term with Hole
 type CVCoalg f a = a :-> (f (Context f a))
 
-futu :: forall f a . HFunctor f => CVCoalg f a -> a :-> Term f
-futu coa = ana (unCxt id coa) . Hole
+futa :: forall f a . HFunctor f => CVCoalg f a -> a :-> Term f
+futa coa = ana (unCxt id coa) . Hole
 
 
 -- | Monadic computation yielding partial Term with Hole
 type CVCoalgM m f a = NatM m a (f (Context f a))
 
 
--- | Higher Order Monadic Futumorphism
-futuM
+-- | Higher Order Monadic Futamorphism
+futaM
   :: forall m f a
    . (HTraversable f, Monad m)
   => CVCoalgM m f a
   -> NatM m a (Term f)
-futuM coa = anaM (unCxtM pure coa) . Hole
+futaM coa = anaM (unCxtM pure coa) . Hole
 
 
 -- | ETC:

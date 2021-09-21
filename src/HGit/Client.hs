@@ -9,7 +9,6 @@
 {-# language MultiParamTypeClasses      #-}
 {-# language OverloadedStrings          #-}
 {-# language PolyKinds                  #-}
-{-# language QuasiQuotes                #-}
 {-# language ScopedTypeVariables        #-}
 {-# language StandaloneDeriving         #-}
 {-# language TemplateHaskell            #-}
@@ -184,7 +183,7 @@ put client m = do
 getAll
   :: GrpcClient
   -> NatM (ExceptT String IO) BH.Hash (Term M)
-getAll c = futuM f
+getAll c = futaM f
   where
     f :: CVCoalgM (ExceptT String IO) M BH.Hash
     f (Const rh) = do
