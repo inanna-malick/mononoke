@@ -19,7 +19,7 @@ import Data.Aeson.Types as AE
 import GHC.Generics
 --------------------------------------------
 import           Control.Concurrent.STM
-import           Control.Monad.IO.Class
+import           Control.Monad.Except
 import           Data.Functor.Const (Const(..))
 import qualified Data.ByteString.Lazy as LB
 import           Data.Functor.Compose
@@ -30,6 +30,7 @@ import           Data.Singletons.TH
 import qualified Data.Text as T
 --------------------------------------------
 import           HGit.Generic.BlakeHash
+import qualified HGit.Generic.DAGStore as DAG
 import           HGit.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
@@ -191,14 +192,14 @@ instance FromJSON x => FromJSON (M (Const x) 'BlobT) where
 decodeM
   :: forall (i :: MTag) x
    . FromJSON x
-  => Sing i
-  -> LB.ByteString
+  => SingI i
+  => Const LB.ByteString i
   -> String `Either` (M (Const x) i)
-decodeM s = case s of
-  SSnapshotT -> AE.eitherDecode
-  SFileTree  -> AE.eitherDecode
-  SCommitT   -> AE.eitherDecode
-  SBlobT     -> AE.eitherDecode
+decodeM (Const b) = case sing @i of
+  SSnapshotT -> AE.eitherDecode b
+  SFileTree  -> AE.eitherDecode b
+  SCommitT   -> AE.eitherDecode b
+  SBlobT     -> AE.eitherDecode b
 
 
 
@@ -293,11 +294,7 @@ expandHash :: forall m. Monad m => StoreRead m -> Hash :-> (LMMT m)
 expandHash get = ana f
   where
     f :: Coalg (LMM m) Hash
-    f h = HC $ Tagged h $ HC $ Compose $ do
-      (HC (Compose mmh)) <- get h
-      case mmh of
-        Nothing -> error "broken link in STM storage"
-        Just mh -> pure mh
+    f h = HC $ Tagged h $ HC $ Compose $ get h
 
 
 uploadM :: Monad m => StoreWrite m -> NatM m (Term M) Hash
@@ -441,7 +438,8 @@ putBlobStore s h m bs = case s of
   SBlobT     -> bs { blobBS     = Map.insert h m $ blobBS     bs }
 
 
-type StoreRead  m = NatM m Hash ((Compose Maybe `HCompose` M) Hash)
+-- type StoreRead  m = NatM (MaybeT m) Hash (M Hash)
+type StoreRead  m = NatM m Hash (M Hash)
 type StoreWrite m = NatM m (M Hash) Hash
 
 data Store m
@@ -467,7 +465,7 @@ stmStore tvar
   = Store
   { sRead = \h -> do
       bs <- readTVar tvar
-      pure $ HC . Compose $ getBlobStore sing h bs
+      pure . maybe (error "hashmap lookup broken") id $ getBlobStore sing h bs
   , sWrite = \mh -> do
       let h = hashM mh
       modifyTVar tvar $ \bs ->
@@ -475,5 +473,23 @@ stmStore tvar
       pure h
   }
 
+
+getM
+  :: DAG.GrpcClient
+  -> NatM (ExceptT String IO) Hash (DAG.PartialTree M)
+getM client = DAG.get client decodeM
+
+getM'
+  :: DAG.GrpcClient
+  -> NatM (ExceptT String IO) Hash (M Hash)
+getM' client h = getM client h >>= pure . hfmap (unCxt (_tag . getHC) id)
+
+
+dagStore :: DAG.GrpcClient -> Store (ExceptT String IO)
+dagStore client
+  = Store
+  { sRead = getM' client
+  , sWrite = DAG.put client AE.encode
+  }
 
 
