@@ -1,6 +1,6 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module HGit.GUI.State where
+module Merkle.GUI.State where
 
 
 --------------------------------------------
@@ -8,8 +8,8 @@ import           Data.List.NonEmpty
 import           Data.Map (Map)
 import qualified Data.Map as Map
 --------------------------------------------
-import           HGit.Core.Types
-import           HGit.GUI.Core
+import           Merkle.Bonsai.Types
+import           Merkle.GUI.Core
 --------------------------------------------
 
 data BranchState m

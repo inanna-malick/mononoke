@@ -1,4 +1,4 @@
-module HGit.Generic.BlakeHash where
+module Merkle.Generic.BlakeHash where
 
 --------------------------------------------
 import           Control.Applicative (Const(..))

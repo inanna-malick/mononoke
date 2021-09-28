@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 
-module HGit.GUI.Elements where
+module Merkle.GUI.Elements where
 
 --------------------------------------------
 import           Control.Monad.Trans
@@ -8,8 +8,8 @@ import           Data.Singletons.TH (SingI, sing)
 import           Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny as UI
 --------------------------------------------
-import           HGit.Core.Types
-import           HGit.GUI.Core
+import           Merkle.Bonsai.Types
+import           Merkle.GUI.Core
 --------------------------------------------
 
 

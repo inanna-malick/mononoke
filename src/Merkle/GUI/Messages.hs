@@ -1,15 +1,15 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module HGit.GUI.Messages
-  ( module HGit.GUI.Messages
+module Merkle.GUI.Messages
+  ( module Merkle.GUI.Messages
   , SpawnPopup(..)
   , UpdateMergeTrie(..)
   ) where
 
 --------------------------------------------
-import           HGit.GUI.Core
-import           HGit.GUI.Modal
-import           HGit.GUI.WorkingMergeTrie
+import           Merkle.GUI.Core
+import           Merkle.GUI.Modal
+import           Merkle.GUI.WorkingMergeTrie
 --------------------------------------------
 
 

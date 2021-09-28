@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module HGit.GUI.CSS where
+module Merkle.GUI.CSS where
 
 import Prelude hiding (span, div)
 import Clay

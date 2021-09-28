@@ -64,18 +64,18 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
-    - HGit.Core.MergeTrie
-    - HGit.Core.Types
-    - HGit.GUI.BrowseWIPT
-    - HGit.GUI.CSS
-    - HGit.GUI.Elements
-    - HGit.GUI.Messages
-    - HGit.GUI.Modal
-    - HGit.GUI.WorkingMergeTrie
-    - HGit.GUI.State
-    - HGit.GUI.Core
-    - HGit.Generic.BlakeHash
-    - HGit.Generic.HRecursionSchemes
+    - Merkle.Bonsai.MergeTrie
+    - Merkle.Bonsai.Types
+    - Merkle.GUI.BrowseWIPT
+    - Merkle.GUI.CSS
+    - Merkle.GUI.Elements
+    - Merkle.GUI.Messages
+    - Merkle.GUI.Modal
+    - Merkle.GUI.WorkingMergeTrie
+    - Merkle.GUI.State
+    - Merkle.GUI.Bonsai
+    - Merkle.Generic.BlakeHash
+    - Merkle.Generic.HRecursionSchemes
 
 executable:
   main: Main.hs

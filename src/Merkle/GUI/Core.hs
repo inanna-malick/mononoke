@@ -1,12 +1,12 @@
 {-# LANGUAGE TypeFamilies #-}
 
-module HGit.GUI.Core where
+module Merkle.GUI.Core where
 
 --------------------------------------------
 import           Data.Singletons
 -- import           Reactive.Threepenny (Event, Handler)
 --------------------------------------------
-import           HGit.Core.Types
+import           Merkle.Bonsai.Types
 --------------------------------------------
 
 

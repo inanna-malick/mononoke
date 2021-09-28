@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module HGit.GUI.WorkingMergeTrie where
+module Merkle.GUI.WorkingMergeTrie where
 
 --------------------------------------------
 import           Control.Concurrent.STM
@@ -16,14 +16,14 @@ import qualified Data.Map as Map
 import           Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny as UI
 --------------------------------------------
-import           HGit.Core.MergeTrie
-import qualified HGit.Core.Types.Render
-import           HGit.Core.Types
-import           HGit.GUI.BrowseWIPT
-import           HGit.GUI.Core
-import           HGit.GUI.Elements
-import           HGit.GUI.State
-import           HGit.Generic.HRecursionSchemes
+import           Merkle.Bonsai.MergeTrie
+import qualified Merkle.Bonsai.Types.Render
+import           Merkle.Bonsai.Types
+import           Merkle.GUI.BrowseWIPT
+import           Merkle.GUI.Core
+import           Merkle.GUI.Elements
+import           Merkle.GUI.State
+import           Merkle.Generic.HRecursionSchemes
 --------------------------------------------
 
 
@@ -40,8 +40,8 @@ instance Show (UpdateMergeTrie m) where
         ctmapShim _ Del = Del
         cmapShim f Change{..} = Change _path $ ctmapShim f _change
      in mconcat [ "ApplyChange: "
-                , unlines $ HGit.Core.Types.Render.renderChange
-                          $ cmapShim (Const . HGit.Core.Types.Render.renderWIPT)
+                , unlines $ Merkle.Bonsai.Types.Render.renderChange
+                          $ cmapShim (Const . Merkle.Bonsai.Types.Render.renderWIPT)
                           $ Change p c
                 ]
   show (RemoveChange p) = "RemoveChange: " ++ show p

@@ -7,7 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
-module HGit.Core.MergeTrie where
+module Merkle.Bonsai.MergeTrie where
 
 
 --------------------------------------------
@@ -24,8 +24,8 @@ import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Map.Merge.Strict
 --------------------------------------------
-import           HGit.Core.Types
-import           HGit.Generic.HRecursionSchemes
+import           Merkle.Bonsai.Types
+import           Merkle.Generic.HRecursionSchemes
 --------------------------------------------
 
 -- | represents assertions from N snapshots

@@ -24,17 +24,17 @@ import           Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny as UI
 import           Graphics.UI.Threepenny.Ext.Flexbox
 --------------------------------------------
-import           HGit.Core.Types
-import           HGit.Core.MergeTrie
-import           HGit.GUI.CSS
-import           HGit.GUI.Core
-import           HGit.GUI.Elements
-import           HGit.GUI.State
-import qualified HGit.GUI.Modal as Modal
-import qualified HGit.GUI.WorkingMergeTrie as WorkingMergeTrie
-import           HGit.GUI.Messages
-import           HGit.Generic.BlakeHash
-import           HGit.Generic.HRecursionSchemes
+import           Merkle.Bonsai.Types
+import           Merkle.Bonsai.MergeTrie
+import           Merkle.GUI.CSS
+import           Merkle.GUI.Core
+import           Merkle.GUI.Elements
+import           Merkle.GUI.State
+import qualified Merkle.GUI.Modal as Modal
+import qualified Merkle.GUI.WorkingMergeTrie as WorkingMergeTrie
+import           Merkle.GUI.Messages
+import           Merkle.Generic.BlakeHash
+import           Merkle.Generic.HRecursionSchemes
 --------------------------------------------
 
 

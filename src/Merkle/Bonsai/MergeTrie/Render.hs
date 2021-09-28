@@ -6,17 +6,17 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# OPTIONS_GHC -fwarn-incomplete-patterns #-}
 
-module HGit.Core.MergeTrie.Render where
+module Merkle.Bonsai.MergeTrie.Render where
 
 --------------------------------------------
 import           Data.Functor.Foldable (cata)
 import           Data.Fix (Fix(..))
 import qualified Data.Map.Strict as Map
 --------------------------------------------
-import           HGit.Core.Types
-import           HGit.Core.Types.Render (renderWIPT)
-import           HGit.Core.MergeTrie
-import           HGit.Render.Utils
+import           Merkle.Bonsai.Types
+import           Merkle.Bonsai.Types.Render (renderWIPT)
+import           Merkle.Bonsai.MergeTrie
+import           Merkle.Render.Utils
 --------------------------------------------
 
 

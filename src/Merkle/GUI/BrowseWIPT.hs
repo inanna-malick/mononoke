@@ -3,7 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module HGit.GUI.BrowseWIPT where
+module Merkle.GUI.BrowseWIPT where
 
 --------------------------------------------
 import           Control.Concurrent.STM
@@ -19,11 +19,11 @@ import           Data.Singletons.TH (SingI, sing)
 import           Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny as UI
 --------------------------------------------
-import           HGit.Core.Types
-import           HGit.GUI.Core
-import           HGit.GUI.Elements
-import           HGit.Generic.BlakeHash
-import           HGit.Generic.HRecursionSchemes
+import           Merkle.Bonsai.Types
+import           Merkle.GUI.Core
+import           Merkle.GUI.Elements
+import           Merkle.Generic.BlakeHash
+import           Merkle.Generic.HRecursionSchemes
 --------------------------------------------
 
 

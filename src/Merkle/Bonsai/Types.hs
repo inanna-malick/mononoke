@@ -8,8 +8,8 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 
 
-module HGit.Core.Types
-  ( module HGit.Core.Types
+module Merkle.Bonsai.Types
+  ( module Merkle.Bonsai.Types
   , Hash
   ) where
 
@@ -29,9 +29,9 @@ import qualified Data.Map.Strict as Map
 import           Data.Singletons.TH
 import qualified Data.Text as T
 --------------------------------------------
-import           HGit.Generic.BlakeHash
-import qualified HGit.Generic.DAGStore as DAG
-import           HGit.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
+import           Merkle.Generic.BlakeHash
+import qualified Merkle.Generic.DAGStore as DAG
+import           Merkle.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
 
@@ -119,7 +119,7 @@ data M a i where
 
 
 
--- -- CANNONICAL HASH FN, i guess (TODO: better?)
+-- -- NONCANNONICAL HASH FN lmao TODO remove
 -- -- 1. convert to blake3
 -- -- 2. convert to nodeP format
 -- -- 3. convert to proto format

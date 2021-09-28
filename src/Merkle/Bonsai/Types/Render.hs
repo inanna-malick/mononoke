@@ -5,7 +5,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module HGit.Core.Types.Render where
+module Merkle.Bonsai.Types.Render where
 
 
 --------------------------------------------
@@ -16,9 +16,9 @@ import           Data.List.NonEmpty (toList)
 import qualified Data.Map.Strict as Map
 import           Data.Singletons.TH
 --------------------------------------------
-import           HGit.Render.Utils
-import           HGit.Core.Types
-import           HGit.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
+import           Merkle.Render.Utils
+import           Merkle.Bonsai.Types
+import           Merkle.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
 --------------------------------------------
 
 

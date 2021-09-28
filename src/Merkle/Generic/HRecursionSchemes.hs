@@ -6,7 +6,7 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 
 -- | mostly sourced from COMPDATA, with added POLYKINDS/SING stuff from me, TODO UPSTREAM or use original
-module HGit.Generic.HRecursionSchemes where
+module Merkle.Generic.HRecursionSchemes where
 
 --------------------------------------------
 import           Data.Functor.Compose
@@ -17,6 +17,7 @@ import qualified Data.Singletons.TH
 
 
 -- | NOTE: the below 3 functions are the only significant divergence from compdata
+-- | NOTE: other divergences include various helper functions and aesthetic modifications
 type NatM m f g = forall i. SingI i => f i -> m (g i)
 type f :-> g = forall i . SingI i => f i -> g i
 type f :=> a = forall i . SingI i => f i -> a
@@ -24,13 +25,9 @@ type f :=> a = forall i . SingI i => f i -> a
 class HFunctor (h :: (k -> Type) -> k -> Type) where
     hfmap :: (f :-> g) -> h f :-> h g
 
-
-data Uninhabited a
-
 instance (Functor f) => HFunctor (Compose f) where
   hfmap f (Compose xs) = Compose (fmap f xs)
 
--- note: just the bit I need for hcataM/anaM
 class HTraversable t where
     hmapM :: (Monad m) => NatM m f g -> NatM m (t f) (t g)
     htraverse :: Applicative f => NatM f a b -> NatM f (t a) (t b)
@@ -38,6 +35,8 @@ class HTraversable t where
 instance (Traversable f) => HTraversable (Compose f) where
   hmapM nat (Compose xs) = Compose <$> traverse nat xs
   htraverse nat (Compose xs)= Compose <$> traverse nat xs
+
+data Uninhabited a
 
 $(Data.Singletons.TH.singletons [d| data CxtType = WithHole | WithNoHole |])
 
@@ -143,10 +142,8 @@ type CVCoalg f a = a :-> (f (Context f a))
 futa :: forall f a . HFunctor f => CVCoalg f a -> a :-> Term f
 futa coa = ana (unCxt id coa) . Hole
 
-
 -- | Monadic computation yielding partial Term with Hole
 type CVCoalgM m f a = NatM m a (f (Context f a))
-
 
 -- | Higher Order Monadic Futamorphism
 futaM

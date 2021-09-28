@@ -1,13 +1,13 @@
 {-# LANGUAGE RecordWildCards #-}
 
-module HGit.GUI.Modal where
+module Merkle.GUI.Modal where
 
 --------------------------------------------
 import           Control.Monad (void)
 import           Graphics.UI.Threepenny.Core
 import qualified Graphics.UI.Threepenny as UI
 --------------------------------------------
-import           HGit.GUI.Elements (withClass)
+import           Merkle.GUI.Elements (withClass)
 --------------------------------------------
 
 data SpawnPopup m

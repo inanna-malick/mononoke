@@ -1,4 +1,4 @@
-module HGit.Render.Utils where
+module Merkle.Render.Utils where
 
 -- | indent and concat
 -- [["a", "b"], ["c"], ["d"], []] results in
