@@ -23,7 +23,7 @@ import           Control.Monad.Except
 import           Data.Functor.Const (Const(..))
 import qualified Data.ByteString.Lazy as LB
 import           Data.Functor.Compose
-import           Data.List.NonEmpty (NonEmpty(..))
+import           Data.List.NonEmpty (NonEmpty(..), intersperse)
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Singletons.TH
@@ -41,6 +41,10 @@ $(singletons [d|
 
 type Path = String -- TODO use Text
 
+concatPath :: NonEmpty Path -> String
+concatPath = foldMap id . intersperse "/"
+
+
 add :: NonEmpty Path -> a 'BlobT -> Change a
 add p a = Change { _path = p, _change = Add a}
 
@@ -53,6 +57,11 @@ data Change a
   , _change:: ChangeType a
   } deriving (Generic)
 
+
+instance Show (Change (Term M)) where
+  show (Change path Del) = "Del " ++ concatPath path
+  show (Change path (Add (Term (Blob contents)))) =
+    "Add " ++ concatPath path ++ ", contents:\n" ++ contents
 
 
 instance ToJSON (a 'BlobT) => ToJSON (Change a) where
@@ -283,7 +292,7 @@ typeTagName s = case s of
 
 
 -- | hash and lift (TODO: THIS IS NEEDED - dip into merkle lib for refs)
-liftLMMT :: forall m x. Applicative m => SingI x => Term M x -> LMMT m x
+liftLMMT :: forall m. Applicative m => Term M :-> LMMT m
 liftLMMT = hcata f
   where
     f x = Term $ HC $ Tagged{ _tag = h x, _elem = HC $ Compose $ pure x}
