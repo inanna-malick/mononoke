@@ -48,6 +48,7 @@ dependencies:
   - mu-grpc-client
   - mu-protobuf
   - mu-schema
+  - network
   - optparse-applicative
   - recursion-schemes
   - safe-exceptions

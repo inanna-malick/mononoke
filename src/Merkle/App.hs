@@ -8,13 +8,16 @@ module Merkle.App where
 
 import           Merkle.Bonsai.Types
 import           Merkle.Generic.HRecursionSchemes
+import           Merkle.Generic.Merkle as M
+import           Merkle.Generic.DAGStore (mkGRPCClient, mkClient)
 
 import           System.Directory
 import qualified Data.Map.Merge.Strict as M
 import qualified Data.Map.Strict as M
 import           Control.Monad.Except
 import           Data.List.NonEmpty (NonEmpty)
-
+import           Data.Aeson as AE
+import GHC.Generics
 
 
 
@@ -28,7 +31,8 @@ empty = liftLMMT $ Term $ Dir M.empty
 -- delbranch: delete branch
 -- checkout: impose remote state on local subdir (note to self: use containers to test this)
 -- commit: commit all state in repo with message
-
+-- merge: list of commits, merge all into current commit, simple diff resolution (?) or fail
+--  - OR: enter merge in progress state, 'current commit' is instead NEL of parents, resolution pending?
 
 -- diff: show extant changes (basically just commit dry run, super easy kinda )
 
@@ -55,13 +59,20 @@ delBranch name ls = case M.member name (branches ls) of
 -- state store: local staged, as json, also presence of a file signifies that it's a mononoke root
 data LocalState
   = LocalState
-  { backing_store_addr :: String
-  , backing_store_port :: Int
+  { backingStoreAddr   :: String
+  , backingStorePort   :: Integer
   , currentCommit      :: Hash 'CommitT
   , currentBranch      :: Maybe String
   , snapshotMappings   :: M.Map (Hash 'CommitT) (Hash 'SnapshotT)
   , branches           :: M.Map String (Hash 'CommitT)
-  } deriving (Ord, Eq, Show)
+  } deriving (Ord, Eq, Show, Generic)
+
+
+instance ToJSON LocalState where
+    toEncoding = genericToEncoding defaultOptions
+
+instance FromJSON LocalState
+
 
 -- simple flow: add some files, git commit, branch, same, etc
 
@@ -79,36 +90,80 @@ data LocalState
 
 
 
-
--- commit
---   :: forall m
---    . MonadError String m
---   => MonadIO m
---   => Path
---   -> String
---   -> m [Change (Term M)]
--- commit root commitMsg = do
---   localState <- readLocalState
---   client     <- mkGRPCClient
---   let dagStore = mkDagStore client
---   snapshotLMMT <- case M.lookup (currentCommit localState) (snapshotMappings localState) of
---     Nothing -> do
---       snapshot <- buildSnapshot
---       snaspshotHash <- upload snapshot dagStore
---       pure $ liftLMMT snapshot
---     Just snapshotHash -> dp
---       pure $ expandHash snapshotHash
---   diffs <- diffLocalState root 
+localStateName :: Path
+localStateName = ".bonsai.state"
 
 
+
+readLocalState
+  :: forall m
+   . ( MonadError String m
+     , MonadIO m
+     )
+  => NonEmpty Path
+  -> m LocalState
+readLocalState containingDir = do
+  let path = concatPath (containingDir <> pure localStateName)
+  liftIO (eitherDecodeFileStrict path) >>= liftEither
+
+
+writeLocalState
+  :: forall m
+   . ( MonadIO m
+     )
+  => NonEmpty Path
+  -> LocalState
+  -> m ()
+writeLocalState containingDir ls = do
+  let path = concatPath (containingDir <> pure localStateName)
+  liftIO $ encodeFile path ls
+
+
+commit
+  :: forall m
+   . ( MonadError String m
+     , MonadIO m
+     )
+  => NonEmpty Path
+  -> String
+  -> m [Change (Term M)]
+commit root commitMsg = do
+  localState <- readLocalState root
+  let clientConfig = mkGRPCClient (backingStoreAddr localState) (fromInteger $ backingStorePort localState)
+  client <- mkClient clientConfig
+  let store = mkDagStore client
+  snapshot <- case M.lookup (currentCommit localState) (snapshotMappings localState) of
+    Nothing -> do
+      snapshot <- undefined -- build snapshot and upload, I think this is already written
+      pure $ snapshot
+    Just snapshotHash -> do
+      pure $ lazyLoadHash store snapshotHash
+  (HC (Tagged _ snapshot')) <- fetchLMMT $ toLMT snapshot
+  let (Snapshot ft _ _) = snapshot'
+  diffs <- diffLocalState root ft
+  wipCommit <- case diffs of
+    [] -> throwError "attempted commit with no diffs"
+    changes -> do
+      let parent = toLMT $ lazyLoadHash store (currentCommit localState)
+      let changes' = mapChange modifiedWIP' <$> changes
+      pure $ modifiedWIP $ Commit commitMsg changes' (pure $ unmodifiedWIP parent)
+  newCommitHash <- hashOfLMMT <$> uploadWIPT (sWrite store) wipCommit
+
+  let localState' = localState { currentCommit =  newCommitHash}
+  writeLocalState root localState'
+
+  -- NOTE: doesn't establish snapshot for new commit
+
+  pure diffs
 
 
 -- working, could do with some polish and tests (lmao) and etc
 diffLocalState
   :: forall m
-   . MonadError String m
-  => MonadIO m
-  => Path
+   . ( MonadError String m
+     , MonadIO m
+     )
+  => NonEmpty Path
   -> LMMT m 'FileTree
   -> m [Change (Term M)]
 diffLocalState root snapshot = processRoot snapshot
@@ -116,7 +171,7 @@ diffLocalState root snapshot = processRoot snapshot
     processRoot :: LMMT m 'FileTree -> m [Change (Term M)]
     processRoot lmmt = do
       liftIO $ putStrLn "processRoot"
-      contents <- liftIO $ listDirectory root
+      contents <- liftIO $ listDirectory $ concatPath root
       let local = M.fromList $ fmap (\a -> (a, ())) contents
       remote <- do
         (HC (Tagged _ m)) <- fetchLMMT lmmt
@@ -124,9 +179,9 @@ diffLocalState root snapshot = processRoot snapshot
           File _ -> throwError "expected root path to be a dir in LMMT"
           Dir  d -> pure d
       mconcat . fmap snd . M.toList <$>
-        M.mergeA (M.traverseMissing $ remoteMissing' . (pure root <>) . pure)
-                 (M.traverseMissing $ localMissing   . (pure root <>) . pure)
-                 (M.zipWithAMatched $ bothPresent    . (pure root <>) . pure)
+        M.mergeA (M.traverseMissing $ remoteMissing' . (root <>) . pure)
+                 (M.traverseMissing $ localMissing   . (root <>) . pure)
+                 (M.zipWithAMatched $ bothPresent    . (root <>) . pure)
                   local remote
 
 

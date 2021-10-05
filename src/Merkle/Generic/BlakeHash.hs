@@ -5,6 +5,7 @@ import           Control.Applicative (Const(..))
 import qualified Crypto.Hash as CH
 import qualified Crypto.Hash.Algorithms as CHA
 import qualified Data.Aeson as AE
+import qualified Data.Aeson.Types as AE
 import qualified Data.ByteArray as BA
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString as B
@@ -41,6 +42,13 @@ bytesToHash = fmap RawBlakeHash . CH.digestFromByteString
 
 instance Show RawBlakeHash where
   show x = "#[" ++ unpack (hashToText x) ++ "]"
+
+
+instance AE.ToJSONKey RawBlakeHash where
+  toJSONKey = AE.toJSONKeyText hashToText
+
+instance AE.FromJSONKey RawBlakeHash where
+  fromJSONKey = AE.FromJSONKeyTextParser (maybe (fail "parsing failed") pure . textToHash)
 
 
 instance AE.ToJSON RawBlakeHash where

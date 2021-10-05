@@ -32,6 +32,7 @@ import qualified Data.Text as T
 import           Merkle.Generic.BlakeHash
 import qualified Merkle.Generic.DAGStore as DAG
 import           Merkle.Generic.HRecursionSchemes as HR -- YOLO 420 SHINY AND CHROME
+import qualified Merkle.Generic.Merkle as M
 --------------------------------------------
 
 
@@ -56,6 +57,15 @@ data Change a
   { _path::   NonEmpty Path
   , _change:: ChangeType a
   } deriving (Generic)
+
+mapChange :: (a 'BlobT -> b 'BlobT) -> Change a -> Change b
+mapChange f (Change p c) = Change p (mapChangeType f c)
+
+mapChangeType :: (a 'BlobT -> b 'BlobT) -> ChangeType a -> ChangeType b
+mapChangeType f (Add x) = Add (f x)
+mapChangeType _ Del = Del
+
+
 
 
 instance Show (Change (Term M)) where
@@ -262,6 +272,9 @@ modifiedWIP m = Term . HC . R . HC $ Tagged h m
   where
     h = hashM $ hfmap hashOfWIPT m
 
+modifiedWIP' :: Term M :-> WIPT m
+modifiedWIP' m = hcata (Term . HC . R) $ hashMT m
+
 
 showHash :: forall (i :: MTag). SingI i => Hash i -> String
 showHash h =
@@ -298,6 +311,13 @@ liftLMMT = hcata f
     f x = Term $ HC $ Tagged{ _tag = h x, _elem = HC $ Compose $ pure x}
     h x = hashM $ hfmap hashOfLMMT x
 
+
+hashMT :: Term M :-> Term (Tagged Hash `HCompose` M)
+hashMT m = hcata f m
+  where
+    f :: M (Term (Tagged Hash `HCompose` M)) :-> Term (Tagged Hash `HCompose` M)
+    f x = Term $ HC $ Tagged{ _tag = h x, _elem = x}
+    h x = hashM $ hfmap (_tag . getHC . unTerm) x
 
 expandHash :: forall m. Monad m => StoreRead m -> Hash :-> (LMMT m)
 expandHash get = ana f
@@ -458,6 +478,13 @@ data Store m
   }
 
 
+lazyLoadHash :: forall m. Monad m => Store m -> Hash :-> Term (M.LazyMerkle m M)
+lazyLoadHash store = ana f
+  where
+    f :: Hash :-> M.LazyMerkle m M Hash
+    f h = M.LazyMerkle h (sRead store h)
+
+
 stmIOStore :: MonadIO m => TVar BlobStore -> Store m
 stmIOStore tvar
   = let store' = stmStore tvar
@@ -484,18 +511,32 @@ stmStore tvar
 
 
 getM
-  :: DAG.GrpcClient
-  -> NatM (ExceptT String IO) Hash (DAG.PartialTree M)
+  :: forall m
+   . ( MonadError String m
+     , MonadIO m
+     )
+  => DAG.GrpcClient
+  -> NatM m Hash (DAG.PartialTree M)
 getM client = DAG.get client decodeM
 
 getM'
-  :: DAG.GrpcClient
-  -> NatM (ExceptT String IO) Hash (M Hash)
+  :: forall m
+   . ( MonadError String m
+     , MonadIO m
+     )
+  => DAG.GrpcClient
+  -> NatM m Hash (M Hash)
 getM' client h = getM client h >>= pure . hfmap (unCxt (_tag . getHC) id)
 
 
-dagStore :: DAG.GrpcClient -> Store (ExceptT String IO)
-dagStore client
+mkDagStore
+  :: forall m
+   . ( MonadError String m
+     , MonadIO m
+     )
+  => DAG.GrpcClient -> Store m
+
+mkDagStore client
   = Store
   { sRead = getM' client
   , sWrite = DAG.put client AE.encode

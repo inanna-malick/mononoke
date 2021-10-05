@@ -44,7 +44,7 @@ import           Data.Functor.Identity
 import           Data.Functor.Classes
 import           Data.ByteString.Builder as BB (word32LE, toLazyByteString)
 import           Control.Monad.Except
-
+import           Network.Socket (PortNumber)
 
 
 grpc "GRPCStore" id "dagstore.proto"
@@ -131,45 +131,63 @@ instance ToSchema   GRPCStore "GetResp" GetRespP
 instance FromSchema GRPCStore "GetResp" GetRespP
 
 
+-- with TLS disabled (via False)
+mkGRPCClient :: String -> PortNumber -> GrpcClientConfig
+mkGRPCClient h p = grpcClientConfigSimple h p False
+
+
 defaultConfig :: GrpcClientConfig
 defaultConfig = grpcClientConfigSimple "127.0.0.1" 8080 False
 
-mkClient :: ExceptT String IO GrpcClient
-mkClient = do
-    eclient <- setup defaultConfig
+mkClient
+  :: forall m
+   . ( MonadError String m
+     , MonadIO m
+     )
+  => GrpcClientConfig
+  -> m GrpcClient
+mkClient c = do
+    eclient <- liftIO $ setupGrpcClient' c
     case eclient of
       Left e -> throwError $ show e
       Right client -> pure client
-  where setup config = setupGrpcClient' config
 
 
 get
-  :: HTraversable f
+  :: forall m f
+   . ( MonadError String m
+     , MonadIO m
+     , HTraversable f
+     )
   => GrpcClient
   -> NatM (Either String) (Const BL.ByteString) (f (Const Id))
-  -> NatM (ExceptT String IO) BH.Hash (PartialTree f)
+  -> NatM m BH.Hash (PartialTree f)
 get client decode (Const h) = do
   let hash = Hash $ BH.unpackHash' h
-  lift $ putStrLn $ "GET node"
+  liftIO $ putStrLn $ "GET node"
   response :: GRpcReply GetRespP
-    <- lift $ gRpcCall @'MsgProtoBuf @DagStore @"DagStore" @"GetNode" client hash
+    <- liftIO $ gRpcCall @'MsgProtoBuf @DagStore @"DagStore" @"GetNode" client hash
   case response of
     GRpcOk g -> do
-      lift $ putStrLn $ "GET: resp len " ++ show (length $ extra_nodes g)
+      liftIO $ putStrLn $ "GET: resp len " ++ show (length $ extra_nodes g)
       liftEither $ fromProtoGetResp decode $ Const g
     x -> throwError $ "GET: error response was: " ++ show x
 
 
 put
-  :: HTraversable f
+  :: forall m f
+   . ( MonadError String m
+     , MonadIO m
+     , HTraversable f
+     )
   => GrpcClient
   -> f (Const Id) :=> BL.ByteString
-  -> NatM (ExceptT String IO) (f BH.Hash) BH.Hash
+  -> NatM m (f BH.Hash) BH.Hash
 put client encode m = do
   let n = unrequireFields $ toProto encode m
-  lift $ putStrLn $ "PUT node"
+  liftIO $ putStrLn $ "PUT node"
   response :: GRpcReply Hash
-    <- lift $ gRpcCall @'MsgProtoBuf @DagStore @"DagStore" @"PutNode" client n
+    <- liftIO $ gRpcCall @'MsgProtoBuf @DagStore @"DagStore" @"PutNode" client n
   case response of
     GRpcOk ph -> liftEither $ fromProtoHash $ Const ph
     x -> throwError $ "PUT: error response was: " ++ show x
@@ -315,3 +333,4 @@ fromProtoGetResp decode (Const gr) = do
               pure . L . HC $ Tagged h nn
 
     htraverse (anaPartialM deref) node
+
