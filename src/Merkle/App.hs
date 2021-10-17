@@ -76,25 +76,34 @@ instance FromJSON LocalState
 
 
 
-initialLocalState :: LocalState
 initialLocalState
-  = LocalState
-  { backingStoreAddr = "localhost"
-  , backingStorePort = 8080
-  , snapshotMappings   = M.empty
-  , branches           = M.empty
-  , currentCommit      = undefined -- TODO empty hash repr?
-  , currentBranch      = Just "main"
-  }
+  :: forall m
+   . Monad m
+  => Store m
+  -> m LocalState
+initialLocalState store = do
+  emptyCommit <- sWrite store $ NullCommit
+  pure $ LocalState
+       { backingStoreAddr   = "localhost"
+       , backingStorePort   = 8080
+       , snapshotMappings   = M.empty
+       , branches           = M.empty
+       , currentCommit      = emptyCommit
+       , currentBranch      = Just "main"
+       }
 
+
+-- TODO:
+-- set up dir with initial state
 init
   :: forall m
    . ( MonadError String m
      , MonadIO m
      )
-  => NonEmpty Path
+  => Store m
+  -> NonEmpty Path
   -> m ()
-init path = do
+init store path = do
   let path' = concatPath path
   -- check if exists
   isFile <- liftIO $ doesFileExist path'
@@ -102,7 +111,7 @@ init path = do
     True -> do
       throwError $ "file already exists at " ++ path'
     False ->
-      writeLocalState path initialLocalState
+      initialLocalState store >>= writeLocalState path
   pure ()
 
 
