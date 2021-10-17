@@ -7,6 +7,7 @@ module Merkle.App where
 
 
 import           Merkle.Bonsai.Types
+import           Merkle.Bonsai.MergeTrie
 import           Merkle.Generic.HRecursionSchemes
 import           Merkle.Generic.Merkle as M
 import           Merkle.Generic.DAGStore (mkGRPCClient, mkClient)
@@ -74,20 +75,35 @@ instance ToJSON LocalState where
 instance FromJSON LocalState
 
 
--- simple flow: add some files, git commit, branch, same, etc
 
+initialLocalState :: LocalState
+initialLocalState
+  = LocalState
+  { backingStoreAddr = "localhost"
+  , backingStorePort = 8080
+  , snapshotMappings   = M.empty
+  , branches           = M.empty
+  , currentCommit      = undefined -- TODO empty hash repr?
+  , currentBranch      = Just "main"
+  }
 
--- initialLocalState :: LocalState
--- initialLocalState
---   = LocalState
---   { backing_store_addr = "localhost"
---   , backing_store_port = 8080
---   , snapshotMappings   = M.empty
---   , branches           = M.empty
---   , currentCommit      = empty_hash
---   , currentBranch      = "main"
---   }
-
+init
+  :: forall m
+   . ( MonadError String m
+     , MonadIO m
+     )
+  => NonEmpty Path
+  -> m ()
+init path = do
+  let path' = concatPath path
+  -- check if exists
+  isFile <- liftIO $ doesFileExist path'
+  case isFile of
+    True -> do
+      throwError $ "file already exists at " ++ path'
+    False ->
+      writeLocalState path initialLocalState
+  pure ()
 
 
 localStateName :: Path
@@ -119,6 +135,9 @@ writeLocalState containingDir ls = do
   liftIO $ encodeFile path ls
 
 
+-- PLAN: app that runs in dir w/ app root, hits remote DAG store server
+-- PLAN: same binary for both
+
 commit
   :: forall m
    . ( MonadError String m
@@ -134,11 +153,16 @@ commit root commitMsg = do
   let store = mkDagStore client
   snapshot <- case M.lookup (currentCommit localState) (snapshotMappings localState) of
     Nothing -> do
-      snapshot <- undefined -- build snapshot and upload, I think this is already written
+      lastCommit <- lmLazy $ unTerm $ lazyLoadHash store (currentCommit localState)
+      let lastCommit' :: M (WIPT m) 'CommitT
+            = hfmap (unmodifiedWIP . toLMT) lastCommit
+      snapshotEWIP <- runExceptT $ makeSnapshot lastCommit' (iRead nullIndex) (sRead store)
+      snapshotWIP <- either (throwError . ("merge errors in history during commit op" ++) . show) pure snapshotEWIP
+      snapshot <- uploadWIPT (sWrite store) $ modifiedWIP snapshotWIP
       pure $ snapshot
     Just snapshotHash -> do
-      pure $ lazyLoadHash store snapshotHash
-  (HC (Tagged _ snapshot')) <- fetchLMMT $ toLMT snapshot
+      pure $ toLMT $ lazyLoadHash store snapshotHash
+  (HC (Tagged _ snapshot')) <- fetchLMMT snapshot
   let (Snapshot ft _ _) = snapshot'
   diffs <- diffLocalState root ft
   wipCommit <- case diffs of
@@ -152,7 +176,7 @@ commit root commitMsg = do
   let localState' = localState { currentCommit =  newCommitHash}
   writeLocalState root localState'
 
-  -- NOTE: doesn't establish snapshot for new commit
+  -- NOTE: doesn't establish snapshot for new commit - should do so to confirm validity LMAO TODO
 
   pure diffs
 

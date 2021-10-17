@@ -19,8 +19,8 @@ import           Merkle.Generic.BlakeHash
 
 data LazyMerkle m f g i
   = LazyMerkle
-  { hash :: Hash i
-  , lazy :: m (f g i)
+  { lmHash :: Hash i
+  , lmLazy :: m (f g i)
   }
 
 instance (Functor m, HFunctor f) => HFunctor (LazyMerkle m f) where
