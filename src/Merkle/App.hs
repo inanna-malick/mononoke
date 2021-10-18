@@ -78,14 +78,20 @@ instance FromJSON LocalState
 
 initialLocalState
   :: forall m
-   . Monad m
-  => Store m
+   . ( MonadIO m
+     , MonadError String m
+     )
+  => String -- store addr
+  -> Integer -- store port
   -> m LocalState
-initialLocalState store = do
+initialLocalState addr port = do
+  let clientConfig = mkGRPCClient addr (fromInteger port)
+  client <- mkClient clientConfig
+  let store = mkDagStore client
   emptyCommit <- sWrite store $ NullCommit
   pure $ LocalState
-       { backingStoreAddr   = "localhost"
-       , backingStorePort   = 8080
+       { backingStoreAddr   = addr
+       , backingStorePort   = port
        , snapshotMappings   = M.empty
        , branches           = M.empty
        , currentCommit      = emptyCommit
@@ -93,25 +99,23 @@ initialLocalState store = do
        }
 
 
--- TODO:
 -- set up dir with initial state
 init
   :: forall m
    . ( MonadError String m
      , MonadIO m
      )
-  => Store m
-  -> NonEmpty Path
+  => NonEmpty Path
   -> m ()
-init store path = do
-  let path' = concatPath path
+init path = do
+  let path' = concatPath $ path <> pure localStateName
   -- check if exists
   isFile <- liftIO $ doesFileExist path'
   case isFile of
     True -> do
-      throwError $ "file already exists at " ++ path'
+      throwError $ "state file already exists at " ++ path'
     False ->
-      initialLocalState store >>= writeLocalState path
+      initialLocalState "localhost" 8080 >>= writeLocalState path
   pure ()
 
 
@@ -201,10 +205,11 @@ diffLocalState
   -> m [Change (Term M)]
 diffLocalState root snapshot = processRoot snapshot
   where
+    listDirectory' x = filter (/= localStateName) <$> listDirectory x
     processRoot :: LMMT m 'FileTree -> m [Change (Term M)]
     processRoot lmmt = do
       liftIO $ putStrLn "processRoot"
-      contents <- liftIO $ listDirectory $ concatPath root
+      contents <- liftIO $ listDirectory' $ concatPath root
       let local = M.fromList $ fmap (\a -> (a, ())) contents
       remote <- do
         (HC (Tagged _ m)) <- fetchLMMT lmmt
@@ -212,9 +217,9 @@ diffLocalState root snapshot = processRoot snapshot
           File _ -> throwError "expected root path to be a dir in LMMT"
           Dir  d -> pure d
       mconcat . fmap snd . M.toList <$>
-        M.mergeA (M.traverseMissing $ remoteMissing' . (root <>) . pure)
-                 (M.traverseMissing $ localMissing   . (root <>) . pure)
-                 (M.zipWithAMatched $ bothPresent    . (root <>) . pure)
+        M.mergeA (M.traverseMissing $ remoteMissing' . pure)
+                 (M.traverseMissing $ localMissing   . pure)
+                 (M.zipWithAMatched $ bothPresent    . pure)
                   local remote
 
 
@@ -222,24 +227,24 @@ diffLocalState root snapshot = processRoot snapshot
     bothPresent :: NonEmpty Path -> () -> LMMT m 'FileTree -> m [Change (Term M)]
     bothPresent path () lmmt = do
       liftIO $ putStrLn "bothPresent"
-      let path' = concatPath path
+      let absolutePath = concatPath $ root <> path
       (HC (Tagged _ m)) <- fetchLMMT lmmt
       case m of
         Dir  remoteDirContents  -> do
-          isDir <- liftIO $ doesDirectoryExist path'
+          isDir <- liftIO $ doesDirectoryExist absolutePath
           case isDir of
             False -> do -- remote dir, local ???, if file then add/remote del, else ???
-              isFile <- liftIO $ doesFileExist path'
+              isFile <- liftIO $ doesFileExist absolutePath
               case isFile of
                 False -> throwError $ "Dir replaced with non-file type entity at " ++ show path
                 True  -> do -- remote dir, local file
                   remoteDeletes <- traverse (uncurry $ localMissing . (path <>) . pure)
                              $ M.toList remoteDirContents
-                  localContents <- liftIO $ readFile path'
+                  localContents <- liftIO $ readFile absolutePath
                   pure $ [Change path $ Add $ Term $ Blob localContents] ++ mconcat remoteDeletes
 
             True  -> do
-              contents <- liftIO $ listDirectory path'
+              contents <- liftIO $ listDirectory' absolutePath
               let local = M.fromList $ fmap (\a -> (a, ())) contents
               mconcat . fmap snd . M.toList <$>
                 M.mergeA (M.traverseMissing $ remoteMissing' . (path <>) . pure)
@@ -248,22 +253,22 @@ diffLocalState root snapshot = processRoot snapshot
                           local remoteDirContents
 
         File remoteContentsLMMT -> do
-          isFile <- liftIO $ doesFileExist path'
+          isFile <- liftIO $ doesFileExist absolutePath
           case isFile of
             True -> do -- diff contents. potential optimization, hash local before blob fetch.
               (HC (Tagged _ remoteBlob)) <- fetchLMMT $ sfBlob remoteContentsLMMT
               let (Blob remoteContents) = remoteBlob
-              localContents <- liftIO $ readFile path'
+              localContents <- liftIO $ readFile absolutePath
               case localContents == remoteContents of
                 True -> pure [] -- no change
                 False -> pure [Change path $ Add $ Term $ Blob localContents]
             False -> do
               localChanges <- do
-                isDir <- liftIO $ doesDirectoryExist path'
+                isDir <- liftIO $ doesDirectoryExist absolutePath
                 case isDir of
                   False -> pure [] -- not a dir or a file, shrug emoji
                   True  -> do
-                    contents <- liftIO $ listDirectory path'
+                    contents <- liftIO $ listDirectory' absolutePath
                     mconcat <$> traverse (remoteMissing . (path <>) . pure) contents
               pure $ [Change path Del] ++ localChanges
 
@@ -285,18 +290,18 @@ diffLocalState root snapshot = processRoot snapshot
 
     remoteMissing :: NonEmpty Path -> m [Change (Term M)]
     remoteMissing path = do
-      let path' = concatPath path
-      isFile <- liftIO $ doesFileExist path'
+      let absolutePath = concatPath $ root <> path
+      isFile <- liftIO $ doesFileExist absolutePath
       case isFile of
         True -> do
-          contents <- liftIO $ readFile path'
+          contents <- liftIO $ readFile absolutePath
           pure [Change path $ Add $ Term $ Blob contents]
         False -> do
-          isDir <- liftIO $ doesDirectoryExist path'
+          isDir <- liftIO $ doesDirectoryExist absolutePath
           case isDir of
             False -> do
               pure [] -- not a dir or a file, shrug emoji
             True  -> do
-              contents <- liftIO $ listDirectory path'
+              contents <- liftIO $ listDirectory' absolutePath
               mconcat <$> traverse (remoteMissing . (path <>) . pure) contents
 

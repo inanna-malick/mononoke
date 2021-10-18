@@ -67,11 +67,15 @@ mapChangeType _ Del = Del
 
 
 
-
 instance Show (Change (Term M)) where
   show (Change path Del) = "Del " ++ concatPath path
   show (Change path (Add (Term (Blob contents)))) =
     "Add " ++ concatPath path ++ ", contents:\n" ++ contents
+
+instance Eq (Change (Term M)) where
+  (Change path1 Del) == (Change path2 Del) = path1 == path2
+  (Change path1 (Add (Term (Blob x1)))) == (Change path2 (Add (Term (Blob x2)))) = x1 == x2 && path1 == path2
+  _ == _ = False
 
 
 instance ToJSON (a 'BlobT) => ToJSON (Change a) where

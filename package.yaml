@@ -65,6 +65,7 @@ dependencies:
 library:
   source-dirs: src
   exposed-modules:
+    - Merkle.App
     - Merkle.Bonsai.MergeTrie
     - Merkle.Bonsai.Types
     - Merkle.GUI.BrowseWIPT
@@ -74,7 +75,7 @@ library:
     - Merkle.GUI.Modal
     - Merkle.GUI.WorkingMergeTrie
     - Merkle.GUI.State
-    - Merkle.GUI.Bonsai
+    - Merkle.GUI.Core
     - Merkle.Generic.BlakeHash
     - Merkle.Generic.HRecursionSchemes
 
@@ -84,13 +85,16 @@ executable:
   dependencies:
     - hgit
 
-# tests:
-#   spec:
-#     main: Spec.hs
-#     source-dirs:
-#       - test
-#     dependencies:
-#       - hspec
-#       - hgit
-#       - temporary
-#     build-tools: hspec-discover
+tests:
+  spec:
+    main: AppTest.hs
+    source-dirs:
+      - test
+    dependencies:
+      - directory
+      - hspec
+      - hgit
+      - HUnit
+      - temporary
+      - QuickCheck
+    build-tools: hspec-discover
